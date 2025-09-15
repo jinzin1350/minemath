@@ -74,10 +74,10 @@ export function ScoreStatusBar() {
   }
 
   return (
-    <Card className="mb-6" data-testid="status-progress-card">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+    <Card className="mb-3 md:mb-6" data-testid="status-progress-card">
+      <CardContent className="p-3 md:p-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-0">
+          <div className="flex items-center gap-2 md:gap-3">
             {todayProgress.isFinal ? (
               <Check className="h-5 w-5 text-green-500" data-testid="icon-finalized" />
             ) : (
@@ -86,7 +86,7 @@ export function ScoreStatusBar() {
             
             <div>
               <div className="flex items-center gap-2">
-                <p className="text-sm font-medium" data-testid="text-score">
+                <p className="text-xs md:text-sm font-medium" data-testid="text-score">
                   Today's Score: {todayProgress.pointsEarned || 0} points
                 </p>
                 <Badge 

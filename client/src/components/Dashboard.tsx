@@ -189,42 +189,44 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
             <MinecraftBlock type="diamond" size={6} />
           </div>
 
-          <CardHeader className="pb-4 relative z-10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+          <CardHeader className="pb-2 md:pb-4 relative z-10">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-0">
+              <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 text-center md:text-left">
                 <div className="relative animate-bounce-slow">
-                  <MinecraftSteve scale={1.4} />
-                  {/* Sparkle effects around Steve */}
-                  <div className="absolute -top-2 -right-2 text-yellow-400 animate-pulse">✨</div>
-                  <div className="absolute -bottom-2 -left-2 text-blue-400 animate-bounce">💎</div>
+                  <MinecraftSteve scale={1.0} />
+                  {/* Hide sparkle effects on mobile */}
+                  <div className="absolute -top-2 -right-2 text-yellow-400 animate-pulse hidden md:block">✨</div>
+                  <div className="absolute -bottom-2 -left-2 text-blue-400 animate-bounce hidden md:block">💎</div>
                 </div>
                 <div>
-                  <CardTitle className="font-pixel text-2xl text-amber-200 animate-pulse bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent drop-shadow-lg">
+                  <CardTitle className="font-pixel text-lg md:text-2xl text-amber-200 animate-pulse bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent drop-shadow-lg">
                     Welcome back, {displayName}!
                   </CardTitle>
-                  <p className="text-emerald-300 font-pixel text-sm animate-fade-in">
-                    🏹 Ready for another math adventure? ⚔️
+                  <p className="text-emerald-300 font-pixel text-xs md:text-sm animate-fade-in">
+                    🏹 Ready for math adventure? ⚔️
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <div className="animate-bounce-slow">
-                  <InventoryDisplay userPoints={dashboardData.totalStats.totalPoints} />
-                </div>
-                <div className="animate-pulse">
-                  <RewardSelector 
-                    userPoints={dashboardData.totalStats.totalPoints}
-                    onRewardSelected={() => {
-                      refetchAchievements(); // Refresh achievements after selection
-                    }}
-                  />
+              <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full md:w-auto">
+                <div className="flex gap-2">
+                  <div className="animate-bounce-slow">
+                    <InventoryDisplay userPoints={dashboardData.totalStats.totalPoints} />
+                  </div>
+                  <div className="animate-pulse">
+                    <RewardSelector 
+                      userPoints={dashboardData.totalStats.totalPoints}
+                      onRewardSelected={() => {
+                        refetchAchievements(); // Refresh achievements after selection
+                      }}
+                    />
+                  </div>
                 </div>
                 <Button 
                   onClick={onStartGame}
-                  className="font-pixel px-10 py-5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 border-4 border-red-900 text-white shadow-2xl hover:scale-110 transition-all duration-300 animate-pulse relative"
+                  className="font-pixel px-6 md:px-10 py-3 md:py-5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 border-2 md:border-4 border-red-900 text-white shadow-2xl hover:scale-110 transition-all duration-300 animate-pulse relative text-sm md:text-base"
                   data-testid="button-start-game"
                 >
-                  <span className="relative z-10 flex items-center gap-2">
+                  <span className="relative z-10 flex items-center gap-1 md:gap-2">
                     ⚔️ START GAME 🏹
                   </span>
                   <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-orange-400/20 animate-ping rounded"></div>
@@ -235,72 +237,72 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
         </Card>
 
         {/* Enhanced Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-4 border-yellow-600 hover-elevate bg-gradient-to-br from-yellow-900/50 to-amber-900/50 shadow-xl relative overflow-hidden group">
-            <CardContent className="p-4 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-yellow-500/30 rounded-lg border-2 border-yellow-400 animate-pulse">
-                  <Trophy className="h-7 w-7 text-yellow-400 animate-bounce" />
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
+          <Card className="border-2 md:border-4 border-yellow-600 hover-elevate bg-gradient-to-br from-yellow-900/50 to-amber-900/50 shadow-xl relative overflow-hidden group">
+            <CardContent className="p-2 md:p-4 relative z-10">
+              <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3">
+                <div className="p-1 md:p-3 bg-yellow-500/30 rounded-lg border border-yellow-400 md:border-2 animate-pulse">
+                  <Trophy className="h-4 w-4 md:h-7 md:w-7 text-yellow-400 animate-bounce" />
                 </div>
-                <div>
-                  <p className="text-3xl font-pixel text-yellow-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.totalPoints}</p>
-                  <p className="text-sm text-yellow-300 font-pixel">🏆 Total Points</p>
+                <div className="text-center md:text-left">
+                  <p className="text-xl md:text-3xl font-pixel text-yellow-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.totalPoints}</p>
+                  <p className="text-xs md:text-sm text-yellow-300 font-pixel">🏆 Points</p>
                 </div>
               </div>
-              {/* Floating sparkles */}
-              <div className="absolute top-1 right-1 text-yellow-400 animate-spin">✨</div>
-              <div className="absolute bottom-1 left-1 text-amber-400 animate-ping">⭐</div>
+              {/* Floating sparkles - hide on mobile */}
+              <div className="absolute top-1 right-1 text-yellow-400 animate-spin hidden md:block">✨</div>
+              <div className="absolute bottom-1 left-1 text-amber-400 animate-ping hidden md:block">⭐</div>
             </CardContent>
           </Card>
 
-          <Card className="border-4 border-green-600 hover-elevate bg-gradient-to-br from-green-900/50 to-emerald-900/50 shadow-xl relative overflow-hidden group">
-            <CardContent className="p-4 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-green-500/30 rounded-lg border-2 border-green-400 animate-pulse">
-                  <Target className="h-7 w-7 text-green-400 animate-bounce" />
+          <Card className="border-2 md:border-4 border-green-600 hover-elevate bg-gradient-to-br from-green-900/50 to-emerald-900/50 shadow-xl relative overflow-hidden group">
+            <CardContent className="p-2 md:p-4 relative z-10">
+              <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3">
+                <div className="p-1 md:p-3 bg-green-500/30 rounded-lg border border-green-400 md:border-2 animate-pulse">
+                  <Target className="h-4 w-4 md:h-7 md:w-7 text-green-400 animate-bounce" />
                 </div>
-                <div>
-                  <p className="text-3xl font-pixel text-green-200 drop-shadow-lg animate-pulse">{accuracy}%</p>
-                  <p className="text-sm text-green-300 font-pixel">🎯 Accuracy</p>
+                <div className="text-center md:text-left">
+                  <p className="text-xl md:text-3xl font-pixel text-green-200 drop-shadow-lg animate-pulse">{accuracy}%</p>
+                  <p className="text-xs md:text-sm text-green-300 font-pixel">🎯 Accuracy</p>
                 </div>
               </div>
-              {/* Floating target */}
-              <div className="absolute top-1 right-1 text-green-400 animate-bounce">🎯</div>
-              <div className="absolute bottom-1 left-1 text-emerald-400 animate-pulse">💚</div>
+              {/* Floating target - hide on mobile */}
+              <div className="absolute top-1 right-1 text-green-400 animate-bounce hidden md:block">🎯</div>
+              <div className="absolute bottom-1 left-1 text-emerald-400 animate-pulse hidden md:block">💚</div>
             </CardContent>
           </Card>
 
-          <Card className="border-4 border-orange-600 hover-elevate bg-gradient-to-br from-orange-900/50 to-red-900/50 shadow-xl relative overflow-hidden group">
-            <CardContent className="p-4 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-orange-500/30 rounded-lg border-2 border-orange-400 animate-pulse">
-                  <TrendingUp className="h-7 w-7 text-orange-400 animate-bounce" />
+          <Card className="border-2 md:border-4 border-orange-600 hover-elevate bg-gradient-to-br from-orange-900/50 to-red-900/50 shadow-xl relative overflow-hidden group">
+            <CardContent className="p-2 md:p-4 relative z-10">
+              <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3">
+                <div className="p-1 md:p-3 bg-orange-500/30 rounded-lg border border-orange-400 md:border-2 animate-pulse">
+                  <TrendingUp className="h-4 w-4 md:h-7 md:w-7 text-orange-400 animate-bounce" />
                 </div>
-                <div>
-                  <p className="text-3xl font-pixel text-orange-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.currentStreak}</p>
-                  <p className="text-sm text-orange-300 font-pixel">🔥 Day Streak</p>
+                <div className="text-center md:text-left">
+                  <p className="text-xl md:text-3xl font-pixel text-orange-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.currentStreak}</p>
+                  <p className="text-xs md:text-sm text-orange-300 font-pixel">🔥 Streak</p>
                 </div>
               </div>
-              {/* Fire effects */}
-              <div className="absolute top-1 right-1 text-orange-400 animate-bounce">🔥</div>
-              <div className="absolute bottom-1 left-1 text-red-400 animate-pulse">⚡</div>
+              {/* Fire effects - hide on mobile */}
+              <div className="absolute top-1 right-1 text-orange-400 animate-bounce hidden md:block">🔥</div>
+              <div className="absolute bottom-1 left-1 text-red-400 animate-pulse hidden md:block">⚡</div>
             </CardContent>
           </Card>
 
-          <Card className="border-4 border-purple-600 hover-elevate bg-gradient-to-br from-purple-900/50 to-pink-900/50 shadow-xl relative overflow-hidden group">
-            <CardContent className="p-4 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-purple-500/30 rounded-lg border-2 border-purple-400 animate-pulse">
-                  <Diamond className="h-7 w-7 text-purple-400 animate-bounce" />
+          <Card className="border-2 md:border-4 border-purple-600 hover-elevate bg-gradient-to-br from-purple-900/50 to-pink-900/50 shadow-xl relative overflow-hidden group">
+            <CardContent className="p-2 md:p-4 relative z-10">
+              <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3">
+                <div className="p-1 md:p-3 bg-purple-500/30 rounded-lg border border-purple-400 md:border-2 animate-pulse">
+                  <Diamond className="h-4 w-4 md:h-7 md:w-7 text-purple-400 animate-bounce" />
                 </div>
-                <div>
-                  <p className="text-3xl font-pixel text-purple-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.bestLevel}</p>
-                  <p className="text-sm text-purple-300 font-pixel">💎 Best Level</p>
+                <div className="text-center md:text-left">
+                  <p className="text-xl md:text-3xl font-pixel text-purple-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.bestLevel}</p>
+                  <p className="text-xs md:text-sm text-purple-300 font-pixel">💎 Level</p>
                 </div>
               </div>
-              {/* Diamond effects */}
-              <div className="absolute top-1 right-1 text-purple-400 animate-spin">💎</div>
-              <div className="absolute bottom-1 left-1 text-pink-400 animate-pulse">👑</div>
+              {/* Diamond effects - hide on mobile */}
+              <div className="absolute top-1 right-1 text-purple-400 animate-spin hidden md:block">💎</div>
+              <div className="absolute bottom-1 left-1 text-pink-400 animate-pulse hidden md:block">👑</div>
             </CardContent>
           </Card>
         </div>
@@ -399,7 +401,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
         </Card>
 
         {/* Recent Achievements & Activity with Inventory */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
           {/* Dashboard Inventory Board */}
           <div className="lg:col-span-1">
             <DashboardInventoryBoard userPoints={dashboardData.totalStats.totalPoints} />

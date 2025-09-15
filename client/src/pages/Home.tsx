@@ -98,45 +98,47 @@ export default function Home() {
     <div className="min-h-screen">
       {/* Navigation */}
       <nav className="bg-card border-b border-card-border">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="font-pixel text-xl text-foreground">MINECRAFT MATH</h1>
-            <div className="flex gap-2">
+        <div className="max-w-6xl mx-auto px-2 md:px-4 py-2 md:py-3 flex flex-col md:flex-row items-center justify-between gap-2 md:gap-0">
+          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 w-full md:w-auto">
+            <h1 className="font-pixel text-lg md:text-xl text-foreground">MINECRAFT MATH</h1>
+            <div className="flex gap-1 md:gap-2 w-full md:w-auto justify-center md:justify-start">
               <Button
                 variant={currentView === 'dashboard' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setCurrentView('dashboard')}
-                className="font-pixel text-xs"
+                className="font-pixel text-xs flex-1 md:flex-none"
                 data-testid="button-dashboard"
               >
-                <BarChart3 className="h-4 w-4 mr-1" />
-                DASHBOARD
+                <BarChart3 className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                <span className="hidden sm:inline">DASHBOARD</span>
+                <span className="sm:hidden">DASH</span>
               </Button>
               <Button
                 variant={currentView === 'game' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setCurrentView('game')}
-                className="font-pixel text-xs"
+                className="font-pixel text-xs flex-1 md:flex-none"
                 data-testid="button-game"
               >
-                <Gamepad2 className="h-4 w-4 mr-1" />
+                <Gamepad2 className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                 PLAY
               </Button>
               <Button
                 variant={currentView === 'leaderboard' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setCurrentView('leaderboard')}
-                className="font-pixel text-xs"
+                className="font-pixel text-xs flex-1 md:flex-none"
                 data-testid="button-leaderboard"
               >
-                <Trophy className="h-4 w-4 mr-1" />
-                LEADERBOARD
+                <Trophy className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                <span className="hidden sm:inline">LEADERBOARD</span>
+                <span className="sm:hidden">RANK</span>
               </Button>
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 md:gap-4 justify-center md:justify-end w-full md:w-auto">
+            <span className="text-xs md:text-sm text-muted-foreground hidden sm:inline">
               Welcome, {(user as any)?.firstName || (user as any)?.name || 'Player'}!
             </span>
             <Button
@@ -146,7 +148,7 @@ export default function Home() {
               className="font-pixel text-xs"
               data-testid="button-logout"
             >
-              <LogOut className="h-4 w-4 mr-1" />
+              <LogOut className="h-3 w-3 md:h-4 md:w-4 mr-1" />
               LOGOUT
             </Button>
           </div>
