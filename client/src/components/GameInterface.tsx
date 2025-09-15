@@ -364,7 +364,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
   }
 
   // Destructure gameStats for easier access in JSX
-  const { level: currentLevel, score: currentScore, hearts, diamonds, magicPower } = gameStats;
+  const { score: currentScore, hearts, diamonds, magicPower } = gameStats;
 
   return (
     // Removed redundant outer div and applied main styles directly
@@ -424,7 +424,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
               <CardContent className="p-2 md:p-4 text-center">
                 <div className="flex items-center justify-center gap-1 md:gap-2 mb-1 md:mb-2">
                   <Zap className="h-4 w-4 md:h-6 md:w-6 text-yellow-400 animate-pulse" />
-                  <span className="font-pixel text-white text-sm md:text-lg">{currentLevel}</span>
+                  <span className="font-pixel text-white text-sm md:text-lg">{gameStats.level}</span>
                 </div>
                 <p className="text-green-300 text-xs md:text-sm font-pixel">⚡ Level</p>
               </CardContent>
