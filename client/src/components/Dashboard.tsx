@@ -86,15 +86,29 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     enabled: !mockMode
   });
 
-  const { data: recentProgress } = useQuery<Array<{
+  const { data: recentProgress, isLoading: progressLoading, refetch: refetchProgress } = useQuery<Array<{
     date: string;
     pointsEarned: number;
     questionsAnswered: number;
     correctAnswers: number;
   }>>({
     queryKey: [`/api/progress/recent?days=${selectedTimeframe === '7d' ? 7 : 30}`],
-    enabled: !mockMode
+    enabled: !mockMode,
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
+
+  // Fetch achievements if not in mock mode
+  const { data: achievementsData, refetch: refetchAchievements } = useQuery({
+    queryKey: ['/api/achievements'],
+    enabled: !mockMode,
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+  });
+
+  useEffect(() => {
+    if (achievementsData) {
+      setAchievements(achievementsData);
+    }
+  }, [achievementsData]);
 
   // Calculate total stats from recent progress
   const calculateTotalStats = (progressData: any[]) => {
@@ -137,47 +151,6 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     ? Math.round((dashboardData.totalStats.correctAnswers / dashboardData.totalStats.totalQuestions) * 100)
     : 0;
 
-  // Fetch achievements if not in mock mode
-  useEffect(() => {
-    if (!mockMode) {
-      fetchAchievements();
-    } else {
-      // Mock achievements for demo
-      setAchievements([
-        {
-          id: '1',
-          name: 'Novice Miner',
-          description: 'Earned your first 500 points!',
-          iconType: 'iron',
-          pointsRequired: 500,
-          unlockedAt: '2024-01-15T10:00:00Z',
-          isNew: false
-        },
-        {
-          id: '2',
-          name: 'Stone Warrior',
-          description: 'Reached 1,000 points - you\'re getting strong!',
-          iconType: 'gold',
-          pointsRequired: 1000,
-          unlockedAt: '2024-01-14T15:30:00Z',
-          isNew: true
-        }
-      ]);
-    }
-  }, [mockMode]);
-
-  const fetchAchievements = async () => {
-    try {
-      const response = await fetch('/api/achievements');
-      if (response.ok) {
-        const userAchievements = await response.json();
-        setAchievements(userAchievements);
-      }
-    } catch (error) {
-      console.error('Failed to fetch achievements:', error);
-    }
-  };
-
   // Format data for the chart with timezone-safe English date
   const chartData = (dashboardData.recentProgress || []).map(day => {
     // Parse date string as UTC to avoid timezone shifts
@@ -199,7 +172,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Score Status Bar with Finalization Info */}
-        <ScoreStatusBar />
+        <ScoreStatusBar refetchData={() => { refetchProgress(); refetchAchievements(); }} />
         {/* Enhanced Header with Minecraft Style */}
         <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90 shadow-2xl backdrop-blur-sm relative overflow-hidden">
           {/* Floating decorative blocks */}
@@ -215,7 +188,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
           <div className="absolute bottom-2 right-8 opacity-20 animate-pulse">
             <MinecraftBlock type="diamond" size={6} />
           </div>
-          
+
           <CardHeader className="pb-4 relative z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -242,7 +215,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
                   <RewardSelector 
                     userPoints={dashboardData.totalStats.totalPoints}
                     onRewardSelected={() => {
-                      // Optionally refresh achievements or other data
+                      refetchAchievements(); // Refresh achievements after selection
                     }}
                   />
                 </div>
@@ -341,7 +314,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
           <div className="absolute top-2 right-4 opacity-20 animate-bounce">
             <MinecraftBlock type="grass" size={6} />
           </div>
-          
+
           <CardHeader className="relative z-10">
             <div className="flex items-center justify-between">
               <CardTitle className="font-pixel text-cyan-200 flex items-center gap-2 animate-pulse">
@@ -431,7 +404,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
           <div className="lg:col-span-1">
             <DashboardInventoryBoard userPoints={dashboardData.totalStats.totalPoints} />
           </div>
-          
+
           <Card className="border-2 border-card-border lg:col-span-1">
             <CardHeader>
               <CardTitle className="font-pixel text-foreground flex items-center gap-2">

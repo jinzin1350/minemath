@@ -67,8 +67,14 @@ export default function Home() {
       console.log('Progress saved successfully:', progressData);
 
       // Invalidate queries to refresh dashboard data
-      queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/achievements'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/rewards/opportunities'] });
+      
+      // Force refetch of all queries to ensure UI updates
+      await queryClient.refetchQueries();
 
       toast({
         title: "Game Complete! 🎉",

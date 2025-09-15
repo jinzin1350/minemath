@@ -17,9 +17,10 @@ export function ScoreStatusBar() {
   const [timeLeft, setTimeLeft] = useState<string>('');
 
   // Get today's progress with finalization status
-  const { data: recentProgress } = useQuery({
+  const { data: recentProgress, refetch } = useQuery({
     queryKey: ['/api/progress/recent'],
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchIntervalInBackground: true, // Continue refreshing when tab is not active
   });
 
   const todayProgress = Array.isArray(recentProgress) && recentProgress.length > 0 
