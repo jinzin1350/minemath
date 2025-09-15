@@ -85,8 +85,8 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
     }
   };
 
-  // Create 12 slots (3x4 grid) for dashboard view
-  const totalSlots = 12;
+  // Create 24 slots (4x6 grid) for dashboard view - expanded inventory
+  const totalSlots = 24;
   const slots = Array.from({ length: totalSlots }, (_, index) => {
     const item = inventory[index];
     return { id: index, item };
@@ -114,9 +114,9 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
       </CardHeader>
       
       <CardContent className="space-y-3 relative z-10">
-        {/* Inventory Grid - 3 rows x 4 columns */}
+        {/* Inventory Grid - 4 rows x 6 columns = 24 slots */}
         <div 
-          className="grid grid-cols-4 gap-1.5 p-3 bg-black/40 border-2 border-amber-700 rounded-lg"
+          className="grid grid-cols-6 gap-1.5 p-3 bg-black/40 border-2 border-amber-700 rounded-lg"
           style={{ 
             backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.05) 25%, transparent 25%)',
             backgroundSize: '8px 8px'

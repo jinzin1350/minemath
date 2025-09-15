@@ -89,8 +89,8 @@ export function GameInventoryBoard({ onInventoryUpdate }: GameInventoryBoardProp
     }
   };
 
-  // Create 21 slots (3x7 grid) like in Minecraft
-  const totalSlots = 21;
+  // Create 24 slots (4x6 grid) - expanded inventory
+  const totalSlots = 24;
   const slots = Array.from({ length: totalSlots }, (_, index) => {
     const item = inventory[index];
     return { id: index, item };
@@ -107,9 +107,9 @@ export function GameInventoryBoard({ onInventoryUpdate }: GameInventoryBoardProp
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Inventory Grid - 3 rows x 7 columns */}
+        {/* Inventory Grid - 4 rows x 6 columns = 24 slots */}
         <div 
-          className="grid grid-cols-7 gap-1 p-2 bg-gray-900/80 border border-gray-600"
+          className="grid grid-cols-6 gap-1 p-2 bg-gray-900/80 border border-gray-600"
           style={{ 
             backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.05) 25%, transparent 25%)',
             backgroundSize: '8px 8px'
