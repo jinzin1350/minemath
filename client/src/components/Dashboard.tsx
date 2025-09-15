@@ -368,35 +368,56 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="h-64 p-4 bg-black/20 rounded-lg border-2 border-cyan-700">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" stroke="#22d3ee" />
-                  <XAxis dataKey="date" className="text-xs font-pixel" stroke="#67e8f9" />
-                  <YAxis className="text-xs font-pixel" stroke="#67e8f9" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'rgba(0, 0, 0, 0.9)', 
-                      border: '2px solid #06b6d4',
-                      borderRadius: '8px',
-                      fontFamily: 'monospace',
-                      fontSize: '12px'
-                    }}
-                    labelStyle={{ color: '#67e8f9' }}
-                    itemStyle={{ color: '#22d3ee' }}
-                  />
-                  <Bar 
-                    dataKey="points" 
-                    fill="url(#gradient)" 
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <defs>
-                    <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#22d3ee" />
-                      <stop offset="100%" stopColor="#0891b2" />
-                    </linearGradient>
-                  </defs>
-                </BarChart>
-              </ResponsiveContainer>
+              {chartData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center animate-pulse">
+                  <div className="mb-4 relative">
+                    <MinecraftSteve scale={0.8} />
+                    <div className="absolute -top-2 -right-2 text-yellow-400 animate-bounce">⭐</div>
+                  </div>
+                  <h3 className="font-pixel text-cyan-300 text-lg mb-2">📊 No Data Yet!</h3>
+                  <p className="text-cyan-400 text-sm font-pixel mb-2">
+                    🎮 Start playing to see your progress chart!
+                  </p>
+                  <p className="text-cyan-500 text-xs">
+                    Your daily points and accuracy will appear here
+                  </p>
+                  <div className="mt-4 flex gap-2">
+                    <div className="animate-bounce">🎯</div>
+                    <div className="animate-pulse">📈</div>
+                    <div className="animate-bounce">🏆</div>
+                  </div>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" stroke="#22d3ee" />
+                    <XAxis dataKey="date" className="text-xs font-pixel" stroke="#67e8f9" />
+                    <YAxis className="text-xs font-pixel" stroke="#67e8f9" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)', 
+                        border: '2px solid #06b6d4',
+                        borderRadius: '8px',
+                        fontFamily: 'monospace',
+                        fontSize: '12px'
+                      }}
+                      labelStyle={{ color: '#67e8f9' }}
+                      itemStyle={{ color: '#22d3ee' }}
+                    />
+                    <Bar 
+                      dataKey="points" 
+                      fill="url(#gradient)" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <defs>
+                      <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22d3ee" />
+                        <stop offset="100%" stopColor="#0891b2" />
+                      </linearGradient>
+                    </defs>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
