@@ -1,0 +1,1 @@
+import { Dashboard } from '../Dashboard';\n\nexport default function DashboardExample() {\n  const handleStartGame = () => {\n    console.log('Starting game...');\n  };\n\n  return (\n    <Dashboard \n      onStartGame={handleStartGame}\n      mockMode={true}\n    />\n  );\n}

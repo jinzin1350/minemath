@@ -1,0 +1,1 @@
+import { LandingPage } from '../LandingPage';\n\nexport default function LandingPageExample() {\n  const handleLogin = () => {\n    console.log('Login clicked - would redirect to /api/login');\n  };\n\n  return (\n    <LandingPage onLogin={handleLogin} />\n  );\n}
