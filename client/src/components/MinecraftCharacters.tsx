@@ -289,69 +289,55 @@ export const MinecraftWitch = ({ isAttacking = false, scale = 1 }: MinecraftChar
 
 export const MinecraftDragon = ({ isAttacking = false, scale = 1 }: MinecraftCharacterProps) => (
   <div 
-    className={`relative inline-block`} 
+    className={`relative inline-block ${isAttacking ? 'animate-pulse' : ''}`} 
     style={{ transform: `scale(${scale})`, imageRendering: 'pixelated' }}
     data-testid="character-dragon"
   >
-    {/* Ender Dragon Head - No horns, purple features */}
-    <div className="relative w-20 h-16 mb-1 mx-auto">
-      <div className="absolute inset-0 bg-black"></div>
-      
-      {/* Purple glowing eyes */}
-      <div className="absolute top-4 left-4 w-3 h-3 bg-purple-400"></div>
-      <div className="absolute top-4 right-4 w-3 h-3 bg-purple-400"></div>
-      
-      {/* Dragon snout */}
-      <div className="absolute top-8 left-6 w-8 h-4 bg-gray-900"></div>
-      
-      {/* Purple breath when attacking */}
-      {isAttacking && (
-        <div className="absolute top-12 left-1/2 transform -translate-x-1/2 w-12 h-4 bg-purple-500 opacity-80">
-          <div className="absolute left-2 top-1 w-2 h-2 bg-purple-300"></div>
-          <div className="absolute right-2 top-1 w-2 h-2 bg-purple-300"></div>
-        </div>
-      )}
-    </div>
-    
-    {/* Body - Large black dragon body */}
-    <div className="relative w-16 h-24 mx-auto mb-1">
-      <div className="absolute inset-0 bg-black"></div>
-      {/* Purple accents */}
-      <div className="absolute top-4 left-2 w-4 h-4 bg-purple-900"></div>
-      <div className="absolute top-12 right-2 w-4 h-4 bg-purple-900"></div>
-      <div className="absolute top-20 left-6 w-4 h-4 bg-purple-900"></div>
-    </div>
-    
-    {/* Large Dark Wings */}
-    <div 
-      className="absolute top-16 -left-8 w-12 h-16 bg-gray-900"
+    <img 
+      src="/dragon-minecraft.png" 
+      alt="Minecraft Ender Dragon" 
+      className="w-20 h-20 pixelated"
       style={{ 
-        transform: isAttacking ? 'rotate(-25deg)' : 'rotate(-15deg)', 
-        transformOrigin: 'bottom right',
-        transition: 'transform 0.3s ease'
+        imageRendering: 'pixelated',
+        transform: isAttacking ? 'rotate(-5deg) scale(1.1)' : 'rotate(0deg) scale(1)',
+        transition: 'transform 0.3s ease',
+        maxWidth: '100%',
+        height: 'auto'
       }}
-    >
-      {/* Wing membrane details */}
-      <div className="absolute top-2 left-2 w-8 h-12 bg-gray-800"></div>
-    </div>
-    <div 
-      className="absolute top-16 -right-8 w-12 h-16 bg-gray-900"
-      style={{ 
-        transform: isAttacking ? 'rotate(25deg)' : 'rotate(15deg)', 
-        transformOrigin: 'bottom left',
-        transition: 'transform 0.3s ease'
+      onError={(e) => {
+        console.error('Failed to load Dragon image, trying alternative path');
+        // Try alternative paths if first one fails
+        const alternatives = [
+          './dragon-minecraft.png',
+          'dragon-minecraft.png',
+          '/public/dragon-minecraft.png'
+        ];
+        const current = e.currentTarget as HTMLImageElement;
+        const currentSrc = current.src;
+        
+        for (const alt of alternatives) {
+          if (!currentSrc.includes(alt.replace('./', ''))) {
+            current.src = alt;
+            return;
+          }
+        }
+        
+        // If all paths fail, hide the image and show fallback
+        current.style.display = 'none';
+        const fallback = document.createElement('div');
+        fallback.className = 'w-20 h-20 bg-black flex items-center justify-center text-purple-400 font-bold text-xs';
+        fallback.textContent = 'DRAGON';
+        current.parentNode?.appendChild(fallback);
       }}
-    >
-      {/* Wing membrane details */}
-      <div className="absolute top-2 right-2 w-8 h-12 bg-gray-800"></div>
-    </div>
+      onLoad={(e) => {
+        console.log('Dragon image loaded successfully');
+      }}
+    />
     
-    {/* Dragon Claws */}
-    <div className="absolute -bottom-8 left-2 w-5 h-8 bg-gray-900"></div>
-    <div className="absolute -bottom-8 right-2 w-5 h-8 bg-gray-900"></div>
-    
-    {/* Long Dragon Tail */}
-    <div className="absolute top-24 left-1/2 transform -translate-x-1/2 w-4 h-12 bg-black"></div>
+    {/* Purple breath effect when attacking */}
+    {isAttacking && (
+      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-purple-500 font-pixel text-xs animate-bounce">🐉</div>
+    )}
   </div>
 );
 
