@@ -118,63 +118,54 @@ export const MinecraftZombie = ({ isAttacking = false, scale = 1 }: MinecraftCha
 
 export const MinecraftSkeleton = ({ isAttacking = false, scale = 1 }: MinecraftCharacterProps) => (
   <div 
-    className={`relative inline-block`} 
+    className={`relative inline-block ${isAttacking ? 'animate-pulse' : ''}`} 
     style={{ transform: `scale(${scale})`, imageRendering: 'pixelated' }}
     data-testid="character-skeleton"
   >
-    {/* Head - Bone white skull */}
-    <div className="relative w-16 h-16 mb-1 mx-auto">
-      <div className="absolute inset-0 bg-gray-100"></div>
-      {/* Dark eye sockets */}
-      <div className="absolute top-4 left-3 w-3 h-3 bg-black"></div>
-      <div className="absolute top-4 right-3 w-3 h-3 bg-black"></div>
-      {/* Horizontal teeth line */}
-      <div className="absolute top-11 left-2 right-2 h-1 bg-black"></div>
-      <div className="absolute top-12 left-3 w-1 h-1 bg-gray-100"></div>
-      <div className="absolute top-12 left-5 w-1 h-1 bg-gray-100"></div>
-      <div className="absolute top-12 right-3 w-1 h-1 bg-gray-100"></div>
-      <div className="absolute top-12 right-5 w-1 h-1 bg-gray-100"></div>
-    </div>
-    
-    {/* Body - Very thin skeleton body */}
-    <div className="relative w-12 h-24 mx-auto mb-1">
-      <div className="absolute inset-0 bg-gray-100"></div>
-      {/* Rib bones */}
-      <div className="absolute top-2 left-1 right-1 h-1 bg-gray-300"></div>
-      <div className="absolute top-6 left-1 right-1 h-1 bg-gray-300"></div>
-      <div className="absolute top-10 left-1 right-1 h-1 bg-gray-300"></div>
-    </div>
-    
-    {/* Arms - Very thin, holding bow */}
-    <div 
-      className="absolute top-16 -left-3 w-3 h-16 bg-gray-100"
+    <img 
+      src="/skeleton-minecraft.png" 
+      alt="Minecraft Skeleton" 
+      className="w-16 h-16 pixelated"
       style={{ 
-        transform: isAttacking ? 'rotate(-30deg)' : 'rotate(-10deg)', 
-        transformOrigin: 'top center',
-        transition: 'transform 0.2s ease'
+        imageRendering: 'pixelated',
+        transform: isAttacking ? 'rotate(-5deg)' : 'rotate(0deg)',
+        transition: 'transform 0.2s ease',
+        maxWidth: '100%',
+        height: 'auto'
       }}
-    ></div>
-    <div 
-      className="absolute top-16 -right-3 w-3 h-16 bg-gray-100"
-      style={{ 
-        transform: isAttacking ? 'rotate(30deg)' : 'rotate(10deg)', 
-        transformOrigin: 'top center',
-        transition: 'transform 0.2s ease'
+      onError={(e) => {
+        console.error('Failed to load Skeleton image, trying alternative path');
+        // Try alternative paths if first one fails
+        const alternatives = [
+          './skeleton-minecraft.png',
+          'skeleton-minecraft.png',
+          '/public/skeleton-minecraft.png'
+        ];
+        const current = e.currentTarget as HTMLImageElement;
+        const currentSrc = current.src;
+        
+        for (const alt of alternatives) {
+          if (!currentSrc.includes(alt.replace('./', ''))) {
+            current.src = alt;
+            return;
+          }
+        }
+        
+        // If all paths fail, hide the image and show fallback
+        current.style.display = 'none';
+        const fallback = document.createElement('div');
+        fallback.className = 'w-16 h-16 bg-gray-200 flex items-center justify-center text-black font-bold text-xs';
+        fallback.textContent = 'SKELETON';
+        current.parentNode?.appendChild(fallback);
       }}
-    ></div>
+      onLoad={(e) => {
+        console.log('Skeleton image loaded successfully');
+      }}
+    />
     
-    {/* Bow - brown wooden bow */}
     {isAttacking && (
-      <div className="relative">
-        <div className="absolute top-12 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-amber-800"></div>
-        <div className="absolute top-10 left-1/2 transform -translate-x-1/2 w-1 h-5 bg-amber-800"></div>
-        <div className="absolute top-14 left-1/2 transform -translate-x-1/2 w-1 h-5 bg-amber-800"></div>
-      </div>
+      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-orange-400 font-pixel text-xs animate-bounce">🏹</div>
     )}
-    
-    {/* Legs - Very thin bone legs */}
-    <div className="absolute -bottom-12 left-3 w-3 h-12 bg-gray-100"></div>
-    <div className="absolute -bottom-12 right-3 w-3 h-12 bg-gray-100"></div>
   </div>
 );
 
@@ -184,53 +175,50 @@ export const MinecraftCreeper = ({ isAttacking = false, scale = 1 }: MinecraftCh
     style={{ transform: `scale(${scale})`, imageRendering: 'pixelated' }}
     data-testid="character-creeper"
   >
-    {/* Head - Green with distinctive T-shaped face */}
-    <div className="relative w-16 h-16 mb-1 mx-auto">
-      {/* Base green head */}
-      <div className="absolute inset-0 bg-green-500"></div>
-      {/* Camo pattern - checkerboard */}
-      <div className="absolute top-0 left-0 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-4 left-4 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-8 left-0 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-12 left-4 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-0 right-0 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-8 right-0 w-4 h-4 bg-green-700"></div>
-      
-      {/* T-shaped face - distinctive creeper face */}
-      <div className="absolute top-4 left-5 w-2 h-2 bg-black"></div>
-      <div className="absolute top-4 right-5 w-2 h-2 bg-black"></div>
-      <div className="absolute top-8 left-1/2 transform -translate-x-1/2 w-1 h-4 bg-black"></div>
-      <div className="absolute top-10 left-6 w-2 h-1 bg-black"></div>
-      <div className="absolute top-10 right-6 w-2 h-1 bg-black"></div>
-    </div>
-    
-    {/* Body - Same camo pattern */}
-    <div className="relative w-16 h-24 mx-auto mb-1">
-      <div className="absolute inset-0 bg-green-500"></div>
-      {/* Camo squares */}
-      <div className="absolute top-0 left-0 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-4 left-4 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-8 left-0 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-12 left-4 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-16 left-0 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-20 left-4 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-0 right-0 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-8 right-0 w-4 h-4 bg-green-700"></div>
-      <div className="absolute top-16 right-0 w-4 h-4 bg-green-700"></div>
-    </div>
-    
-    {/* Four small feet - characteristic of creepers */}
-    <div className="absolute -bottom-6 left-1 w-3 h-6 bg-green-500"></div>
-    <div className="absolute -bottom-6 left-5 w-3 h-6 bg-green-500"></div>
-    <div className="absolute -bottom-6 right-5 w-3 h-6 bg-green-500"></div>
-    <div className="absolute -bottom-6 right-1 w-3 h-6 bg-green-500"></div>
+    <img 
+      src="/creeper-minecraft.png" 
+      alt="Minecraft Creeper" 
+      className="w-16 h-16 pixelated"
+      style={{ 
+        imageRendering: 'pixelated',
+        transform: isAttacking ? 'scale(1.1)' : 'scale(1)',
+        transition: 'transform 0.2s ease',
+        maxWidth: '100%',
+        height: 'auto'
+      }}
+      onError={(e) => {
+        console.error('Failed to load Creeper image, trying alternative path');
+        // Try alternative paths if first one fails
+        const alternatives = [
+          './creeper-minecraft.png',
+          'creeper-minecraft.png',
+          '/public/creeper-minecraft.png'
+        ];
+        const current = e.currentTarget as HTMLImageElement;
+        const currentSrc = current.src;
+        
+        for (const alt of alternatives) {
+          if (!currentSrc.includes(alt.replace('./', ''))) {
+            current.src = alt;
+            return;
+          }
+        }
+        
+        // If all paths fail, hide the image and show fallback
+        current.style.display = 'none';
+        const fallback = document.createElement('div');
+        fallback.className = 'w-16 h-16 bg-green-500 flex items-center justify-center text-white font-bold text-xs';
+        fallback.textContent = 'CREEPER';
+        current.parentNode?.appendChild(fallback);
+      }}
+      onLoad={(e) => {
+        console.log('Creeper image loaded successfully');
+      }}
+    />
     
     {/* Explosion effect when attacking */}
     {isAttacking && (
-      <div className="absolute -top-8 -left-8 -right-8 -bottom-8 animate-ping">
-        <div className="w-full h-full bg-orange-400 opacity-75"></div>
-        <div className="absolute inset-4 bg-red-500 opacity-50"></div>
-      </div>
+      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-red-500 font-pixel text-xs animate-bounce">💥</div>
     )}
   </div>
 );
