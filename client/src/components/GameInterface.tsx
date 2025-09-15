@@ -460,8 +460,8 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
           <MinecraftBlock type="dirt" size={8} />
         </div>
 
-        <div className="relative z-10 flex justify-between items-end h-full">
-          {/* Player */}
+        <div className="relative z-10 flex justify-end items-end h-full">
+          {/* Player - positioned on the right */}
           <div className="flex flex-col items-center relative">
             <MinecraftSteve isDefending={playerDefending} />
             <span className="font-pixel text-xs text-green-400 mt-2 bg-black bg-opacity-50 px-2 py-1 rounded">
