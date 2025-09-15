@@ -526,10 +526,23 @@ export class DatabaseStorage implements IStorage {
     return reward;
   }
 
-  async getUserInventory(userId: string): Promise<UserInventory[]> {
+  async getUserInventory(userId: string): Promise<any[]> {
     return await db
-      .select()
+      .select({
+        id: userInventory.id,
+        userId: userInventory.userId,
+        rewardId: userInventory.rewardId,
+        selectedAt: userInventory.selectedAt,
+        pointsWhenSelected: userInventory.pointsWhenSelected,
+        // Include reward details
+        name: availableRewards.name,
+        description: availableRewards.description,
+        iconName: availableRewards.iconName,
+        itemType: availableRewards.itemType,
+        rarity: availableRewards.rarity,
+      })
       .from(userInventory)
+      .innerJoin(availableRewards, eq(userInventory.rewardId, availableRewards.id))
       .where(eq(userInventory.userId, userId))
       .orderBy(desc(userInventory.selectedAt));
   }
