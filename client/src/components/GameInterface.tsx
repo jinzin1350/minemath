@@ -79,11 +79,11 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
     const num2 = Math.floor(Math.random() * maxNum) + 1;
     setCurrentQuestion({ num1, num2 });
     
-    if (gameStats.level <= enemies.length) {
-      setCurrentEnemy(enemies[gameStats.level - 1]);
-      setEnemyPosition(100);
-      setEnemyMoving(true);
-    }
+    // Show different enemies on each question for variety!
+    const randomEnemyIndex = Math.floor(Math.random() * enemies.length);
+    setCurrentEnemy(enemies[randomEnemyIndex]);
+    setEnemyPosition(100);
+    setEnemyMoving(true);
   };
 
   const handleSubmit = () => {
