@@ -4,18 +4,78 @@ import { Dashboard } from '@/components/Dashboard';
 import { GameInterface } from '@/components/GameInterface';
 import { Button } from '@/components/ui/button';
 import { LogOut, BarChart3, Gamepad2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { queryClient } from '@/lib/queryClient';
 
 export default function Home() {
   const { user } = useAuth();
   const [currentView, setCurrentView] = useState<'dashboard' | 'game'>('dashboard');
+  const { toast } = useToast();
 
   const handleLogout = () => {
     window.location.href = '/api/logout';
   };
 
-  const handleGameComplete = (stats: any) => {
+  const handleGameComplete = async (stats: any) => {
     console.log('Game completed with stats:', stats);
-    // TODO: Save game session to backend
+    
+    try {
+      // Calculate points and game data from stats
+      const pointsEarned = stats.score || 0;
+      const level = stats.level || 1;
+      
+      // For now, we'll calculate rough estimates
+      // In a real implementation, you'd track these during the game
+      const questionsAnswered = Math.max(1, Math.floor(pointsEarned / 10)); // Assume ~10 points per question
+      const correctAnswers = Math.max(1, Math.floor(questionsAnswered * 0.8)); // Assume 80% accuracy
+      
+      console.log('Saving progress:', {
+        pointsEarned,
+        questionsAnswered,
+        correctAnswers,
+        level
+      });
+
+      // Save game session to backend
+      const response = await fetch('/api/progress/daily', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pointsEarned,
+          questionsAnswered,
+          correctAnswers,
+          level
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save progress');
+      }
+
+      const progressData = await response.json();
+      console.log('Progress saved successfully:', progressData);
+
+      // Invalidate queries to refresh dashboard data
+      queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+
+      toast({
+        title: "Game Complete! 🎉",
+        description: `You earned ${pointsEarned} points! Progress saved.`,
+      });
+
+    } catch (error) {
+      console.error('Failed to save game progress:', error);
+      
+      toast({
+        title: "Game Complete! 🎉",
+        description: `You earned ${stats.score || 0} points! (Progress not saved - please try again)`,
+        variant: "destructive",
+      });
+    }
+    
     setCurrentView('dashboard');
   };
 
