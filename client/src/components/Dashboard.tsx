@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useQuery } from '@tanstack/react-query';
 import { MinecraftSteve, MinecraftBlock } from './MinecraftCharacters';
 import { AchievementBadge } from './AchievementBadge';
 import { RewardSelector } from './RewardSelector';
@@ -74,8 +75,66 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d'>('7d');
   const [achievements, setAchievements] = useState<DashboardData['achievements']>([]);
 
-  const displayName = data.user.firstName || 'Player';
-  const accuracy = Math.round((data.totalStats.correctAnswers / data.totalStats.totalQuestions) * 100);
+  // Fetch real data when not in mock mode
+  const { data: userInfo } = useQuery<{
+    firstName?: string;
+    lastName?: string;
+    profileImageUrl?: string;
+  }>({
+    queryKey: ['/api/auth/user'],
+    enabled: !mockMode
+  });
+
+  const { data: recentProgress } = useQuery<Array<{
+    date: string;
+    pointsEarned: number;
+    questionsAnswered: number;
+    correctAnswers: number;
+  }>>({
+    queryKey: [`/api/progress/recent?days=${selectedTimeframe === '7d' ? 7 : 30}`],
+    enabled: !mockMode
+  });
+
+  // Calculate total stats from recent progress
+  const calculateTotalStats = (progressData: any[]) => {
+    if (!progressData || progressData.length === 0) {
+      return {
+        totalPoints: 0,
+        totalQuestions: 0,
+        correctAnswers: 0,
+        currentStreak: 0,
+        bestLevel: 1
+      };
+    }
+
+    const totals = progressData.reduce((acc, day) => ({
+      totalPoints: acc.totalPoints + day.pointsEarned,
+      totalQuestions: acc.totalQuestions + day.questionsAnswered,
+      correctAnswers: acc.correctAnswers + day.correctAnswers
+    }), { totalPoints: 0, totalQuestions: 0, correctAnswers: 0 });
+
+    return {
+      ...totals,
+      currentStreak: progressData.length, // Simple approximation
+      bestLevel: Math.max(1, Math.floor(totals.totalPoints / 200))
+    };
+  };
+
+  // Use real data if available, otherwise fall back to mock data
+  const dashboardData = mockMode || !userInfo || !recentProgress ? data : {
+    user: {
+      firstName: userInfo.firstName || 'Player',
+      lastName: userInfo.lastName || '',
+      profileImageUrl: userInfo.profileImageUrl
+    },
+    recentProgress: recentProgress || [],
+    totalStats: calculateTotalStats(recentProgress || [])
+  };
+
+  const displayName = dashboardData.user.firstName || 'Player';
+  const accuracy = dashboardData.totalStats.totalQuestions > 0 
+    ? Math.round((dashboardData.totalStats.correctAnswers / dashboardData.totalStats.totalQuestions) * 100)
+    : 0;
 
   // Fetch achievements if not in mock mode
   useEffect(() => {
@@ -118,13 +177,20 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     }
   };
 
-  // Format data for the chart with English date
-  const chartData = data.recentProgress.map(day => {
-    const date = new Date(day.date);
+  // Format data for the chart with timezone-safe English date
+  const chartData = (dashboardData.recentProgress || []).map(day => {
+    // Parse date string as UTC to avoid timezone shifts
+    const date = new Date(`${day.date}T00:00:00Z`);
     return {
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date: date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        timeZone: 'UTC'
+      }),
       points: day.pointsEarned,
-      accuracy: Math.round((day.correctAnswers / day.questionsAnswered) * 100)
+      accuracy: day.questionsAnswered > 0 
+        ? Math.round((day.correctAnswers / day.questionsAnswered) * 100)
+        : 0
     };
   }).reverse();
 
@@ -167,11 +233,11 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
               </div>
               <div className="flex gap-3">
                 <div className="animate-bounce-slow">
-                  <InventoryDisplay userPoints={data.totalStats.totalPoints} />
+                  <InventoryDisplay userPoints={dashboardData.totalStats.totalPoints} />
                 </div>
                 <div className="animate-pulse">
                   <RewardSelector 
-                    userPoints={data.totalStats.totalPoints}
+                    userPoints={dashboardData.totalStats.totalPoints}
                     onRewardSelected={() => {
                       // Optionally refresh achievements or other data
                     }}
@@ -201,7 +267,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
                   <Trophy className="h-7 w-7 text-yellow-400 animate-bounce" />
                 </div>
                 <div>
-                  <p className="text-3xl font-pixel text-yellow-200 drop-shadow-lg animate-pulse">{data.totalStats.totalPoints}</p>
+                  <p className="text-3xl font-pixel text-yellow-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.totalPoints}</p>
                   <p className="text-sm text-yellow-300 font-pixel">🏆 Total Points</p>
                 </div>
               </div>
@@ -235,7 +301,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
                   <TrendingUp className="h-7 w-7 text-orange-400 animate-bounce" />
                 </div>
                 <div>
-                  <p className="text-3xl font-pixel text-orange-200 drop-shadow-lg animate-pulse">{data.totalStats.currentStreak}</p>
+                  <p className="text-3xl font-pixel text-orange-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.currentStreak}</p>
                   <p className="text-sm text-orange-300 font-pixel">🔥 Day Streak</p>
                 </div>
               </div>
@@ -252,7 +318,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
                   <Diamond className="h-7 w-7 text-purple-400 animate-bounce" />
                 </div>
                 <div>
-                  <p className="text-3xl font-pixel text-purple-200 drop-shadow-lg animate-pulse">{data.totalStats.bestLevel}</p>
+                  <p className="text-3xl font-pixel text-purple-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.bestLevel}</p>
                   <p className="text-sm text-purple-300 font-pixel">💎 Best Level</p>
                 </div>
               </div>
@@ -339,7 +405,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Dashboard Inventory Board */}
           <div className="lg:col-span-1">
-            <DashboardInventoryBoard userPoints={data.totalStats.totalPoints} />
+            <DashboardInventoryBoard userPoints={dashboardData.totalStats.totalPoints} />
           </div>
           
           <Card className="border-2 border-card-border lg:col-span-1">
@@ -389,7 +455,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {data.recentProgress.slice(0, 5).map((day, index) => (
+                {(dashboardData.recentProgress || []).slice(0, 5).map((day, index) => (
                   <div key={day.date} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div>
                       <p className="font-pixel text-sm text-foreground">
