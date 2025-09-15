@@ -134,6 +134,9 @@ export const insertTemporaryProgressSchema = createInsertSchema(dailyProgress).o
   isFinal: true, // Server controls this
   finalizeAt: true, // Server computes this
   finalizedAt: true, // Server sets this
+  userTimeZone: true, // Server calculates this from optional timeZone
+  userId: true, // Server gets this from authentication
+  date: true, // Server calculates this
 }).extend({
   timeZone: z.string().optional(), // Client can send timezone, server uses for finalizeAt calculation
 });

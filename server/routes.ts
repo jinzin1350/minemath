@@ -7,7 +7,7 @@ import { z } from "zod";
 
 // Validation schemas for API endpoints
 const updateDailyProgressSchema = insertDailyProgressSchema.omit({ userId: true, date: true });
-const updateTemporaryProgressSchema = insertTemporaryProgressSchema.omit({ userId: true, date: true });
+const updateTemporaryProgressSchema = insertTemporaryProgressSchema;
 const createGameSessionSchema = insertGameSessionSchema.omit({ userId: true });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -111,11 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body with Zod schema (includes optional timezone)
       const validatedData = updateTemporaryProgressSchema.parse(req.body);
       
-      const progress = await storage.upsertTemporaryProgress(userId, {
-        ...validatedData,
-        // Pass timezone from client if provided, otherwise null
-        timeZone: validatedData.timeZone || undefined
-      });
+      const progress = await storage.upsertTemporaryProgress(userId, validatedData);
       
       res.json({
         ...progress,
