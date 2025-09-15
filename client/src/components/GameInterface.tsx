@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { MinecraftSteve, MinecraftZombie, MinecraftBlock } from './MinecraftCharacters';
+import { MinecraftSteve, MinecraftZombie, MinecraftSkeleton, MinecraftCreeper, MinecraftWitch, MinecraftDragon, MinecraftBlock } from './MinecraftCharacters';
 import { AchievementNotification } from './AchievementBadge';
 import { Heart, Diamond, Zap } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
@@ -66,11 +66,11 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
   const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
 
   const enemies: Enemy[] = [
-    { name: 'Zombie', speed: 8, sound: 'GRRRR!', defeatSound: 'ARGHHHH!' },
-    { name: 'Skeleton', speed: 6, sound: 'CLACK!', defeatSound: 'CRACK!' },
-    { name: 'Creeper', speed: 10, sound: 'SSSSSS!', defeatSound: 'BOOM!' },
-    { name: 'Witch', speed: 5, sound: 'CACKLE!', defeatSound: 'NOOO!' },
-    { name: 'Dragon', speed: 12, sound: 'ROAR!', defeatSound: 'DEFEATED!' }
+    { name: 'Zombie', speed: 8, sound: '💀 GRRRR!', defeatSound: '💥 ARGHHHH!' },
+    { name: 'Skeleton', speed: 6, sound: '🏹 CLACK CLACK!', defeatSound: '💀 CRACK!' },
+    { name: 'Creeper', speed: 10, sound: '💣 SSSSSS!', defeatSound: '💥 BOOM!' },
+    { name: 'Witch', speed: 5, sound: '🧙‍♀️ CACKLE!', defeatSound: '⚡ NOOO!' },
+    { name: 'Dragon', speed: 12, sound: '🐲 ROAAAAR!', defeatSound: '🔥 DEFEATED!' }
   ];
 
   const generateQuestion = () => {
@@ -112,7 +112,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
       }
       
       if (currentEnemy) {
-        setFeedback(`💥 ${currentEnemy.name} DEFEATED! +${earnedPoints} POINTS! 🌟`);
+        setFeedback(`${currentEnemy.defeatSound} +${earnedPoints} POINTS! 🌟`);
       } else {
         setFeedback(`✨ Perfect! +${earnedPoints} POINTS! 🌟`);
       }
@@ -315,24 +315,56 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
       </Card>
 
       {/* Game Arena */}
-      <Card className="p-4 mb-4 border-2 border-card-border relative min-h-[300px]">
-        <div className="flex justify-between items-end h-full">
+      <Card className="p-4 mb-4 border-2 border-card-border relative min-h-[300px] bg-gradient-to-b from-sky-300 to-green-400 overflow-hidden">
+        {/* Minecraft-style background blocks */}
+        <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-r from-green-600 via-green-700 to-green-600 opacity-30"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-r from-amber-800 via-amber-900 to-amber-800"></div>
+        
+        {/* Floating blocks decoration */}
+        <div className="absolute top-4 left-4">
+          <MinecraftBlock type="grass" size={12} />
+        </div>
+        <div className="absolute top-4 right-4">
+          <MinecraftBlock type="stone" size={12} />
+        </div>
+        <div className="absolute top-1/2 left-8 transform -translate-y-1/2">
+          <MinecraftBlock type="dirt" size={8} />
+        </div>
+        
+        <div className="relative z-10 flex justify-between items-end h-full">
           {/* Player */}
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center relative">
             <MinecraftSteve isDefending={playerDefending} />
-            <span className="font-pixel text-xs text-green-400 mt-2">YOU</span>
+            <span className="font-pixel text-xs text-green-400 mt-2 bg-black bg-opacity-50 px-2 py-1 rounded">
+              🛡️ STEVE
+            </span>
+            {/* Magic power indicator */}
+            {gameStats.magicPower > 0 && (
+              <div className="absolute -top-4 -right-4 bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-pixel animate-pulse">
+                {gameStats.magicPower}
+              </div>
+            )}
           </div>
 
           {/* Battle Effects */}
           {showMagicBlast && (
-            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl animate-ping">
-              ⚡
+            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl animate-ping z-20">
+              <div className="text-yellow-400 animate-spin">⚡</div>
+              <div className="text-blue-400 animate-pulse">💫</div>
+              <div className="text-purple-400 animate-bounce">✨</div>
             </div>
           )}
 
           {showPointsAnimation && (
-            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 font-pixel text-yellow-400 animate-bounce text-lg">
-              +{pointsEarned}
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 font-pixel text-yellow-400 animate-bounce text-lg z-20 bg-black bg-opacity-50 px-3 py-1 rounded-lg border-2 border-yellow-400">
+              +{pointsEarned} XP
+            </div>
+          )}
+          
+          {/* Enemy approaching warning */}
+          {currentEnemy && enemyPosition <= 30 && !playerDefending && (
+            <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 text-red-500 font-pixel text-sm animate-pulse bg-black bg-opacity-70 px-4 py-2 rounded-lg border-2 border-red-500">
+              ⚠️ {currentEnemy.sound} ⚠️
             </div>
           )}
 
@@ -342,8 +374,17 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
               className="absolute bottom-4 transition-all duration-100"
               style={{ right: `${enemyPosition}%` }}
             >
-              <MinecraftZombie isAttacking={enemyAttacking} scale={0.8} />
+              {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={0.8} />}
+              {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={0.8} />}
+              {currentEnemy.name === 'Creeper' && <MinecraftCreeper isAttacking={enemyAttacking} scale={0.8} />}
+              {currentEnemy.name === 'Witch' && <MinecraftWitch isAttacking={enemyAttacking} scale={0.8} />}
+              {currentEnemy.name === 'Dragon' && <MinecraftDragon isAttacking={enemyAttacking} scale={0.6} />}
               <div className="text-xs text-center font-pixel text-red-400 mt-1">
+                {currentEnemy.name === 'Zombie' && '🧟'} 
+                {currentEnemy.name === 'Skeleton' && '💀'} 
+                {currentEnemy.name === 'Creeper' && '💣'} 
+                {currentEnemy.name === 'Witch' && '🧙‍♀️'} 
+                {currentEnemy.name === 'Dragon' && '🐲'} 
                 {currentEnemy.name}
               </div>
             </div>
@@ -354,8 +395,8 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
       {/* Question and Answer */}
       <Card className="p-4 border-2 border-card-border">
         <div className="text-center space-y-4">
-          <h2 className="text-xl font-pixel text-foreground">
-            {currentQuestion.num1} + {currentQuestion.num2} = ?
+          <h2 className="text-xl font-pixel text-foreground bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent border-2 border-blue-400 bg-black bg-opacity-30 px-4 py-2 rounded-lg">
+            ⚡ {currentQuestion.num1} + {currentQuestion.num2} = ? ⚡
           </h2>
           
           <div className="flex gap-2 max-w-xs mx-auto">
@@ -371,21 +412,23 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
             <Button 
               onClick={handleSubmit}
               disabled={!userAnswer}
-              className="font-pixel px-6"
+              className="font-pixel px-6 bg-red-600 hover:bg-red-700 border-2 border-red-800 text-white shadow-lg hover:scale-105 transition-all duration-200"
               data-testid="button-submit"
             >
-              ATTACK!
+              ⚔️ ATTACK!
             </Button>
           </div>
 
           {feedback && (
-            <div className="font-pixel text-sm text-yellow-400 animate-pulse">
+            <div className="font-pixel text-sm text-yellow-400 animate-pulse bg-black bg-opacity-50 px-4 py-2 rounded-lg border border-yellow-400">
               {feedback}
             </div>
           )}
 
           {showCelebration && (
-            <div className="text-2xl animate-bounce">🎉</div>
+            <div className="text-2xl animate-bounce flex gap-2">
+              🎉 🏆 🎉
+            </div>
           )}
         </div>
       </Card>
