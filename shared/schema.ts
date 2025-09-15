@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, date, index, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, date, index, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -51,6 +51,19 @@ export const gameSessions = pgTable("game_sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Achievement badges - Minecraft-style awards every 500 points
+export const achievements = pgTable("achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  type: varchar("type").notNull(), // 'points', 'streak', 'level', 'accuracy'
+  name: varchar("name").notNull(),
+  description: varchar("description").notNull(),
+  iconType: varchar("icon_type").notNull(), // 'diamond', 'emerald', 'gold', 'iron', 'redstone'
+  pointsRequired: integer("points_required").notNull(),
+  unlockedAt: timestamp("unlocked_at").defaultNow(),
+  isNew: boolean("is_new").default(true),
+});
+
 // Schema types
 export const upsertUserSchema = createInsertSchema(users).pick({
   id: true,
@@ -71,9 +84,16 @@ export const insertGameSessionSchema = createInsertSchema(gameSessions).omit({
   createdAt: true,
 });
 
+export const insertAchievementSchema = createInsertSchema(achievements).omit({
+  id: true,
+  unlockedAt: true,
+});
+
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type DailyProgress = typeof dailyProgress.$inferSelect;
 export type InsertDailyProgress = z.infer<typeof insertDailyProgressSchema>;
 export type GameSession = typeof gameSessions.$inferSelect;
 export type InsertGameSession = z.infer<typeof insertGameSessionSchema>;
+export type Achievement = typeof achievements.$inferSelect;
+export type InsertAchievement = z.infer<typeof insertAchievementSchema>;

@@ -32,6 +32,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Achievement routes
+  app.get('/api/achievements', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const achievements = await storage.getUserAchievements(userId);
+      res.json(achievements);
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({ message: "Failed to fetch achievements" });
+    }
+  });
+
+  app.post('/api/achievements/check', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { totalPoints } = req.body;
+      const newAchievements = await storage.checkAndAwardPointAchievements(userId, totalPoints);
+      res.json(newAchievements);
+    } catch (error) {
+      console.error("Error checking achievements:", error);
+      res.status(500).json({ message: "Failed to check achievements" });
+    }
+  });
+
+  app.patch('/api/achievements/:id/mark-seen', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.markAchievementAsSeen(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking achievement as seen:", error);
+      res.status(500).json({ message: "Failed to mark achievement as seen" });
+    }
+  });
+
   app.post('/api/progress/daily', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

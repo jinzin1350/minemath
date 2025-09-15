@@ -2,12 +2,15 @@ import {
   users, 
   dailyProgress, 
   gameSessions,
+  achievements,
   type User, 
   type UpsertUser,
   type DailyProgress,
   type InsertDailyProgress,
   type GameSession,
-  type InsertGameSession
+  type InsertGameSession,
+  type Achievement,
+  type InsertAchievement
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte } from "drizzle-orm";
@@ -28,6 +31,12 @@ export interface IStorage {
   // Game session operations
   createGameSession(session: InsertGameSession): Promise<GameSession>;
   getUserGameSessions(userId: string, limit?: number): Promise<GameSession[]>;
+  
+  // Achievement operations
+  getUserAchievements(userId: string): Promise<Achievement[]>;
+  createAchievement(achievement: InsertAchievement): Promise<Achievement>;
+  markAchievementAsSeen(achievementId: string): Promise<void>;
+  checkAndAwardPointAchievements(userId: string, totalPoints: number): Promise<Achievement[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -111,6 +120,77 @@ export class DatabaseStorage implements IStorage {
       .where(eq(gameSessions.userId, userId))
       .orderBy(desc(gameSessions.createdAt))
       .limit(limit);
+  }
+
+  // Achievement operations
+  async getUserAchievements(userId: string): Promise<Achievement[]> {
+    return await db
+      .select()
+      .from(achievements)
+      .where(eq(achievements.userId, userId))
+      .orderBy(desc(achievements.unlockedAt));
+  }
+
+  async createAchievement(achievementData: InsertAchievement): Promise<Achievement> {
+    const [achievement] = await db
+      .insert(achievements)
+      .values(achievementData)
+      .returning();
+    return achievement;
+  }
+
+  async markAchievementAsSeen(achievementId: string): Promise<void> {
+    await db
+      .update(achievements)
+      .set({ isNew: false })
+      .where(eq(achievements.id, achievementId));
+  }
+
+  async checkAndAwardPointAchievements(userId: string, totalPoints: number): Promise<Achievement[]> {
+    const newAchievements: Achievement[] = [];
+    
+    // Define Minecraft-style achievements every 500 points
+    const pointMilestones = [
+      { points: 500, name: "Novice Miner", icon: "iron", desc: "Earned your first 500 points!" },
+      { points: 1000, name: "Stone Warrior", icon: "gold", desc: "Reached 1,000 points - you're getting strong!" },
+      { points: 1500, name: "Diamond Fighter", icon: "diamond", desc: "Amazing! 1,500 points achieved!" },
+      { points: 2000, name: "Emerald Master", icon: "emerald", desc: "Incredible! 2,000 points unlocked!" },
+      { points: 2500, name: "Redstone Engineer", icon: "redstone", desc: "Legendary! 2,500 points mastered!" },
+      { points: 3000, name: "Math Legend", icon: "diamond", desc: "Ultimate achievement! 3,000 points!" },
+    ];
+
+    // Check which milestones user has achieved
+    for (const milestone of pointMilestones) {
+      if (totalPoints >= milestone.points) {
+        // Check if user already has this achievement
+        const [existing] = await db
+          .select()
+          .from(achievements)
+          .where(
+            and(
+              eq(achievements.userId, userId),
+              eq(achievements.pointsRequired, milestone.points),
+              eq(achievements.type, "points")
+            )
+          );
+
+        if (!existing) {
+          // Award new achievement
+          const achievement = await this.createAchievement({
+            userId,
+            type: "points",
+            name: milestone.name,
+            description: milestone.desc,
+            iconType: milestone.icon,
+            pointsRequired: milestone.points,
+            isNew: true,
+          });
+          newAchievements.push(achievement);
+        }
+      }
+    }
+
+    return newAchievements;
   }
 }
 

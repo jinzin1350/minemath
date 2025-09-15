@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { MinecraftSteve, MinecraftZombie, MinecraftBlock } from './MinecraftCharacters';
+import { AchievementNotification } from './AchievementBadge';
 import { Heart, Diamond, Zap } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 
 interface GameStats {
   level: number;
@@ -30,6 +32,14 @@ interface GameInterfaceProps {
   mockMode?: boolean;
 }
 
+interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  iconType: string;
+  pointsRequired: number;
+}
+
 export function GameInterface({ onGameComplete, mockMode = false }: GameInterfaceProps) {
   const [gameStats, setGameStats] = useState<GameStats>({
     level: 1,
@@ -52,6 +62,8 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
   const [showMagicBlast, setShowMagicBlast] = useState(false);
   const [showPointsAnimation, setShowPointsAnimation] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
+  const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
+  const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
 
   const enemies: Enemy[] = [
     { name: 'Zombie', speed: 8, sound: 'GRRRR!', defeatSound: 'ARGHHHH!' },
@@ -93,6 +105,11 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
         magicPower: gameStats.magicPower + gameStats.level
       };
       setGameStats(newStats);
+
+      // Check for new achievements every 500 points
+      if (!mockMode) {
+        checkForAchievements(newStats.score);
+      }
       
       if (currentEnemy) {
         setFeedback(`💥 ${currentEnemy.name} DEFEATED! +${earnedPoints} POINTS! 🌟`);
@@ -150,6 +167,38 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
   useEffect(() => {
     generateQuestion();
   }, [gameStats.level]);
+
+  // Check for achievements
+  const checkForAchievements = async (totalPoints: number) => {
+    try {
+      const response = await fetch('/api/achievements/check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ totalPoints }),
+      });
+      
+      if (response.ok) {
+        const achievements = await response.json();
+        if (achievements.length > 0) {
+          setNewAchievements(achievements);
+          setCurrentAchievementIndex(0);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check achievements:', error);
+    }
+  };
+
+  const handleAchievementClose = () => {
+    if (currentAchievementIndex < newAchievements.length - 1) {
+      setCurrentAchievementIndex(prev => prev + 1);
+    } else {
+      setNewAchievements([]);
+      setCurrentAchievementIndex(0);
+    }
+  };
 
   // Enemy movement effect
   useEffect(() => {
@@ -340,6 +389,14 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
           )}
         </div>
       </Card>
+
+      {/* Achievement Notifications */}
+      {newAchievements.length > 0 && currentAchievementIndex < newAchievements.length && (
+        <AchievementNotification
+          achievement={newAchievements[currentAchievementIndex]}
+          onClose={handleAchievementClose}
+        />
+      )}
     </div>
   );
 }
