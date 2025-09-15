@@ -171,10 +171,10 @@ export class DatabaseStorage implements IStorage {
       .onConflictDoUpdate({
         target: [dailyProgress.userId, dailyProgress.date],
         set: {
-          // Enforce monotonic increase: only update if new score is higher
-          pointsEarned: sql`GREATEST(${dailyProgress.pointsEarned}, ${dataToInsert.pointsEarned})`,
-          questionsAnswered: sql`GREATEST(${dailyProgress.questionsAnswered}, ${dataToInsert.questionsAnswered})`,
-          correctAnswers: sql`GREATEST(${dailyProgress.correctAnswers}, ${dataToInsert.correctAnswers})`,
+          // Add new points and stats to existing values
+          pointsEarned: sql`${dailyProgress.pointsEarned} + ${dataToInsert.pointsEarned}`,
+          questionsAnswered: sql`${dailyProgress.questionsAnswered} + ${dataToInsert.questionsAnswered}`,
+          correctAnswers: sql`${dailyProgress.correctAnswers} + ${dataToInsert.correctAnswers}`,
           level: sql`GREATEST(${dailyProgress.level}, ${dataToInsert.level})`,
           lastUpdateAt: new Date(),
           // Don't update if already final - use new Date() instead of NOW()
