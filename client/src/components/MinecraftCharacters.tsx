@@ -11,7 +11,7 @@ export const MinecraftSteve = ({ isDefending = false, scale = 1 }: MinecraftChar
     data-testid="character-steve"
   >
     <img 
-      src="./steve-minecraft.png" 
+      src="/steve-minecraft.png" 
       alt="Minecraft Steve" 
       className="w-16 h-16 pixelated"
       style={{ 
@@ -22,8 +22,29 @@ export const MinecraftSteve = ({ isDefending = false, scale = 1 }: MinecraftChar
         height: 'auto'
       }}
       onError={(e) => {
-        console.error('Failed to load Steve image:', e);
-        e.currentTarget.style.display = 'none';
+        console.error('Failed to load Steve image, trying alternative path');
+        // Try alternative paths if first one fails
+        const alternatives = [
+          './steve-minecraft.png',
+          'steve-minecraft.png',
+          '/public/steve-minecraft.png'
+        ];
+        const current = e.currentTarget as HTMLImageElement;
+        const currentSrc = current.src;
+        
+        for (const alt of alternatives) {
+          if (!currentSrc.includes(alt.replace('./', ''))) {
+            current.src = alt;
+            return;
+          }
+        }
+        
+        // If all paths fail, hide the image and show fallback
+        current.style.display = 'none';
+        const fallback = document.createElement('div');
+        fallback.className = 'w-16 h-16 bg-blue-500 flex items-center justify-center text-white font-bold text-xs';
+        fallback.textContent = 'STEVE';
+        current.parentNode?.appendChild(fallback);
       }}
       onLoad={(e) => {
         console.log('Steve image loaded successfully');
