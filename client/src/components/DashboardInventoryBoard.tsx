@@ -136,7 +136,7 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
                 <>
                   {/* Item icon */}
                   <div className="flex items-center justify-center h-full text-lg">
-                    {getItemIcon(slot.item.reward.iconName)}
+                    {getItemIcon(slot.item.reward.iconName || 'chest')}
                   </div>
 
                   {/* Rarity indicator - small colored dot */}
@@ -163,7 +163,7 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
         {selectedItem && (
           <div className="bg-black/90 border-2 border-amber-600 p-2 text-xs rounded-lg">
             <div className="font-pixel text-amber-300 flex items-center gap-1">
-              <span>{getItemIcon(selectedItem.reward.iconName)}</span>
+              <span>{getItemIcon(selectedItem.reward.iconName || 'chest')}</span>
               {selectedItem.reward.name}
               <Badge 
                 variant="outline" 
