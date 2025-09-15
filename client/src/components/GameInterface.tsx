@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -49,6 +49,12 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
     diamonds: 0,
     magicPower: 0
   });
+
+  // Keep latest gameStats in ref for cleanup
+  const gameStatsRef = useRef(gameStats);
+  useEffect(() => {
+    gameStatsRef.current = gameStats;
+  }, [gameStats]);
 
   const [currentQuestion, setCurrentQuestion] = useState<Question>({ num1: 0, num2: 0 });
   const [userAnswer, setUserAnswer] = useState('');
@@ -180,6 +186,18 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
   useEffect(() => {
     generateQuestion();
   }, [gameStats.level]);
+
+  // Auto-save progress when component unmounts (user leaves game)
+  useEffect(() => {
+    return () => {
+      // Save progress when component unmounts only if there's meaningful progress
+      const currentStats = gameStatsRef.current;
+      if (currentStats.score > 0) {
+        console.log('Auto-saving progress on component unmount:', currentStats);
+        onGameComplete?.(currentStats);
+      }
+    };
+  }, [onGameComplete]); // Only depend on onGameComplete, use ref for latest gameStats
 
   // Check for achievements
   const checkForAchievements = async (totalPoints: number) => {
