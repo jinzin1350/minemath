@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MinecraftSteve, MinecraftBlock } from './MinecraftCharacters';
+import { AchievementBadge } from './AchievementBadge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Calendar, Trophy, Target, TrendingUp, Diamond, Zap, Heart } from 'lucide-react';
 
@@ -25,6 +26,15 @@ interface DashboardData {
     currentStreak: number;
     bestLevel: number;
   };
+  achievements?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    iconType: string;
+    pointsRequired: number;
+    unlockedAt: string;
+    isNew: boolean;
+  }>;
 }
 
 interface DashboardProps {
@@ -59,9 +69,51 @@ const mockData: DashboardData = {
 
 export function Dashboard({ data = mockData, onStartGame, mockMode = false }: DashboardProps) {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d'>('7d');
+  const [achievements, setAchievements] = useState<DashboardData['achievements']>([]);
 
   const displayName = data.user.firstName || 'Player';
   const accuracy = Math.round((data.totalStats.correctAnswers / data.totalStats.totalQuestions) * 100);
+
+  // Fetch achievements if not in mock mode
+  useEffect(() => {
+    if (!mockMode) {
+      fetchAchievements();
+    } else {
+      // Mock achievements for demo
+      setAchievements([
+        {
+          id: '1',
+          name: 'Novice Miner',
+          description: 'Earned your first 500 points!',
+          iconType: 'iron',
+          pointsRequired: 500,
+          unlockedAt: '2024-01-15T10:00:00Z',
+          isNew: false
+        },
+        {
+          id: '2',
+          name: 'Stone Warrior',
+          description: 'Reached 1,000 points - you\'re getting strong!',
+          iconType: 'gold',
+          pointsRequired: 1000,
+          unlockedAt: '2024-01-14T15:30:00Z',
+          isNew: true
+        }
+      ]);
+    }
+  }, [mockMode]);
+
+  const fetchAchievements = async () => {
+    try {
+      const response = await fetch('/api/achievements');
+      if (response.ok) {
+        const userAchievements = await response.json();
+        setAchievements(userAchievements);
+      }
+    } catch (error) {
+      console.error('Failed to fetch achievements:', error);
+    }
+  };
 
   // Format data for the chart
   const chartData = data.recentProgress.map(day => ({
@@ -210,34 +262,37 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
             <CardHeader>
               <CardTitle className="font-pixel text-foreground flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-yellow-500" />
-                Recent Achievements
+                Achievement Badges ({achievements?.length || 0})
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <MinecraftBlock type="diamond" size={24} />
-                <div>
-                  <p className="font-pixel text-sm text-foreground">Math Warrior</p>
-                  <p className="text-xs text-muted-foreground">Answered 100 questions correctly</p>
+              {achievements && achievements.length > 0 ? (
+                achievements.slice(0, 3).map((achievement) => (
+                  <AchievementBadge
+                    key={achievement.id}
+                    achievement={achievement}
+                    size="sm"
+                    showPoints={false}
+                  />
+                ))
+              ) : (
+                <div className="text-center py-4">
+                  <Trophy className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Play games to earn achievement badges!
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    First badge unlocks at 500 points
+                  </p>
                 </div>
-                <Badge variant="secondary" className="ml-auto font-pixel">NEW</Badge>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <div className="flex">
-                  <Heart className="h-6 w-6 text-red-500 fill-current" />
+              )}
+              {achievements && achievements.length > 3 && (
+                <div className="text-center pt-2">
+                  <Badge variant="outline" className="font-pixel text-xs">
+                    +{achievements.length - 3} more badges
+                  </Badge>
                 </div>
-                <div>
-                  <p className="font-pixel text-sm text-foreground">Streak Master</p>
-                  <p className="text-xs text-muted-foreground">5 days in a row</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <Zap className="h-6 w-6 text-yellow-500" />
-                <div>
-                  <p className="font-pixel text-sm text-foreground">Speed Demon</p>
-                  <p className="text-xs text-muted-foreground">Beat level 3 in record time</p>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
