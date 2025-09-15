@@ -115,7 +115,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
     // Show different enemies on each question for variety!
     const randomEnemyIndex = Math.floor(Math.random() * enemies.length);
     setCurrentEnemy(enemies[randomEnemyIndex]);
-    setEnemyPosition(100);
+    setEnemyPosition(0);
     setEnemyMoving(true);
   };
 
@@ -185,7 +185,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
 
   const restartGame = () => {
     setGameStats({ level: 1, score: 0, hearts: 3, diamonds: 0, magicPower: 0 });
-    setEnemyPosition(100);
+    setEnemyPosition(0);
     setEnemyAttacking(false);
     setPlayerDefending(false);
     setEnemyMoving(false);
@@ -254,11 +254,11 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
 
   // Enemy movement effect
   useEffect(() => {
-    if (enemyMoving && currentEnemy && enemyPosition > 0) {
+    if (enemyMoving && currentEnemy && enemyPosition < 100) {
       const interval = setInterval(() => {
         setEnemyPosition(prev => {
-          const newPos = prev - (currentEnemy.speed / 10);
-          if (newPos <= 0) {
+          const newPos = prev + (currentEnemy.speed / 10);
+          if (newPos >= 100) {
             setEnemyAttacking(true);
             setEnemyMoving(false);
             setTimeout(() => {
@@ -268,12 +268,12 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
                 setGameState('gameOver');
                 onGameComplete?.(gameStats);
               } else {
-                setEnemyPosition(100);
+                setEnemyPosition(0);
                 setEnemyAttacking(false);
                 setEnemyMoving(true);
               }
             }, 1000);
-            return 0;
+            return 100;
           }
           return newPos;
         });
@@ -491,7 +491,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
           )}
 
           {/* Enemy approaching warning */}
-          {currentEnemy && enemyPosition <= 30 && !playerDefending && (
+          {currentEnemy && enemyPosition >= 70 && !playerDefending && (
             <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 text-red-500 font-pixel text-sm animate-pulse bg-black bg-opacity-70 px-4 py-2 rounded-lg border-2 border-red-500">
               ⚠️ {currentEnemy.sound} ⚠️
             </div>
@@ -501,7 +501,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
           {currentEnemy && (
             <div
               className="absolute bottom-4 transition-all duration-100"
-              style={{ right: `${enemyPosition}%` }}
+              style={{ left: `${enemyPosition}%` }}
             >
               {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={0.8} />}
               {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={0.8} />}
