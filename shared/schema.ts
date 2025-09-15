@@ -25,7 +25,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Daily progress tracking
+// Daily progress tracking with temporary/final scoring system
 export const dailyProgress = pgTable("daily_progress", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
@@ -34,6 +34,12 @@ export const dailyProgress = pgTable("daily_progress", {
   questionsAnswered: integer("questions_answered").default(0),
   correctAnswers: integer("correct_answers").default(0),
   level: integer("level").default(1),
+  // New fields for temporary/final scoring system
+  isFinal: boolean("is_final").default(false).notNull(), // false = temporary, true = locked forever
+  finalizeAt: timestamp("finalize_at").notNull(), // UTC timestamp when score should be finalized (local midnight)
+  finalizedAt: timestamp("finalized_at"), // When it was actually finalized (nullable)
+  userTimeZone: varchar("user_time_zone").notNull(), // IANA timezone (e.g., "Asia/Tehran", "America/New_York")
+  lastUpdateAt: timestamp("last_update_at").defaultNow(), // For audit and UI display
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -111,10 +117,29 @@ export const upsertUserSchema = createInsertSchema(users).pick({
   profileImageUrl: true,
 });
 
+// Insert schemas for daily progress
 export const insertDailyProgressSchema = createInsertSchema(dailyProgress).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  lastUpdateAt: true,
+});
+
+// Schema for temporary progress updates (until midnight)
+export const insertTemporaryProgressSchema = createInsertSchema(dailyProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastUpdateAt: true,
+  isFinal: true, // Server controls this
+  finalizeAt: true, // Server computes this
+  finalizedAt: true, // Server sets this
+}).extend({
+  timeZone: z.string().optional(), // Client can send timezone, server uses for finalizeAt calculation
+});
+
+export const updateDailyProgressSchema = insertDailyProgressSchema.partial().extend({
+  pointsEarned: z.number().min(0),
 });
 
 export const insertGameSessionSchema = createInsertSchema(gameSessions).omit({
@@ -147,6 +172,7 @@ export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type DailyProgress = typeof dailyProgress.$inferSelect;
 export type InsertDailyProgress = z.infer<typeof insertDailyProgressSchema>;
+export type InsertTemporaryProgress = z.infer<typeof insertTemporaryProgressSchema>;
 export type GameSession = typeof gameSessions.$inferSelect;
 export type InsertGameSession = z.infer<typeof insertGameSessionSchema>;
 export type Achievement = typeof achievements.$inferSelect;
