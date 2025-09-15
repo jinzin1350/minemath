@@ -59,60 +59,54 @@ export const MinecraftSteve = ({ isDefending = false, scale = 1 }: MinecraftChar
 
 export const MinecraftZombie = ({ isAttacking = false, scale = 1 }: MinecraftCharacterProps) => (
   <div 
-    className={`relative inline-block`} 
+    className={`relative inline-block ${isAttacking ? 'animate-bounce' : ''}`} 
     style={{ transform: `scale(${scale})`, imageRendering: 'pixelated' }}
     data-testid="character-zombie"
   >
-    {/* Head - zombie green skin */}
-    <div className="relative w-16 h-16 mb-1 mx-auto">
-      {/* Zombie skin - muted green */}
-      <div className="absolute inset-0 bg-green-600"></div>
-      {/* Hair like Steve but darker */}
-      <div className="absolute top-0 left-1 right-1 h-3 bg-green-800"></div>
-      <div className="absolute top-1 left-0 right-0 h-2 bg-green-700"></div>
-      {/* Dark zombie eyes */}
-      <div className="absolute top-5 left-4 w-2 h-2 bg-black"></div>
-      <div className="absolute top-5 right-4 w-2 h-2 bg-black"></div>
-      {/* Nose shadow */}
-      <div className="absolute top-7 left-1/2 transform -translate-x-1/2 w-1 h-2 bg-green-700"></div>
-      {/* Mouth */}
-      <div className="absolute top-9 left-6 w-4 h-1 bg-green-700"></div>
-    </div>
-    
-    {/* Body - same shirt as Steve but tattered */}
-    <div className="relative w-16 h-24 mx-auto mb-1">
-      <div className="absolute inset-0 bg-teal-600"></div>
-      {/* Torn/tattered effects */}
-      <div className="absolute top-0 left-0 right-0 h-2 bg-teal-700"></div>
-      <div className="absolute top-8 left-2 w-3 h-3 bg-green-600"></div>
-      <div className="absolute top-15 right-2 w-2 h-2 bg-green-600"></div>
-    </div>
-    
-    {/* Arms - outstretched when attacking */}
-    <div 
-      className="absolute top-16 -left-4 w-4 h-12 bg-green-600"
+    <img 
+      src="/zombie-minecraft.png" 
+      alt="Minecraft Zombie" 
+      className="w-16 h-16 pixelated"
       style={{ 
-        transform: isAttacking ? 'rotate(0deg)' : 'rotate(-15deg)', 
-        transformOrigin: 'top center',
-        transition: 'transform 0.3s ease'
+        imageRendering: 'pixelated',
+        transform: isAttacking ? 'rotate(-10deg)' : 'rotate(0deg)',
+        transition: 'transform 0.3s ease',
+        maxWidth: '100%',
+        height: 'auto'
       }}
-    >
-      <div className="absolute top-0 left-0 right-0 h-8 bg-teal-600"></div>
-    </div>
-    <div 
-      className="absolute top-16 -right-4 w-4 h-12 bg-green-600"
-      style={{ 
-        transform: isAttacking ? 'rotate(0deg)' : 'rotate(15deg)', 
-        transformOrigin: 'top center',
-        transition: 'transform 0.3s ease'
+      onError={(e) => {
+        console.error('Failed to load Zombie image, trying alternative path');
+        // Try alternative paths if first one fails
+        const alternatives = [
+          './zombie-minecraft.png',
+          'zombie-minecraft.png',
+          '/public/zombie-minecraft.png'
+        ];
+        const current = e.currentTarget as HTMLImageElement;
+        const currentSrc = current.src;
+        
+        for (const alt of alternatives) {
+          if (!currentSrc.includes(alt.replace('./', ''))) {
+            current.src = alt;
+            return;
+          }
+        }
+        
+        // If all paths fail, hide the image and show fallback
+        current.style.display = 'none';
+        const fallback = document.createElement('div');
+        fallback.className = 'w-16 h-16 bg-green-600 flex items-center justify-center text-white font-bold text-xs';
+        fallback.textContent = 'ZOMBIE';
+        current.parentNode?.appendChild(fallback);
       }}
-    >
-      <div className="absolute top-0 left-0 right-0 h-8 bg-teal-600"></div>
-    </div>
+      onLoad={(e) => {
+        console.log('Zombie image loaded successfully');
+      }}
+    />
     
-    {/* Legs - same pants as Steve */}
-    <div className="absolute -bottom-12 left-2 w-4 h-12 bg-blue-900"></div>
-    <div className="absolute -bottom-12 right-2 w-4 h-12 bg-blue-900"></div>
+    {isAttacking && (
+      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-green-400 font-pixel text-xs animate-bounce">🧟</div>
+    )}
   </div>
 );
 
