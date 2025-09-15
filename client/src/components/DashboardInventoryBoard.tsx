@@ -104,7 +104,7 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
       <div className="absolute top-1 right-1 opacity-30 animate-bounce">
         <Package className="w-4 h-4 text-amber-400" />
       </div>
-      
+
       <CardHeader className="pb-3 relative z-10">
         <CardTitle className="font-pixel text-amber-200 flex items-center gap-2 text-lg animate-pulse">
           <Package className="w-5 h-5" />
@@ -112,7 +112,7 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
           <Sparkles className="w-4 h-4 text-yellow-400 animate-spin" />
         </CardTitle>
       </CardHeader>
-      
+
       <CardContent className="space-y-3 relative z-10">
         {/* Inventory Grid - 4 rows x 6 columns = 24 slots */}
         <div 
@@ -125,17 +125,10 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
           {slots.map((slot) => (
             <div
               key={slot.id}
-              className={`
-                relative aspect-square border-2 cursor-pointer transition-all duration-200 rounded-sm
-                ${slot.item 
-                  ? `${getRarityBorderColor(slot.item.reward.rarity)} bg-gray-800 ${getRarityGlow(slot.item.reward.rarity)}` 
-                  : 'border-gray-700 bg-gray-900/50'
-                }
-                ${selectedSlot === slot.id 
-                  ? 'ring-2 ring-amber-400 bg-amber-400/10 scale-105' 
-                  : 'hover:border-gray-500 hover:bg-gray-800/70'
-                }
-              `}
+              className={`relative aspect-square border-2 cursor-pointer transition-all duration-200 rounded-[4px] ${slot.item && slot.item.reward
+              ? `${getRarityBorderColor(slot.item.reward.rarity)} bg-gray-800 ${getRarityGlow(slot.item.reward.rarity)}`
+              : 'border-gray-700 bg-gray-900/50'
+            }`}
               onClick={() => setSelectedSlot(selectedSlot === slot.id ? null : slot.id)}
               data-testid={`dashboard-inventory-slot-${slot.id}`}
             >
@@ -145,7 +138,7 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
                   <div className="flex items-center justify-center h-full text-lg">
                     {getItemIcon(slot.item.reward.iconName)}
                   </div>
-                  
+
                   {/* Rarity indicator - small colored dot */}
                   <div className={`absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full ${
                     slot.item.reward.rarity === 'common' ? 'bg-gray-400' :
@@ -153,7 +146,7 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
                     slot.item.reward.rarity === 'epic' ? 'bg-purple-400' :
                     'bg-yellow-400'
                   }`}></div>
-                  
+
                   {/* Selected indicator */}
                   {selectedSlot === slot.id && (
                     <div className="absolute inset-0 border border-amber-400 bg-amber-400/20 flex items-center justify-center rounded-sm">
