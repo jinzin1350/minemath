@@ -116,6 +116,7 @@ export class DatabaseStorage implements IStorage {
           level: progressData.level,
           updatedAt: new Date(),
         },
+        where: eq(dailyProgress.isFinal, false), // Only update if not finalized
       })
       .returning();
     return progress;
@@ -142,8 +143,10 @@ export class DatabaseStorage implements IStorage {
 
   // NEW: Temporary/Final Scoring System Methods
   async upsertTemporaryProgress(userId: string, progressData: InsertTemporaryProgress): Promise<DailyProgress> {
-    const today = new Date().toISOString().split('T')[0];
     const timeZone = progressData.timeZone || 'UTC';
+    
+    // Calculate today's date in user's timezone (not UTC)
+    const today = this.getTodayInTimezone(timeZone);
     
     // Calculate finalizeAt: start of next day in user's timezone
     const finalizeAt = this.calculateNextMidnight(timeZone);
@@ -174,8 +177,8 @@ export class DatabaseStorage implements IStorage {
           correctAnswers: sql`GREATEST(${dailyProgress.correctAnswers}, ${dataToInsert.correctAnswers})`,
           level: sql`GREATEST(${dailyProgress.level}, ${dataToInsert.level})`,
           lastUpdateAt: new Date(),
-          // Don't update if already final
-          updatedAt: sql`CASE WHEN ${dailyProgress.isFinal} = true THEN ${dailyProgress.updatedAt} ELSE NOW() END`,
+          // Don't update if already final - use new Date() instead of NOW()
+          updatedAt: sql`CASE WHEN ${dailyProgress.isFinal} = true THEN ${dailyProgress.updatedAt} ELSE ${new Date()} END`,
         },
         where: eq(dailyProgress.isFinal, false), // Only update if not final
       })
@@ -263,17 +266,62 @@ export class DatabaseStorage implements IStorage {
     return result?.date || null;
   }
 
+  private getTodayInTimezone(timeZone: string): string {
+    try {
+      // Validate timezone string
+      if (!this.isValidTimeZone(timeZone)) {
+        console.warn(`Invalid timezone: ${timeZone}, falling back to UTC`);
+        return new Date().toISOString().split('T')[0];
+      }
+      
+      const now = new Date();
+      // Use Intl.DateTimeFormat for reliable timezone conversion
+      const formatter = new Intl.DateTimeFormat('en-CA', { 
+        timeZone, 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+      });
+      
+      return formatter.format(now); // Returns YYYY-MM-DD format directly
+    } catch (error) {
+      console.error('Error calculating today in timezone:', timeZone, error);
+      // Fallback to UTC date
+      return new Date().toISOString().split('T')[0];
+    }
+  }
+
   private calculateNextMidnight(timeZone: string): Date {
     try {
+      // Validate timezone string
+      if (!this.isValidTimeZone(timeZone)) {
+        console.warn(`Invalid timezone: ${timeZone}, falling back to UTC`);
+        const tomorrow = new Date();
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+        tomorrow.setUTCHours(0, 0, 0, 0);
+        return tomorrow;
+      }
+      
       const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
       
-      // Create a date object for midnight in the user's timezone
-      const midnight = new Date(tomorrow.toLocaleDateString('en-CA', { timeZone }) + 'T00:00:00');
+      // Get tomorrow's date in the target timezone
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const tomorrowDateStr = new Intl.DateTimeFormat('en-CA', { 
+        timeZone, 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+      }).format(tomorrow);
       
-      // Convert to UTC
-      const utcMidnight = new Date(midnight.getTime() - this.getTimezoneOffset(timeZone, midnight));
+      // Create midnight timestamp in the target timezone
+      // This approach is more reliable than manual offset calculations
+      const midnightInTargetTZ = new Date(`${tomorrowDateStr}T00:00:00`);
+      
+      // Get the UTC offset for the target timezone at this specific time
+      const offsetMs = this.getTimezoneOffsetMs(timeZone, midnightInTargetTZ);
+      
+      // Convert to UTC timestamp
+      const utcMidnight = new Date(midnightInTargetTZ.getTime() - offsetMs);
       
       return utcMidnight;
     } catch (error) {
@@ -286,22 +334,80 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  private getTimezoneOffset(timeZone: string, date: Date): number {
-    const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-    const targetTime = new Date(utc + this.getOffsetForTimezone(timeZone));
-    return targetTime.getTimezoneOffset() * 60000;
-  }
-
-  private getOffsetForTimezone(timeZone: string): number {
+  /**
+   * Validates if a timezone string is supported
+   */
+  private isValidTimeZone(timeZone: string): boolean {
     try {
-      const now = new Date();
-      const utc = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
-      const target = new Date(now.toLocaleString('en-US', { timeZone }));
-      return target.getTime() - utc.getTime();
+      Intl.DateTimeFormat(undefined, { timeZone });
+      return true;
     } catch (error) {
-      console.error('Error getting timezone offset:', error);
-      return 0; // Default to UTC
+      return false;
     }
+  }
+  
+  /**
+   * Gets the timezone offset in milliseconds for a given timezone at a specific date
+   * This is more reliable than manual calculations
+   */
+  private getTimezoneOffsetMs(timeZone: string, date: Date): number {
+    try {
+      // Create formatters for UTC and target timezone
+      const utcFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'UTC',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      
+      const targetFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      
+      // Parse the formatted dates to get the actual time difference
+      const utcParts = utcFormatter.formatToParts(date);
+      const targetParts = targetFormatter.formatToParts(date);
+      
+      const utcTime = this.parseFormattedDate(utcParts);
+      const targetTime = this.parseFormattedDate(targetParts);
+      
+      return utcTime - targetTime;
+    } catch (error) {
+      console.error('Error calculating timezone offset:', error);
+      return 0; // Default to no offset (UTC)
+    }
+  }
+  
+  /**
+   * Helper to parse Intl.DateTimeFormat parts into a timestamp
+   */
+  private parseFormattedDate(parts: Intl.DateTimeFormatPart[]): number {
+    const values: {[key: string]: string} = {};
+    parts.forEach(part => {
+      if (part.type !== 'literal') {
+        values[part.type] = part.value;
+      }
+    });
+    
+    const year = parseInt(values.year);
+    const month = parseInt(values.month) - 1; // JavaScript months are 0-based
+    const day = parseInt(values.day);
+    const hour = parseInt(values.hour || '0');
+    const minute = parseInt(values.minute || '0');
+    const second = parseInt(values.second || '0');
+    
+    return new Date(year, month, day, hour, minute, second).getTime();
   }
 
   // Game session operations

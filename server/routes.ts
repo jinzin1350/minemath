@@ -161,6 +161,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // NEW: Admin/Debug endpoint for finalization statistics
+  app.get('/api/admin/finalization-stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const { finalizationService } = await import('./finalization');
+      const stats = await finalizationService.getFinalizationStats();
+      
+      res.json({
+        ...stats,
+        timestamp: new Date().toISOString(),
+        schedulerRunning: true
+      });
+    } catch (error: any) {
+      console.error("Error fetching finalization stats:", error);
+      res.status(500).json({ message: "Failed to fetch finalization stats" });
+    }
+  });
+
   app.post('/api/game-session', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
