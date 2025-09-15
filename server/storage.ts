@@ -10,6 +10,7 @@ import {
   type UpsertUser,
   type DailyProgress,
   type InsertDailyProgress,
+  type InsertTemporaryProgress,
   type GameSession,
   type InsertGameSession,
   type Achievement,
@@ -22,7 +23,7 @@ import {
   type InsertRewardOpportunity,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, sum } from "drizzle-orm";
+import { eq, desc, and, gte, sum, sql } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -36,6 +37,18 @@ export interface IStorage {
   getDailyProgress(userId: string, date: string): Promise<DailyProgress | undefined>;
   upsertDailyProgress(progress: InsertDailyProgress): Promise<DailyProgress>;
   getRecentProgress(userId: string, days: number): Promise<DailyProgress[]>;
+  
+  // NEW: Temporary/Final scoring system
+  upsertTemporaryProgress(userId: string, progressData: InsertTemporaryProgress): Promise<DailyProgress>;
+  finalizeDueForUser(userId: string): Promise<void>;
+  finalizeDueAll(): Promise<void>;
+  getLeaderboard(date: string, limit?: number): Promise<Array<{
+    userId: string;
+    userName: string;
+    pointsEarned: number;
+    rank: number;
+  }>>;
+  getLatestFinalizedDate(): Promise<string | null>;
   
   // Game session operations
   createGameSession(session: InsertGameSession): Promise<GameSession>;
@@ -109,6 +122,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecentProgress(userId: string, days: number): Promise<DailyProgress[]> {
+    // Lazy finalization: Check for due finalizations before fetching
+    await this.finalizeDueForUser(userId);
+    
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
     
@@ -122,6 +138,170 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(desc(dailyProgress.date));
+  }
+
+  // NEW: Temporary/Final Scoring System Methods
+  async upsertTemporaryProgress(userId: string, progressData: InsertTemporaryProgress): Promise<DailyProgress> {
+    const today = new Date().toISOString().split('T')[0];
+    const timeZone = progressData.timeZone || 'UTC';
+    
+    // Calculate finalizeAt: start of next day in user's timezone
+    const finalizeAt = this.calculateNextMidnight(timeZone);
+    
+    // Prepare data for upsert
+    const dataToInsert = {
+      userId,
+      date: today,
+      pointsEarned: progressData.pointsEarned || 0,
+      questionsAnswered: progressData.questionsAnswered || 0,
+      correctAnswers: progressData.correctAnswers || 0,
+      level: progressData.level || 1,
+      isFinal: false,
+      finalizeAt,
+      userTimeZone: timeZone,
+      lastUpdateAt: new Date(),
+    };
+
+    const [progress] = await db
+      .insert(dailyProgress)
+      .values(dataToInsert)
+      .onConflictDoUpdate({
+        target: [dailyProgress.userId, dailyProgress.date],
+        set: {
+          // Enforce monotonic increase: only update if new score is higher
+          pointsEarned: sql`GREATEST(${dailyProgress.pointsEarned}, ${dataToInsert.pointsEarned})`,
+          questionsAnswered: sql`GREATEST(${dailyProgress.questionsAnswered}, ${dataToInsert.questionsAnswered})`,
+          correctAnswers: sql`GREATEST(${dailyProgress.correctAnswers}, ${dataToInsert.correctAnswers})`,
+          level: sql`GREATEST(${dailyProgress.level}, ${dataToInsert.level})`,
+          lastUpdateAt: new Date(),
+          // Don't update if already final
+          updatedAt: sql`CASE WHEN ${dailyProgress.isFinal} = true THEN ${dailyProgress.updatedAt} ELSE NOW() END`,
+        },
+        where: eq(dailyProgress.isFinal, false), // Only update if not final
+      })
+      .returning();
+    return progress;
+  }
+
+  async finalizeDueForUser(userId: string): Promise<void> {
+    const now = new Date();
+    
+    await db
+      .update(dailyProgress)
+      .set({
+        isFinal: true,
+        finalizedAt: now,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(dailyProgress.userId, userId),
+          eq(dailyProgress.isFinal, false),
+          sql`${dailyProgress.finalizeAt} <= ${now}`
+        )
+      );
+  }
+
+  async finalizeDueAll(): Promise<void> {
+    const now = new Date();
+    
+    await db
+      .update(dailyProgress)
+      .set({
+        isFinal: true,
+        finalizedAt: now,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(dailyProgress.isFinal, false),
+          sql`${dailyProgress.finalizeAt} <= ${now}`
+        )
+      );
+  }
+
+  async getLeaderboard(date: string, limit: number = 10): Promise<Array<{
+    userId: string;
+    userName: string;
+    pointsEarned: number;
+    rank: number;
+  }>> {
+    const results = await db
+      .select({
+        userId: dailyProgress.userId,
+        userName: sql<string>`COALESCE(${users.firstName}, 'Player')`,
+        pointsEarned: dailyProgress.pointsEarned,
+      })
+      .from(dailyProgress)
+      .leftJoin(users, eq(dailyProgress.userId, users.id))
+      .where(
+        and(
+          eq(dailyProgress.date, date),
+          eq(dailyProgress.isFinal, true) // Only finalized scores
+        )
+      )
+      .orderBy(desc(dailyProgress.pointsEarned))
+      .limit(limit);
+
+    // Add rank numbers and handle nulls
+    return results.map((result, index) => ({
+      userId: result.userId,
+      userName: result.userName || 'Player',
+      pointsEarned: result.pointsEarned || 0,
+      rank: index + 1,
+    }));
+  }
+
+  async getLatestFinalizedDate(): Promise<string | null> {
+    const [result] = await db
+      .select({ date: dailyProgress.date })
+      .from(dailyProgress)
+      .where(eq(dailyProgress.isFinal, true))
+      .orderBy(desc(dailyProgress.date))
+      .limit(1);
+    
+    return result?.date || null;
+  }
+
+  private calculateNextMidnight(timeZone: string): Date {
+    try {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      // Create a date object for midnight in the user's timezone
+      const midnight = new Date(tomorrow.toLocaleDateString('en-CA', { timeZone }) + 'T00:00:00');
+      
+      // Convert to UTC
+      const utcMidnight = new Date(midnight.getTime() - this.getTimezoneOffset(timeZone, midnight));
+      
+      return utcMidnight;
+    } catch (error) {
+      console.error('Error calculating next midnight for timezone:', timeZone, error);
+      // Fallback to UTC midnight
+      const tomorrow = new Date();
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      tomorrow.setUTCHours(0, 0, 0, 0);
+      return tomorrow;
+    }
+  }
+
+  private getTimezoneOffset(timeZone: string, date: Date): number {
+    const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+    const targetTime = new Date(utc + this.getOffsetForTimezone(timeZone));
+    return targetTime.getTimezoneOffset() * 60000;
+  }
+
+  private getOffsetForTimezone(timeZone: string): number {
+    try {
+      const now = new Date();
+      const utc = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+      const target = new Date(now.toLocaleString('en-US', { timeZone }));
+      return target.getTime() - utc.getTime();
+    } catch (error) {
+      console.error('Error getting timezone offset:', error);
+      return 0; // Default to UTC
+    }
   }
 
   // Game session operations
