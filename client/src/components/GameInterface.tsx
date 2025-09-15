@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card'; // Import CardContent
 import { MinecraftSteve, MinecraftZombie, MinecraftSkeleton, MinecraftCreeper, MinecraftWitch, MinecraftDragon, MinecraftBlock } from './MinecraftCharacters';
 import { AchievementNotification } from './AchievementBadge';
 import { GameInventoryBoard } from './GameInventoryBoard';
-import { Heart, Diamond, Zap } from 'lucide-react';
+import { Heart, Diamond, Zap, Trophy } from 'lucide-react'; // Import Trophy
 import { apiRequest } from '@/lib/queryClient';
 
 interface GameStats {
@@ -31,6 +31,8 @@ interface Enemy {
 interface GameInterfaceProps {
   onGameComplete?: (stats: GameStats) => void;
   mockMode?: boolean;
+  onBackToDashboard?: () => void; // Added for navigation
+  startNewGame?: () => void; // Added for starting a new game
 }
 
 interface Achievement {
@@ -41,7 +43,20 @@ interface Achievement {
   pointsRequired: number;
 }
 
-export function GameInterface({ onGameComplete, mockMode = false }: GameInterfaceProps) {
+// Mock items for GameInventoryBoard - assuming this is where item.name, item.rarity, item.iconName, item.quantity are used
+// This is a placeholder and should be replaced with actual inventory data if available
+const mockInventoryItems = [
+  { id: 'item1', name: 'Sword', rarity: 'Epic', iconName: 'sword', quantity: 1 },
+  { id: 'item2', name: 'Shield', rarity: 'Rare', iconName: 'shield', quantity: 1 },
+  { id: 'item3', name: 'Potion', rarity: 'Common', iconName: 'potion', quantity: 5 },
+  { id: 'item4', name: 'Gold Coin', rarity: 'Common', iconName: 'coin', quantity: 10 },
+  { id: 'item5', name: 'Mystery Box', iconName: 'chest', quantity: 2 }, // Missing rarity
+  { id: 'item6', name: null, rarity: 'Legendary', iconName: 'gem', quantity: 1 }, // Missing name
+  { id: 'item7', iconName: 'arrow', rarity: 'Common', quantity: 20 }, // Missing name
+  { id: 'item8', name: 'Empty Slot' }, // Missing rarity and iconName
+];
+
+export function GameInterface({ onGameComplete, mockMode = false, onBackToDashboard = () => {}, startNewGame = () => {} }: GameInterfaceProps) {
   const [gameStats, setGameStats] = useState<GameStats>({
     level: 1,
     score: 0,
@@ -60,7 +75,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
   const [userAnswer, setUserAnswer] = useState('');
   const [feedback, setFeedback] = useState('');
   const [showCelebration, setShowCelebration] = useState(false);
-  const [gameState, setGameState] = useState<'playing' | 'gameOver' | 'levelComplete'>('playing');
+  const [gameState, setGameState] = useState<'playing' | 'gameOver' | 'levelComplete' | 'menu'>('playing'); // Added 'menu' state
   const [enemyPosition, setEnemyPosition] = useState(100);
   const [enemyAttacking, setEnemyAttacking] = useState(false);
   const [playerDefending, setPlayerDefending] = useState(false);
@@ -184,8 +199,11 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
   };
 
   useEffect(() => {
-    generateQuestion();
-  }, [gameStats.level]);
+    // Start the game with a question when the component mounts or level changes
+    if (gameState === 'playing') {
+      generateQuestion();
+    }
+  }, [gameState, gameStats.level]); // Depend on gameState and level
 
   // Auto-save progress when component unmounts (user leaves game)
   useEffect(() => {
@@ -263,7 +281,39 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
       }, 100);
       return () => clearInterval(interval);
     }
-  }, [enemyMoving, currentEnemy, enemyPosition, gameStats.hearts]);
+  }, [enemyMoving, currentEnemy, enemyPosition, gameStats.hearts, onGameComplete, gameStats]); // Added dependencies
+
+  // Game menu state handling
+  if (gameState === 'menu') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-purple-900 via-blue-900 to-green-900 flex items-center justify-center p-4">
+        <Card className="p-6 text-center border-4 border-yellow-500 w-full max-w-sm bg-card">
+          <div className="mb-4">
+            <MinecraftSteve scale={1.5} />
+          </div>
+          <h2 className="text-2xl font-pixel text-yellow-600 mb-4">MATH ADVENTURE</h2>
+          <p className="text-foreground mb-4">Press "NEW GAME" to begin your quest!</p>
+          <Button
+            onClick={() => {
+              setGameState('playing');
+              startNewGame();
+            }}
+            className="w-full font-pixel bg-purple-600 hover:bg-purple-700"
+            data-testid="button-start-game"
+          >
+            START ADVENTURE
+          </Button>
+          <Button
+            onClick={onBackToDashboard}
+            variant="outline"
+            className="w-full mt-4 font-pixel border-2 hover:scale-105 transition-all duration-200"
+          >
+            ← BACK TO DASHBOARD
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   if (gameState === 'gameOver') {
     return (
@@ -278,7 +328,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
             <p className="text-cyan-400">Diamonds: {gameStats.diamonds}</p>
             <p className="text-green-400">Level: {gameStats.level}</p>
           </div>
-          <Button 
+          <Button
             onClick={restartGame}
             className="w-full font-pixel"
             data-testid="button-respawn"
@@ -302,7 +352,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
             <p className="text-foreground">Score: {gameStats.score}</p>
             <p className="text-cyan-400">Diamonds: {gameStats.diamonds}</p>
           </div>
-          <Button 
+          <Button
             onClick={restartGame}
             className="w-full font-pixel bg-purple-600 hover:bg-purple-700"
             data-testid="button-new-game"
@@ -314,40 +364,85 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
     );
   }
 
+  // Destructure gameStats for easier access in JSX
+  const { level, score: currentScore, hearts, diamonds, magicPower } = gameStats;
+
   return (
+    // Removed redundant outer div and applied main styles directly
     <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4" style={{ imageRendering: 'pixelated' }}>
-      {/* Header Stats */}
-      <Card className="p-4 mb-4 border-2 border-card-border">
-        <div className="flex justify-between items-center text-sm">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              <span className="font-pixel text-foreground">Level {gameStats.level}</span>
+      {/* Game Header */}
+      <div className="relative z-10 p-3 md:p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-3 md:mb-6 gap-2 md:gap-0">
+            <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 w-full md:w-auto">
+              <Button
+                onClick={onBackToDashboard}
+                variant="outline"
+                size="sm"
+                className="font-pixel border-2 hover:scale-105 transition-all duration-200 text-xs md:text-sm w-full md:w-auto"
+              >
+                ← DASHBOARD
+              </Button>
+              <h1 className="font-pixel text-sm md:text-2xl text-white animate-pulse text-center">
+                🏹 MINECRAFT MATH ⚔️
+              </h1>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="font-pixel text-foreground">Score: {gameStats.score}</span>
+            <div className="flex gap-2 md:gap-3 w-full md:w-auto justify-center">
+              <Button
+                onClick={startNewGame}
+                variant="outline"
+                size="sm"
+                className="font-pixel border-2 hover:scale-105 transition-all duration-200 text-xs md:text-sm flex-1 md:flex-none"
+                disabled={gameState !== 'playing'} // Only disable if not playing
+              >
+                🔄 NEW GAME
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              {[...Array(3)].map((_, i) => (
-                <Heart 
-                  key={i} 
-                  size={16} 
-                  className={i < gameStats.hearts ? "text-red-500 fill-current" : "text-gray-400"} 
-                />
-              ))}
-            </div>
-            <div className="flex items-center gap-1">
-              <Diamond size={16} className="text-cyan-400" />
-              <span className="font-pixel text-cyan-400">{gameStats.diamonds}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Zap size={16} className="text-yellow-400" />
-              <span className="font-pixel text-yellow-400">{gameStats.magicPower}</span>
-            </div>
+          {/* Game Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-3 md:mb-6">
+            <Card className="border-2 border-red-600 bg-gradient-to-br from-red-900/80 to-red-800/60">
+              <CardContent className="p-2 md:p-4 text-center">
+                <div className="flex items-center justify-center gap-1 md:gap-2 mb-1 md:mb-2">
+                  <Heart className="h-4 w-4 md:h-6 md:w-6 text-red-400 animate-pulse" />
+                  <span className="font-pixel text-white text-sm md:text-lg">{hearts}</span>
+                </div>
+                <p className="text-red-300 text-xs md:text-sm font-pixel">❤️ Lives</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-blue-600 bg-gradient-to-br from-blue-900/80 to-blue-800/60">
+              <CardContent className="p-2 md:p-4 text-center">
+                <div className="flex items-center justify-center gap-1 md:gap-2 mb-1 md:mb-2">
+                  <Trophy className="h-4 w-4 md:h-6 md:w-6 text-yellow-400 animate-bounce" />
+                  <span className="font-pixel text-white text-sm md:text-lg">{currentScore}</span>
+                </div>
+                <p className="text-blue-300 text-xs md:text-sm font-pixel">🏆 Score</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-green-600 bg-gradient-to-br from-green-900/80 to-green-800/60">
+              <CardContent className="p-2 md:p-4 text-center">
+                <div className="flex items-center justify-center gap-1 md:gap-2 mb-1 md:mb-2">
+                  <Zap className="h-4 w-4 md:h-6 md:w-6 text-yellow-400 animate-pulse" />
+                  <span className="font-pixel text-white text-sm md:text-lg">{level}</span>
+                </div>
+                <p className="text-green-300 text-xs md:text-sm font-pixel">⚡ Level</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-purple-600 bg-gradient-to-br from-purple-900/80 to-purple-800/60">
+              <CardContent className="p-2 md:p-4 text-center">
+                <div className="flex items-center justify-center gap-1 md:gap-2 mb-1 md:mb-2">
+                  <Diamond className="h-4 w-4 md:h-6 md:w-6 text-cyan-400 animate-spin" />
+                  <span className="font-pixel text-white text-sm md:text-lg">{diamonds}</span>
+                </div>
+                <p className="text-purple-300 text-xs md:text-sm font-pixel">💎 Gems</p>
+              </CardContent>
+            </Card>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Game Arena */}
       <Card className="p-4 mb-4 border-2 border-card-border relative min-h-[300px] bg-gradient-to-b from-sky-300 to-green-400 overflow-hidden">
@@ -374,9 +469,9 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
               🛡️ STEVE
             </span>
             {/* Magic power indicator */}
-            {gameStats.magicPower > 0 && (
+            {magicPower > 0 && (
               <div className="absolute -top-4 -right-4 bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-pixel animate-pulse">
-                {gameStats.magicPower}
+                {magicPower}
               </div>
             )}
           </div>
@@ -405,7 +500,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
 
           {/* Enemy */}
           {currentEnemy && (
-            <div 
+            <div
               className="absolute bottom-4 transition-all duration-100"
               style={{ right: `${enemyPosition}%` }}
             >
@@ -415,11 +510,11 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
               {currentEnemy.name === 'Witch' && <MinecraftWitch isAttacking={enemyAttacking} scale={0.8} />}
               {currentEnemy.name === 'Dragon' && <MinecraftDragon isAttacking={enemyAttacking} scale={0.6} />}
               <div className="text-xs text-center font-pixel text-red-400 mt-1">
-                {currentEnemy.name === 'Zombie' && '🧟'} 
-                {currentEnemy.name === 'Skeleton' && '💀'} 
-                {currentEnemy.name === 'Creeper' && '💣'} 
-                {currentEnemy.name === 'Witch' && '🧙‍♀️'} 
-                {currentEnemy.name === 'Dragon' && '🐲'} 
+                {currentEnemy.name === 'Zombie' && '🧟'}
+                {currentEnemy.name === 'Skeleton' && '💀'}
+                {currentEnemy.name === 'Creeper' && '💣'}
+                {currentEnemy.name === 'Witch' && '🧙‍♀️'}
+                {currentEnemy.name === 'Dragon' && '🐲'}
                 {currentEnemy.name}
               </div>
             </div>
@@ -446,7 +541,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
                 data-testid="input-answer"
                 onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
               />
-              <Button 
+              <Button
                 onClick={handleSubmit}
                 disabled={!userAnswer}
                 className="font-pixel px-6 bg-red-600 hover:bg-red-700 border-2 border-red-800 text-white shadow-lg hover:scale-105 transition-all duration-200"
@@ -472,10 +567,10 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
 
         {/* Game Inventory Board */}
         <div className="lg:col-span-1">
-          <GameInventoryBoard 
-            onInventoryUpdate={() => {
-              // Optionally trigger any updates needed
-            }}
+          <GameInventoryBoard
+            // Pass mock items or actual inventory data here
+            items={mockInventoryItems}
+            onItemClick={(item) => console.log('Clicked on item:', item)} // Placeholder for item click handler
           />
         </div>
       </div>
