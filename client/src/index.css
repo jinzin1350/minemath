@@ -332,6 +332,14 @@
     50% { transform: translateY(-10px); }
   }
 
+  /* Pixelated image rendering */
+  .pixelated {
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
   @keyframes float-delay {
     0%, 100% { transform: translateY(-5px); }
     50% { transform: translateY(-15px); }

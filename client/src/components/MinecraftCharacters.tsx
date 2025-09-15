@@ -10,58 +10,16 @@ export const MinecraftSteve = ({ isDefending = false, scale = 1 }: MinecraftChar
     style={{ transform: `scale(${scale})`, imageRendering: 'pixelated' }}
     data-testid="character-steve"
   >
-    {/* Head - 16x16 pixels */}
-    <div className="relative w-16 h-16 mb-1 mx-auto">
-      {/* Skin base */}
-      <div className="absolute inset-0 bg-yellow-200"></div>
-      {/* Hair - brown pixels */}
-      <div className="absolute top-0 left-1 right-1 h-3 bg-amber-800"></div>
-      <div className="absolute top-1 left-0 right-0 h-2 bg-amber-700"></div>
-      {/* Eyes - small black squares */}
-      <div className="absolute top-5 left-4 w-2 h-2 bg-black"></div>
-      <div className="absolute top-5 right-4 w-2 h-2 bg-black"></div>
-      {/* Nose shadow */}
-      <div className="absolute top-7 left-1/2 transform -translate-x-1/2 w-1 h-2 bg-yellow-300"></div>
-      {/* Mouth */}
-      <div className="absolute top-9 left-6 w-4 h-1 bg-yellow-300"></div>
-    </div>
-    
-    {/* Body - 16x24 pixels */}
-    <div className="relative w-16 h-24 mx-auto mb-1">
-      {/* Shirt - teal color like Minecraft */}
-      <div className="absolute inset-0 bg-teal-600"></div>
-      {/* Shirt details */}
-      <div className="absolute top-0 left-0 right-0 h-2 bg-teal-700"></div>
-      <div className="absolute top-2 left-1 right-1 h-1 bg-teal-500"></div>
-    </div>
-    
-    {/* Arms - 8x24 pixels each */}
-    <div 
-      className="absolute top-16 -left-4 w-4 h-12 bg-yellow-200"
+    <img 
+      src="/steve-minecraft.png" 
+      alt="Minecraft Steve" 
+      className="w-16 h-16 pixelated"
       style={{ 
-        transform: isDefending ? 'rotate(-45deg)' : 'rotate(0deg)', 
-        transformOrigin: 'top center',
+        imageRendering: 'pixelated',
+        transform: isDefending ? 'rotate(-5deg)' : 'rotate(0deg)',
         transition: 'transform 0.2s ease'
       }}
-    >
-      {/* Shirt sleeve */}
-      <div className="absolute top-0 left-0 right-0 h-8 bg-teal-600"></div>
-    </div>
-    <div 
-      className="absolute top-16 -right-4 w-4 h-12 bg-yellow-200"
-      style={{ 
-        transform: isDefending ? 'rotate(45deg)' : 'rotate(0deg)', 
-        transformOrigin: 'top center',
-        transition: 'transform 0.2s ease'
-      }}
-    >
-      {/* Shirt sleeve */}
-      <div className="absolute top-0 left-0 right-0 h-8 bg-teal-600"></div>
-    </div>
-    
-    {/* Legs - 8x24 pixels each */}
-    <div className="absolute -bottom-12 left-2 w-4 h-12 bg-blue-900"></div>
-    <div className="absolute -bottom-12 right-2 w-4 h-12 bg-blue-900"></div>
+    />
     
     {isDefending && (
       <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-yellow-300 font-pixel text-xs animate-bounce">⚡</div>
