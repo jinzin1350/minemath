@@ -18,7 +18,13 @@ export default function Home() {
   };
 
   const handleGameComplete = async (stats: any) => {
-    console.log('Game completed with stats:', stats);
+    console.log('🎮 handleGameComplete called with stats:', stats);
+    console.log('🎮 Stats breakdown:', {
+      level: stats.level,
+      score: stats.score,
+      hearts: stats.hearts,
+      diamonds: stats.diamonds
+    });
     
     try {
       // Calculate points and game data from stats
@@ -125,7 +131,7 @@ export default function Home() {
           
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
-              Welcome, {(user as any)?.firstName || user?.name || 'Player'}!
+              Welcome, {(user as any)?.firstName || (user as any)?.name || 'Player'}!
             </span>
             <Button
               variant="outline"

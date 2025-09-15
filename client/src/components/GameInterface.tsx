@@ -189,12 +189,16 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
 
   // Auto-save progress when component unmounts (user leaves game)
   useEffect(() => {
+    console.log('GameInterface mounted, setting up auto-save cleanup');
     return () => {
       // Save progress when component unmounts only if there's meaningful progress
       const currentStats = gameStatsRef.current;
+      console.log('GameInterface unmounting with stats:', currentStats);
       if (currentStats.score > 0) {
         console.log('Auto-saving progress on component unmount:', currentStats);
         onGameComplete?.(currentStats);
+      } else {
+        console.log('No meaningful progress to save (score = 0)');
       }
     };
   }, [onGameComplete]); // Only depend on onGameComplete, use ref for latest gameStats
