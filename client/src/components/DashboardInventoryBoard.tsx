@@ -5,16 +5,16 @@ import { Package, Sparkles, Gift } from 'lucide-react';
 
 interface InventoryItem {
   id: string;
+  userId: string;
+  rewardId: string;
   selectedAt: string;
   pointsWhenSelected: number;
-  reward: {
-    id: string;
-    name: string;
-    description: string;
-    itemType: string;
-    iconName: string;
-    rarity: string;
-  };
+  // Flattened reward properties
+  name: string;
+  description: string;
+  itemType: string;
+  iconName: string;
+  rarity: string;
 }
 
 interface DashboardInventoryBoardProps {
@@ -125,8 +125,8 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
           {slots.map((slot) => (
             <div
               key={slot.id}
-              className={`relative aspect-square border-2 cursor-pointer transition-all duration-200 rounded-[4px] ${slot.item && slot.item.reward
-              ? `${getRarityBorderColor(slot.item.reward.rarity || 'common')} bg-gray-800 ${getRarityGlow(slot.item.reward.rarity || 'common')}`
+              className={`relative aspect-square border-2 cursor-pointer transition-all duration-200 rounded-[4px] ${slot.item
+              ? `${getRarityBorderColor(slot.item.rarity || 'common')} bg-gray-800 ${getRarityGlow(slot.item.rarity || 'common')}`
               : 'border-gray-700 bg-gray-900/50'
             }`}
               onClick={() => setSelectedSlot(selectedSlot === slot.id ? null : slot.id)}
@@ -136,14 +136,14 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
                 <>
                   {/* Item icon */}
                   <div className="flex items-center justify-center h-full text-lg">
-                    {getItemIcon(slot.item.reward?.iconName || 'chest')}
+                    {getItemIcon(slot.item.iconName || 'chest')}
                   </div>
 
                   {/* Rarity indicator - small colored dot */}
                   <div className={`absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full ${
-                    slot.item.reward?.rarity === 'common' ? 'bg-gray-400' :
-                    slot.item.reward?.rarity === 'rare' ? 'bg-blue-400' :
-                    slot.item.reward?.rarity === 'epic' ? 'bg-purple-400' :
+                    slot.item.rarity === 'common' ? 'bg-gray-400' :
+                    slot.item.rarity === 'rare' ? 'bg-blue-400' :
+                    slot.item.rarity === 'epic' ? 'bg-purple-400' :
                     'bg-yellow-400'
                   }`}></div>
 
@@ -160,24 +160,24 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
         </div>
 
         {/* Selected item tooltip */}
-        {selectedItem && selectedItem.reward && (
+        {selectedItem && (
           <div className="bg-black/90 border-2 border-amber-600 p-2 text-xs rounded-lg">
             <div className="font-pixel text-amber-300 flex items-center gap-1">
-              <span>{getItemIcon(selectedItem.reward.iconName || 'chest')}</span>
-              {selectedItem.reward.name}
+              <span>{getItemIcon(selectedItem.iconName || 'chest')}</span>
+              {selectedItem.name}
               <Badge 
                 variant="outline" 
                 className={`text-xs h-4 ${
-                  selectedItem.reward.rarity === 'common' ? 'border-gray-400 text-gray-400' :
-                  selectedItem.reward.rarity === 'rare' ? 'border-blue-400 text-blue-400' :
-                  selectedItem.reward.rarity === 'epic' ? 'border-purple-400 text-purple-400' :
+                  selectedItem.rarity === 'common' ? 'border-gray-400 text-gray-400' :
+                  selectedItem.rarity === 'rare' ? 'border-blue-400 text-blue-400' :
+                  selectedItem.rarity === 'epic' ? 'border-purple-400 text-purple-400' :
                   'border-yellow-400 text-yellow-400'
                 }`}
               >
-                {selectedItem.reward.rarity}
+                {selectedItem.rarity}
               </Badge>
             </div>
-            <p className="text-gray-300 mt-1">{selectedItem.reward.description}</p>
+            <p className="text-gray-300 mt-1">{selectedItem.description}</p>
             <p className="text-gray-500 text-xs mt-1">
               Obtained: {new Date(selectedItem.selectedAt).toLocaleDateString()}
             </p>
