@@ -219,71 +219,55 @@ export const MinecraftCreeper = ({ isAttacking = false, scale = 1 }: MinecraftCh
 
 export const MinecraftWitch = ({ isAttacking = false, scale = 1 }: MinecraftCharacterProps) => (
   <div 
-    className={`relative inline-block`} 
+    className={`relative inline-block ${isAttacking ? 'animate-bounce' : ''}`} 
     style={{ transform: `scale(${scale})`, imageRendering: 'pixelated' }}
     data-testid="character-witch"
   >
-    {/* Head with large witch hat */}
-    <div className="relative w-16 h-20 mb-1 mx-auto">
-      {/* Witch hat - black with purple band */}
-      <div className="absolute -top-8 left-2 right-2 h-12 bg-black"></div>
-      <div className="absolute -top-6 left-1 right-1 h-2 bg-purple-600"></div>
-      
-      {/* Villager-like face */}
-      <div className="absolute top-0 left-0 right-0 h-16 bg-orange-200"></div>
-      
-      {/* Eyes */}
-      <div className="absolute top-4 left-4 w-2 h-2 bg-black"></div>
-      <div className="absolute top-4 right-4 w-2 h-2 bg-black"></div>
-      
-      {/* Long protruding nose with wart */}
-      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 w-2 h-4 bg-orange-300"></div>
-      <div className="absolute top-7 left-9 w-1 h-1 bg-green-700"></div>
-      
-      {/* Mouth */}
-      <div className="absolute top-11 left-6 w-4 h-1 bg-orange-300"></div>
-    </div>
-    
-    {/* Body - Deep purple robe */}
-    <div className="relative w-16 h-24 mx-auto mb-1">
-      <div className="absolute inset-0 bg-purple-800"></div>
-      {/* Robe details */}
-      <div className="absolute top-0 left-2 right-2 h-3 bg-purple-900"></div>
-      <div className="absolute top-8 left-4 w-2 h-2 bg-purple-700"></div>
-    </div>
-    
-    {/* Arms - folded when idle, potion when attacking */}
-    <div 
-      className="absolute top-16 -left-4 w-4 h-12 bg-orange-200"
+    <img 
+      src="/witch-minecraft.png" 
+      alt="Minecraft Witch" 
+      className="w-16 h-16 pixelated"
       style={{ 
-        transform: isAttacking ? 'rotate(-30deg)' : 'rotate(-10deg)', 
-        transformOrigin: 'top center',
-        transition: 'transform 0.2s ease'
+        imageRendering: 'pixelated',
+        transform: isAttacking ? 'rotate(-3deg) scale(1.05)' : 'rotate(0deg) scale(1)',
+        transition: 'transform 0.2s ease',
+        maxWidth: '100%',
+        height: 'auto'
       }}
-    >
-      <div className="absolute top-0 left-0 right-0 h-8 bg-purple-800"></div>
-    </div>
-    <div 
-      className="absolute top-16 -right-4 w-4 h-12 bg-orange-200"
-      style={{ 
-        transform: isAttacking ? 'rotate(30deg)' : 'rotate(10deg)', 
-        transformOrigin: 'top center',
-        transition: 'transform 0.2s ease'
+      onError={(e) => {
+        console.error('Failed to load Witch image, trying alternative path');
+        // Try alternative paths if first one fails
+        const alternatives = [
+          './witch-minecraft.png',
+          'witch-minecraft.png',
+          '/public/witch-minecraft.png'
+        ];
+        const current = e.currentTarget as HTMLImageElement;
+        const currentSrc = current.src;
+        
+        for (const alt of alternatives) {
+          if (!currentSrc.includes(alt.replace('./', ''))) {
+            current.src = alt;
+            return;
+          }
+        }
+        
+        // If all paths fail, hide the image and show fallback
+        current.style.display = 'none';
+        const fallback = document.createElement('div');
+        fallback.className = 'w-16 h-16 bg-purple-800 flex items-center justify-center text-white font-bold text-xs';
+        fallback.textContent = 'WITCH';
+        current.parentNode?.appendChild(fallback);
       }}
-    >
-      <div className="absolute top-0 left-0 right-0 h-8 bg-purple-800"></div>
-    </div>
+      onLoad={(e) => {
+        console.log('Witch image loaded successfully');
+      }}
+    />
     
-    {/* Potion bottle when attacking */}
+    {/* Potion effect when attacking */}
     {isAttacking && (
-      <div className="absolute top-12 right-0 w-3 h-4 bg-green-400">
-        <div className="absolute top-0 left-1 right-1 h-1 bg-gray-600"></div>
-      </div>
+      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-purple-500 font-pixel text-xs animate-bounce">🧪</div>
     )}
-    
-    {/* Legs - hidden under robe */}
-    <div className="absolute -bottom-12 left-3 w-4 h-12 bg-gray-800"></div>
-    <div className="absolute -bottom-12 right-3 w-4 h-12 bg-gray-800"></div>
   </div>
 );
 
