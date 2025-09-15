@@ -118,12 +118,15 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     }
   };
 
-  // Format data for the chart
-  const chartData = data.recentProgress.map(day => ({
-    date: new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    points: day.pointsEarned,
-    accuracy: Math.round((day.correctAnswers / day.questionsAnswered) * 100)
-  })).reverse();
+  // Format data for the chart with English date
+  const chartData = data.recentProgress.map(day => {
+    const date = new Date(day.date);
+    return {
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      points: day.pointsEarned,
+      accuracy: Math.round((day.correctAnswers / day.questionsAnswered) * 100)
+    };
+  }).reverse();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
