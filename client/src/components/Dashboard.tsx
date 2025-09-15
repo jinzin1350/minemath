@@ -8,6 +8,7 @@ import { AchievementBadge } from './AchievementBadge';
 import { RewardSelector } from './RewardSelector';
 import { InventoryDisplay } from './InventoryDisplay';
 import { DashboardInventoryBoard } from './DashboardInventoryBoard';
+import { ScoreStatusBar } from './ScoreStatusBar';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Calendar, Trophy, Target, TrendingUp, Diamond, Zap, Heart } from 'lucide-react';
 
@@ -197,6 +198,8 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Score Status Bar with Finalization Info */}
+        <ScoreStatusBar />
         {/* Enhanced Header with Minecraft Style */}
         <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90 shadow-2xl backdrop-blur-sm relative overflow-hidden">
           {/* Floating decorative blocks */}

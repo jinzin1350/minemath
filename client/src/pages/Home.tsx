@@ -36,8 +36,8 @@ export default function Home() {
         level
       });
 
-      // Save game session to backend
-      const response = await fetch('/api/progress/daily', {
+      // Save temporary progress to backend (until midnight finalization)
+      const response = await fetch('/api/progress/temporary', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,7 +47,8 @@ export default function Home() {
           pointsEarned,
           questionsAnswered,
           correctAnswers,
-          level
+          level,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone // Auto-detect user timezone
         }),
       });
 
@@ -113,7 +114,7 @@ export default function Home() {
           
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
-              Welcome, {user?.firstName || 'Player'}!
+              Welcome, {(user as any)?.firstName || user?.name || 'Player'}!
             </span>
             <Button
               variant="outline"
