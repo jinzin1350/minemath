@@ -11,13 +11,22 @@ export const MinecraftSteve = ({ isDefending = false, scale = 1 }: MinecraftChar
     data-testid="character-steve"
   >
     <img 
-      src="/steve-minecraft.png" 
+      src="./steve-minecraft.png" 
       alt="Minecraft Steve" 
       className="w-16 h-16 pixelated"
       style={{ 
         imageRendering: 'pixelated',
         transform: isDefending ? 'rotate(-5deg)' : 'rotate(0deg)',
-        transition: 'transform 0.2s ease'
+        transition: 'transform 0.2s ease',
+        maxWidth: '100%',
+        height: 'auto'
+      }}
+      onError={(e) => {
+        console.error('Failed to load Steve image:', e);
+        e.currentTarget.style.display = 'none';
+      }}
+      onLoad={(e) => {
+        console.log('Steve image loaded successfully');
       }}
     />
     
