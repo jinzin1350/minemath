@@ -2,6 +2,12 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { insertDailyProgressSchema, insertGameSessionSchema } from "@shared/schema";
+import { z } from "zod";
+
+// Validation schemas for API endpoints
+const updateDailyProgressSchema = insertDailyProgressSchema.omit({ userId: true, date: true });
+const createGameSessionSchema = insertGameSessionSchema.omit({ userId: true });
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -47,8 +53,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/achievements/check', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { totalPoints } = req.body;
-      const newAchievements = await storage.checkAndAwardPointAchievements(userId, totalPoints);
+      // Security fix: Calculate total points server-side, don't trust client input
+      const newAchievements = await storage.checkAndAwardPointAchievements(userId);
       res.json(newAchievements);
     } catch (error) {
       console.error("Error checking achievements:", error);
@@ -59,7 +65,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/achievements/:id/mark-seen', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      await storage.markAchievementAsSeen(id);
+      const userId = req.user.claims.sub;
+      // Security fix: Verify ownership - users can only mark their own achievements as seen
+      await storage.markAchievementAsSeen(id, userId);
       res.json({ success: true });
     } catch (error) {
       console.error("Error marking achievement as seen:", error);
@@ -70,20 +78,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/progress/daily', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { pointsEarned, questionsAnswered, correctAnswers, level } = req.body;
+      
+      // Validate request body with Zod schema
+      const validatedData = updateDailyProgressSchema.parse(req.body);
       const today = new Date().toISOString().split('T')[0];
       
       const progress = await storage.upsertDailyProgress({
         userId,
         date: today,
-        pointsEarned,
-        questionsAnswered,
-        correctAnswers,
-        level
+        ...validatedData
       });
       
       res.json(progress);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: error.errors 
+        });
+      }
       console.error("Error updating progress:", error);
       res.status(500).json({ message: "Failed to update progress" });
     }
@@ -92,11 +105,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/game-session', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const sessionData = { ...req.body, userId };
+      
+      // Validate request body with Zod schema
+      const validatedData = createGameSessionSchema.parse(req.body);
+      const sessionData = { ...validatedData, userId };
       
       const session = await storage.createGameSession(sessionData);
       res.json(session);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: error.errors 
+        });
+      }
       console.error("Error creating game session:", error);
       res.status(500).json({ message: "Failed to create game session" });
     }

@@ -13,7 +13,7 @@ import {
   type InsertAchievement
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte } from "drizzle-orm";
+import { eq, desc, and, gte, sum } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -35,8 +35,9 @@ export interface IStorage {
   // Achievement operations
   getUserAchievements(userId: string): Promise<Achievement[]>;
   createAchievement(achievement: InsertAchievement): Promise<Achievement>;
-  markAchievementAsSeen(achievementId: string): Promise<void>;
-  checkAndAwardPointAchievements(userId: string, totalPoints: number): Promise<Achievement[]>;
+  markAchievementAsSeen(achievementId: string, userId: string): Promise<void>;
+  getUserTotalPoints(userId: string): Promise<number>;
+  checkAndAwardPointAchievements(userId: string): Promise<Achievement[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -139,14 +140,25 @@ export class DatabaseStorage implements IStorage {
     return achievement;
   }
 
-  async markAchievementAsSeen(achievementId: string): Promise<void> {
+  async markAchievementAsSeen(achievementId: string, userId: string): Promise<void> {
     await db
       .update(achievements)
       .set({ isNew: false })
-      .where(eq(achievements.id, achievementId));
+      .where(and(eq(achievements.id, achievementId), eq(achievements.userId, userId)));
   }
 
-  async checkAndAwardPointAchievements(userId: string, totalPoints: number): Promise<Achievement[]> {
+  async getUserTotalPoints(userId: string): Promise<number> {
+    const result = await db
+      .select({ total: sum(dailyProgress.pointsEarned) })
+      .from(dailyProgress)
+      .where(eq(dailyProgress.userId, userId));
+    
+    return result[0]?.total ? Number(result[0].total) : 0;
+  }
+
+  async checkAndAwardPointAchievements(userId: string): Promise<Achievement[]> {
+    // Calculate total points from actual database records
+    const totalPoints = await this.getUserTotalPoints(userId);
     const newAchievements: Achievement[] = [];
     
     // Define Minecraft-style achievements every 500 points

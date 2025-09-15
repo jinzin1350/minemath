@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, date, index, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, date, index, jsonb, boolean, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -36,7 +36,9 @@ export const dailyProgress = pgTable("daily_progress", {
   level: integer("level").default(1),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  unique("unique_daily_progress").on(table.userId, table.date)
+]);
 
 // Game sessions
 export const gameSessions = pgTable("game_sessions", {
@@ -62,7 +64,9 @@ export const achievements = pgTable("achievements", {
   pointsRequired: integer("points_required").notNull(),
   unlockedAt: timestamp("unlocked_at").defaultNow(),
   isNew: boolean("is_new").default(true),
-});
+}, (table) => [
+  unique("unique_achievement_per_user").on(table.userId, table.type, table.pointsRequired)
+]);
 
 // Schema types
 export const upsertUserSchema = createInsertSchema(users).pick({
