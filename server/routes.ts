@@ -2,11 +2,12 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertDailyProgressSchema, insertGameSessionSchema } from "@shared/schema";
+import { insertDailyProgressSchema, insertTemporaryProgressSchema, insertGameSessionSchema } from "@shared/schema";
 import { z } from "zod";
 
 // Validation schemas for API endpoints
 const updateDailyProgressSchema = insertDailyProgressSchema.omit({ userId: true, date: true });
+const updateTemporaryProgressSchema = insertTemporaryProgressSchema.omit({ userId: true, date: true });
 const createGameSessionSchema = insertGameSessionSchema.omit({ userId: true });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -19,7 +20,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       res.json(user);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
@@ -99,6 +100,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating progress:", error);
       res.status(500).json({ message: "Failed to update progress" });
+    }
+  });
+
+  // NEW: Temporary progress endpoint (until midnight finalization)
+  app.post('/api/progress/temporary', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Validate request body with Zod schema (includes optional timezone)
+      const validatedData = updateTemporaryProgressSchema.parse(req.body);
+      
+      const progress = await storage.upsertTemporaryProgress(userId, {
+        ...validatedData,
+        // Pass timezone from client if provided, otherwise null
+        timeZone: validatedData.timeZone || undefined
+      });
+      
+      res.json({
+        ...progress,
+        status: progress.isFinal ? 'final' : 'temporary',
+        timeUntilFinalization: progress.isFinal ? null : progress.finalizeAt
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error updating temporary progress:", error);
+      res.status(500).json({ message: "Failed to update temporary progress" });
+    }
+  });
+
+  // NEW: Leaderboard endpoint (only finalized scores)
+  app.get('/api/leaderboard', isAuthenticated, async (req: any, res) => {
+    try {
+      const date = req.query.date as string || await storage.getLatestFinalizedDate();
+      const limit = parseInt(req.query.limit as string) || 10;
+      
+      if (!date) {
+        return res.json({ 
+          leaderboard: [], 
+          date: null, 
+          message: "No finalized scores available yet" 
+        });
+      }
+      
+      const leaderboard = await storage.getLeaderboard(date, limit);
+      
+      res.json({
+        leaderboard,
+        date,
+        total: leaderboard.length
+      });
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error);
+      res.status(500).json({ message: "Failed to fetch leaderboard" });
     }
   });
 
