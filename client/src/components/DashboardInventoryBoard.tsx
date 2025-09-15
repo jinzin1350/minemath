@@ -126,7 +126,7 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
             <div
               key={slot.id}
               className={`relative aspect-square border-2 cursor-pointer transition-all duration-200 rounded-[4px] ${slot.item && slot.item.reward
-              ? `${getRarityBorderColor(slot.item.reward.rarity)} bg-gray-800 ${getRarityGlow(slot.item.reward.rarity)}`
+              ? `${getRarityBorderColor(slot.item.reward.rarity || 'common')} bg-gray-800 ${getRarityGlow(slot.item.reward.rarity || 'common')}`
               : 'border-gray-700 bg-gray-900/50'
             }`}
               onClick={() => setSelectedSlot(selectedSlot === slot.id ? null : slot.id)}
@@ -136,14 +136,14 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
                 <>
                   {/* Item icon */}
                   <div className="flex items-center justify-center h-full text-lg">
-                    {getItemIcon(slot.item.reward.iconName || 'chest')}
+                    {getItemIcon(slot.item.reward?.iconName || 'chest')}
                   </div>
 
                   {/* Rarity indicator - small colored dot */}
                   <div className={`absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full ${
-                    slot.item.reward.rarity === 'common' ? 'bg-gray-400' :
-                    slot.item.reward.rarity === 'rare' ? 'bg-blue-400' :
-                    slot.item.reward.rarity === 'epic' ? 'bg-purple-400' :
+                    slot.item.reward?.rarity === 'common' ? 'bg-gray-400' :
+                    slot.item.reward?.rarity === 'rare' ? 'bg-blue-400' :
+                    slot.item.reward?.rarity === 'epic' ? 'bg-purple-400' :
                     'bg-yellow-400'
                   }`}></div>
 
@@ -160,7 +160,7 @@ export function DashboardInventoryBoard({ userPoints }: DashboardInventoryBoardP
         </div>
 
         {/* Selected item tooltip */}
-        {selectedItem && (
+        {selectedItem && selectedItem.reward && (
           <div className="bg-black/90 border-2 border-amber-600 p-2 text-xs rounded-lg">
             <div className="font-pixel text-amber-300 flex items-center gap-1">
               <span>{getItemIcon(selectedItem.reward.iconName || 'chest')}</span>
