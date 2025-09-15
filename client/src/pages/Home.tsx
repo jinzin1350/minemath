@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Dashboard } from '@/components/Dashboard';
 import { GameInterface } from '@/components/GameInterface';
+import { Leaderboard } from '@/components/Leaderboard';
 import { Button } from '@/components/ui/button';
-import { LogOut, BarChart3, Gamepad2 } from 'lucide-react';
+import { LogOut, BarChart3, Gamepad2, Trophy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 
 export default function Home() {
   const { user } = useAuth();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'game'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'game' | 'leaderboard'>('dashboard');
   const { toast } = useToast();
 
   const handleLogout = () => {
@@ -109,6 +110,16 @@ export default function Home() {
                 <Gamepad2 className="h-4 w-4 mr-1" />
                 PLAY
               </Button>
+              <Button
+                variant={currentView === 'leaderboard' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentView('leaderboard')}
+                className="font-pixel text-xs"
+                data-testid="button-leaderboard"
+              >
+                <Trophy className="h-4 w-4 mr-1" />
+                LEADERBOARD
+              </Button>
             </div>
           </div>
           
@@ -137,6 +148,10 @@ export default function Home() {
       
       {currentView === 'game' && (
         <GameInterface onGameComplete={handleGameComplete} />
+      )}
+      
+      {currentView === 'leaderboard' && (
+        <Leaderboard />
       )}
     </div>
   );
