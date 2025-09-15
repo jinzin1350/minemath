@@ -42,6 +42,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Important: Send cookies for authentication
         body: JSON.stringify({
           pointsEarned,
           questionsAnswered,
