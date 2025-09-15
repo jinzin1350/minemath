@@ -192,6 +192,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint to check database status
+  app.get('/api/debug/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const totalPoints = await storage.getUserTotalPoints(userId);
+      const recentProgress = await storage.getRecentProgress(userId, 7);
+      
+      res.json({
+        userId,
+        userExists: !!user,
+        totalPoints,
+        recentProgressCount: recentProgress.length,
+        latestProgress: recentProgress[0] || null
+      });
+    } catch (error) {
+      console.error("Error checking debug status:", error);
+      res.status(500).json({ message: "Failed to check status", error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

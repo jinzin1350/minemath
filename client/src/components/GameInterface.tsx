@@ -49,7 +49,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
     diamonds: 0,
     magicPower: 0
   });
-  
+
   const [currentQuestion, setCurrentQuestion] = useState<Question>({ num1: 0, num2: 0 });
   const [userAnswer, setUserAnswer] = useState('');
   const [feedback, setFeedback] = useState('');
@@ -66,6 +66,18 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
   const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
 
+  // Mock data and states for the old `handleAnswerSubmit` function, which are not directly used in the new implementation but were part of the original structure that needed replacement.
+  // These are kept to ensure the context of the change is clear, but their values are not critical as the new `handleSubmit` logic supersedes them.
+  const [score, setScore] = useState(0);
+  const [playerHealth, setPlayerHealth] = useState(100);
+  const [enemyHealth, setEnemyHealth] = useState(100);
+  const [correctAnswers, setCorrectAnswers] = useState(0);
+  const [questionsAnswered, setQuestionsAnswered] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [gameStartTime, setGameStartTime] = useState(Date.now());
+  const [currentProblem, setCurrentProblem] = useState({ answer: 0 }); // Placeholder for the old structure
+  const [answer, setAnswer] = useState(''); // Placeholder for the old structure
+
   const enemies: Enemy[] = [
     { name: 'Zombie', speed: 8, sound: '💀 GRRRR!', defeatSound: '💥 ARGHHHH!' },
     { name: 'Skeleton', speed: 6, sound: '🏹 CLACK CLACK!', defeatSound: '💀 CRACK!' },
@@ -79,7 +91,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
     const num1 = Math.floor(Math.random() * maxNum) + 1;
     const num2 = Math.floor(Math.random() * maxNum) + 1;
     setCurrentQuestion({ num1, num2 });
-    
+
     // Show different enemies on each question for variety!
     const randomEnemyIndex = Math.floor(Math.random() * enemies.length);
     setCurrentEnemy(enemies[randomEnemyIndex]);
@@ -98,7 +110,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
       setPlayerDefending(true);
       setShowMagicBlast(true);
       setEnemyMoving(false);
-      
+
       const newStats = {
         ...gameStats,
         score: gameStats.score + earnedPoints,
@@ -111,15 +123,15 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
       if (!mockMode) {
         checkForAchievements(newStats.score);
       }
-      
+
       if (currentEnemy) {
         setFeedback(`${currentEnemy.defeatSound} +${earnedPoints} POINTS! 🌟`);
       } else {
         setFeedback(`✨ Perfect! +${earnedPoints} POINTS! 🌟`);
       }
-      
+
       setShowCelebration(true);
-      
+
       setTimeout(() => {
         setShowCelebration(false);
         setShowMagicBlast(false);
@@ -127,7 +139,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
         setShowPointsAnimation(false);
         setFeedback('');
         setUserAnswer('');
-        
+
         if (newStats.score >= gameStats.level * 50) {
           if (gameStats.level < 5) {
             setGameStats(prev => ({ ...prev, level: prev.level + 1 }));
@@ -143,7 +155,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
     } else {
       setFeedback(`❌ Wrong! Answer: ${correct} (No points)`);
       setEnemyPosition(prev => Math.max(0, prev - 25));
-      
+
       setTimeout(() => {
         setFeedback('');
         setUserAnswer('');
@@ -179,7 +191,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
         },
         body: JSON.stringify({ totalPoints }),
       });
-      
+
       if (response.ok) {
         const achievements = await response.json();
         if (achievements.length > 0) {
@@ -320,7 +332,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
         {/* Minecraft-style background blocks */}
         <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-r from-green-600 via-green-700 to-green-600 opacity-30"></div>
         <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-r from-amber-800 via-amber-900 to-amber-800"></div>
-        
+
         {/* Floating blocks decoration */}
         <div className="absolute top-4 left-4">
           <MinecraftBlock type="grass" size={12} />
@@ -331,7 +343,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
         <div className="absolute top-1/2 left-8 transform -translate-y-1/2">
           <MinecraftBlock type="dirt" size={8} />
         </div>
-        
+
         <div className="relative z-10 flex justify-between items-end h-full">
           {/* Player */}
           <div className="flex flex-col items-center relative">
@@ -361,7 +373,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
               +{pointsEarned} XP
             </div>
           )}
-          
+
           {/* Enemy approaching warning */}
           {currentEnemy && enemyPosition <= 30 && !playerDefending && (
             <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 text-red-500 font-pixel text-sm animate-pulse bg-black bg-opacity-70 px-4 py-2 rounded-lg border-2 border-red-500">
@@ -401,7 +413,7 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
             <h2 className="text-xl font-pixel text-foreground bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent border-2 border-blue-400 bg-black bg-opacity-30 px-4 py-2 rounded-lg">
               ⚡ {currentQuestion.num1} + {currentQuestion.num2} = ? ⚡
             </h2>
-            
+
             <div className="flex gap-2 max-w-xs mx-auto">
               <Input
                 type="number"
