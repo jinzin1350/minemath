@@ -94,7 +94,6 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
   const [enemyHealth, setEnemyHealth] = useState(100);
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
-  const [level, setLevel] = useState(1);
   const [gameStartTime, setGameStartTime] = useState(Date.now());
   const [currentProblem, setCurrentProblem] = useState({ answer: 0 }); // Placeholder for the old structure
   const [answer, setAnswer] = useState(''); // Placeholder for the old structure
