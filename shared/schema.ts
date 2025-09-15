@@ -68,6 +68,40 @@ export const achievements = pgTable("achievements", {
   unique("unique_achievement_per_user").on(table.userId, table.type, table.pointsRequired)
 ]);
 
+// Available rewards - Minecraft items that can be selected every 500 points
+export const availableRewards = pgTable("available_rewards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: varchar("description").notNull(),
+  itemType: varchar("item_type").notNull(), // 'block', 'tool', 'food', 'potion', 'special'
+  iconName: varchar("icon_name").notNull(), // 'diamond_sword', 'golden_apple', 'tnt', etc.
+  rarity: varchar("rarity").notNull().default('common'), // 'common', 'rare', 'epic', 'legendary'
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User inventory - Selected rewards by users
+export const userInventory = pgTable("user_inventory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  rewardId: varchar("reward_id").references(() => availableRewards.id).notNull(),
+  selectedAt: timestamp("selected_at").defaultNow(),
+  pointsWhenSelected: integer("points_when_selected").notNull(),
+});
+
+// Reward opportunities - Track when users can select rewards (every 500 points)
+export const rewardOpportunities = pgTable("reward_opportunities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  pointsMilestone: integer("points_milestone").notNull(), // 500, 1000, 1500, etc.
+  isUsed: boolean("is_used").default(false),
+  selectedRewardId: varchar("selected_reward_id").references(() => availableRewards.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  usedAt: timestamp("used_at"),
+}, (table) => [
+  unique("unique_milestone_per_user").on(table.userId, table.pointsMilestone)
+]);
+
 // Schema types
 export const upsertUserSchema = createInsertSchema(users).pick({
   id: true,
@@ -93,6 +127,22 @@ export const insertAchievementSchema = createInsertSchema(achievements).omit({
   unlockedAt: true,
 });
 
+export const insertAvailableRewardSchema = createInsertSchema(availableRewards).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserInventorySchema = createInsertSchema(userInventory).omit({
+  id: true,
+  selectedAt: true,
+});
+
+export const insertRewardOpportunitySchema = createInsertSchema(rewardOpportunities).omit({
+  id: true,
+  createdAt: true,
+  usedAt: true,
+});
+
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type DailyProgress = typeof dailyProgress.$inferSelect;
@@ -101,3 +151,9 @@ export type GameSession = typeof gameSessions.$inferSelect;
 export type InsertGameSession = z.infer<typeof insertGameSessionSchema>;
 export type Achievement = typeof achievements.$inferSelect;
 export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
+export type AvailableReward = typeof availableRewards.$inferSelect;
+export type InsertAvailableReward = z.infer<typeof insertAvailableRewardSchema>;
+export type UserInventory = typeof userInventory.$inferSelect;
+export type InsertUserInventory = z.infer<typeof insertUserInventorySchema>;
+export type RewardOpportunity = typeof rewardOpportunities.$inferSelect;
+export type InsertRewardOpportunity = z.infer<typeof insertRewardOpportunitySchema>;

@@ -124,6 +124,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reward system routes
+  app.get('/api/rewards/available', isAuthenticated, async (req: any, res) => {
+    try {
+      const rewards = await storage.getAvailableRewards();
+      res.json(rewards);
+    } catch (error) {
+      console.error("Error fetching available rewards:", error);
+      res.status(500).json({ message: "Failed to fetch available rewards" });
+    }
+  });
+
+  app.get('/api/rewards/opportunities', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Check and create new opportunities based on points
+      await storage.checkAndCreateRewardOpportunities(userId);
+      // Return available opportunities
+      const opportunities = await storage.getUserRewardOpportunities(userId);
+      res.json(opportunities);
+    } catch (error) {
+      console.error("Error fetching reward opportunities:", error);
+      res.status(500).json({ message: "Failed to fetch reward opportunities" });
+    }
+  });
+
+  app.post('/api/rewards/select', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { pointsMilestone, rewardId } = req.body;
+
+      if (!pointsMilestone || !rewardId) {
+        return res.status(400).json({ message: "Points milestone and reward ID are required" });
+      }
+
+      // Get total points to verify eligibility
+      const totalPoints = await storage.getUserTotalPoints(userId);
+      if (totalPoints < pointsMilestone) {
+        return res.status(400).json({ message: "Not enough points for this reward" });
+      }
+
+      // Add to inventory
+      await storage.addToUserInventory({
+        userId,
+        rewardId,
+        pointsWhenSelected: totalPoints,
+      });
+
+      // Mark opportunity as used
+      await storage.useRewardOpportunity(userId, pointsMilestone, rewardId);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error selecting reward:", error);
+      res.status(500).json({ message: "Failed to select reward" });
+    }
+  });
+
+  app.get('/api/inventory', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const inventory = await storage.getUserInventory(userId);
+      res.json(inventory);
+    } catch (error) {
+      console.error("Error fetching inventory:", error);
+      res.status(500).json({ message: "Failed to fetch inventory" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

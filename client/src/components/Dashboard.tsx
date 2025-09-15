@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MinecraftSteve, MinecraftBlock } from './MinecraftCharacters';
 import { AchievementBadge } from './AchievementBadge';
+import { RewardSelector } from './RewardSelector';
+import { InventoryDisplay } from './InventoryDisplay';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Calendar, Trophy, Target, TrendingUp, Diamond, Zap, Heart } from 'lucide-react';
 
@@ -138,13 +140,22 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
                   <p className="text-muted-foreground">Ready for another math adventure?</p>
                 </div>
               </div>
-              <Button 
-                onClick={onStartGame}
-                className="font-pixel px-6 py-3 bg-green-600 hover:bg-green-700"
-                data-testid="button-start-game"
-              >
-                START GAME
-              </Button>
+              <div className="flex gap-3">
+                <InventoryDisplay userPoints={data.totalStats.totalPoints} />
+                <RewardSelector 
+                  userPoints={data.totalStats.totalPoints}
+                  onRewardSelected={() => {
+                    // Optionally refresh achievements or other data
+                  }}
+                />
+                <Button 
+                  onClick={onStartGame}
+                  className="font-pixel px-6 py-3 bg-green-600 hover:bg-green-700"
+                  data-testid="button-start-game"
+                >
+                  START GAME
+                </Button>
+              </div>
             </div>
           </CardHeader>
         </Card>

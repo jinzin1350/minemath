@@ -3,6 +3,9 @@ import {
   dailyProgress, 
   gameSessions,
   achievements,
+  availableRewards,
+  userInventory,
+  rewardOpportunities,
   type User, 
   type UpsertUser,
   type DailyProgress,
@@ -10,7 +13,13 @@ import {
   type GameSession,
   type InsertGameSession,
   type Achievement,
-  type InsertAchievement
+  type InsertAchievement,
+  type AvailableReward,
+  type InsertAvailableReward,
+  type UserInventory,
+  type InsertUserInventory,
+  type RewardOpportunity,
+  type InsertRewardOpportunity,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, sum } from "drizzle-orm";
@@ -38,6 +47,16 @@ export interface IStorage {
   markAchievementAsSeen(achievementId: string, userId: string): Promise<void>;
   getUserTotalPoints(userId: string): Promise<number>;
   checkAndAwardPointAchievements(userId: string): Promise<Achievement[]>;
+  
+  // Reward system operations
+  getAvailableRewards(): Promise<AvailableReward[]>;
+  createAvailableReward(reward: InsertAvailableReward): Promise<AvailableReward>;
+  getUserInventory(userId: string): Promise<UserInventory[]>;
+  addToUserInventory(inventory: InsertUserInventory): Promise<UserInventory>;
+  getUserRewardOpportunities(userId: string): Promise<RewardOpportunity[]>;
+  createRewardOpportunity(opportunity: InsertRewardOpportunity): Promise<RewardOpportunity>;
+  useRewardOpportunity(userId: string, pointsMilestone: number, selectedRewardId: string): Promise<void>;
+  checkAndCreateRewardOpportunities(userId: string): Promise<RewardOpportunity[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -203,6 +222,104 @@ export class DatabaseStorage implements IStorage {
     }
 
     return newAchievements;
+  }
+
+  // Reward system operations
+  async getAvailableRewards(): Promise<AvailableReward[]> {
+    return await db
+      .select()
+      .from(availableRewards)
+      .where(eq(availableRewards.isActive, true));
+  }
+
+  async createAvailableReward(rewardData: InsertAvailableReward): Promise<AvailableReward> {
+    const [reward] = await db
+      .insert(availableRewards)
+      .values(rewardData)
+      .returning();
+    return reward;
+  }
+
+  async getUserInventory(userId: string): Promise<UserInventory[]> {
+    return await db
+      .select()
+      .from(userInventory)
+      .where(eq(userInventory.userId, userId))
+      .orderBy(desc(userInventory.selectedAt));
+  }
+
+  async addToUserInventory(inventoryData: InsertUserInventory): Promise<UserInventory> {
+    const [inventory] = await db
+      .insert(userInventory)
+      .values(inventoryData)
+      .returning();
+    return inventory;
+  }
+
+  async getUserRewardOpportunities(userId: string): Promise<RewardOpportunity[]> {
+    return await db
+      .select()
+      .from(rewardOpportunities)
+      .where(and(
+        eq(rewardOpportunities.userId, userId),
+        eq(rewardOpportunities.isUsed, false)
+      ))
+      .orderBy(desc(rewardOpportunities.pointsMilestone));
+  }
+
+  async createRewardOpportunity(opportunityData: InsertRewardOpportunity): Promise<RewardOpportunity> {
+    const [opportunity] = await db
+      .insert(rewardOpportunities)
+      .values(opportunityData)
+      .returning();
+    return opportunity;
+  }
+
+  async useRewardOpportunity(userId: string, pointsMilestone: number, selectedRewardId: string): Promise<void> {
+    await db
+      .update(rewardOpportunities)
+      .set({
+        isUsed: true,
+        selectedRewardId,
+        usedAt: new Date(),
+      })
+      .where(and(
+        eq(rewardOpportunities.userId, userId),
+        eq(rewardOpportunities.pointsMilestone, pointsMilestone)
+      ));
+  }
+
+  async checkAndCreateRewardOpportunities(userId: string): Promise<RewardOpportunity[]> {
+    const totalPoints = await this.getUserTotalPoints(userId);
+    const newOpportunities: RewardOpportunity[] = [];
+
+    // Create opportunities every 500 points
+    const completedMilestones = Math.floor(totalPoints / 500);
+    
+    for (let milestone = 1; milestone <= completedMilestones; milestone++) {
+      const pointsMilestone = milestone * 500;
+      
+      // Check if opportunity already exists
+      const [existing] = await db
+        .select()
+        .from(rewardOpportunities)
+        .where(and(
+          eq(rewardOpportunities.userId, userId),
+          eq(rewardOpportunities.pointsMilestone, pointsMilestone)
+        ));
+
+      if (!existing) {
+        // Create new reward opportunity
+        const opportunity = await this.createRewardOpportunity({
+          userId,
+          pointsMilestone,
+          isUsed: false,
+        });
+        newOpportunities.push(opportunity);
+      }
+    }
+
+    return newOpportunities;
   }
 }
 

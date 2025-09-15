@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { MinecraftSteve, MinecraftZombie, MinecraftSkeleton, MinecraftCreeper, MinecraftWitch, MinecraftDragon, MinecraftBlock } from './MinecraftCharacters';
 import { AchievementNotification } from './AchievementBadge';
+import { GameInventoryBoard } from './GameInventoryBoard';
 import { Heart, Diamond, Zap } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -392,46 +393,58 @@ export function GameInterface({ onGameComplete, mockMode = false }: GameInterfac
         </div>
       </Card>
 
-      {/* Question and Answer */}
-      <Card className="p-4 border-2 border-card-border">
-        <div className="text-center space-y-4">
-          <h2 className="text-xl font-pixel text-foreground bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent border-2 border-blue-400 bg-black bg-opacity-30 px-4 py-2 rounded-lg">
-            ⚡ {currentQuestion.num1} + {currentQuestion.num2} = ? ⚡
-          </h2>
-          
-          <div className="flex gap-2 max-w-xs mx-auto">
-            <Input
-              type="number"
-              value={userAnswer}
-              onChange={(e) => setUserAnswer(e.target.value)}
-              placeholder="Your answer"
-              className="text-center font-pixel"
-              data-testid="input-answer"
-              onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-            />
-            <Button 
-              onClick={handleSubmit}
-              disabled={!userAnswer}
-              className="font-pixel px-6 bg-red-600 hover:bg-red-700 border-2 border-red-800 text-white shadow-lg hover:scale-105 transition-all duration-200"
-              data-testid="button-submit"
-            >
-              ⚔️ ATTACK!
-            </Button>
+      {/* Main Game Content - Side by side layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Question and Answer */}
+        <Card className="lg:col-span-2 p-4 border-2 border-card-border">
+          <div className="text-center space-y-4">
+            <h2 className="text-xl font-pixel text-foreground bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent border-2 border-blue-400 bg-black bg-opacity-30 px-4 py-2 rounded-lg">
+              ⚡ {currentQuestion.num1} + {currentQuestion.num2} = ? ⚡
+            </h2>
+            
+            <div className="flex gap-2 max-w-xs mx-auto">
+              <Input
+                type="number"
+                value={userAnswer}
+                onChange={(e) => setUserAnswer(e.target.value)}
+                placeholder="Your answer"
+                className="text-center font-pixel"
+                data-testid="input-answer"
+                onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+              />
+              <Button 
+                onClick={handleSubmit}
+                disabled={!userAnswer}
+                className="font-pixel px-6 bg-red-600 hover:bg-red-700 border-2 border-red-800 text-white shadow-lg hover:scale-105 transition-all duration-200"
+                data-testid="button-submit"
+              >
+                ⚔️ ATTACK!
+              </Button>
+            </div>
+
+            {feedback && (
+              <div className="font-pixel text-sm text-yellow-400 animate-pulse bg-black bg-opacity-50 px-4 py-2 rounded-lg border border-yellow-400">
+                {feedback}
+              </div>
+            )}
+
+            {showCelebration && (
+              <div className="text-2xl animate-bounce flex gap-2">
+                🎉 🏆 🎉
+              </div>
+            )}
           </div>
+        </Card>
 
-          {feedback && (
-            <div className="font-pixel text-sm text-yellow-400 animate-pulse bg-black bg-opacity-50 px-4 py-2 rounded-lg border border-yellow-400">
-              {feedback}
-            </div>
-          )}
-
-          {showCelebration && (
-            <div className="text-2xl animate-bounce flex gap-2">
-              🎉 🏆 🎉
-            </div>
-          )}
+        {/* Game Inventory Board */}
+        <div className="lg:col-span-1">
+          <GameInventoryBoard 
+            onInventoryUpdate={() => {
+              // Optionally trigger any updates needed
+            }}
+          />
         </div>
-      </Card>
+      </div>
 
       {/* Achievement Notifications */}
       {newAchievements.length > 0 && currentAchievementIndex < newAchievements.length && (
