@@ -77,16 +77,13 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
   const [achievements, setAchievements] = useState<DashboardData['achievements']>([]);
 
   // Fetch real data when not in mock mode
-  const { data: userInfo, refetch: refetchUserInfo } = useQuery<{
+  const { data: userInfo } = useQuery<{
     firstName?: string;
     lastName?: string;
     profileImageUrl?: string;
   }>({
     queryKey: ['/api/auth/user'],
-    enabled: !mockMode,
-    refetchInterval: 10000, // More frequent refresh
-    refetchIntervalInBackground: true,
-    staleTime: 0, // Always consider data stale
+    enabled: !mockMode
   });
 
   const { data: recentProgress, isLoading: progressLoading, refetch: refetchProgress } = useQuery<Array<{
@@ -97,27 +94,21 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
   }>>({
     queryKey: [`/api/progress/recent?days=${selectedTimeframe === '7d' ? 7 : 30}`],
     enabled: !mockMode,
-    refetchInterval: 10000, // More frequent refresh
-    refetchIntervalInBackground: true,
-    staleTime: 0, // Always consider data stale
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
   // Fetch total user stats including all-time total points
   const { data: userTotalPoints, refetch: refetchTotalPoints } = useQuery<number>({
     queryKey: ['/api/user/total-points'],
     enabled: !mockMode,
-    refetchInterval: 10000, // More frequent refresh
-    refetchIntervalInBackground: true,
-    staleTime: 0, // Always consider data stale
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
   // Fetch achievements if not in mock mode
   const { data: achievementsData, refetch: refetchAchievements } = useQuery({
     queryKey: ['/api/achievements'],
     enabled: !mockMode,
-    refetchInterval: 10000, // More frequent refresh
-    refetchIntervalInBackground: true,
-    staleTime: 0, // Always consider data stale
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
   useEffect(() => {
@@ -188,14 +179,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Score Status Bar with Finalization Info */}
-        <ScoreStatusBar refetchData={async () => { 
-          await Promise.all([
-            refetchProgress(),
-            refetchAchievements(),
-            refetchTotalPoints(),
-            refetchUserInfo()
-          ]);
-        }} />
+        <ScoreStatusBar refetchData={() => { refetchProgress(); refetchAchievements(); refetchTotalPoints(); }} />
         {/* Enhanced Header with Minecraft Style */}
         <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90 shadow-2xl backdrop-blur-sm relative overflow-hidden">
           {/* Floating decorative blocks */}

@@ -276,22 +276,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth debug endpoint (without authentication required)
-  app.get('/api/debug/auth', async (req: any, res) => {
-    try {
-      res.json({
-        isAuthenticated: req.isAuthenticated(),
-        session: req.session ? 'exists' : 'missing',
-        user: req.user ? 'exists' : 'missing',
-        userClaims: req.user?.claims ? 'exists' : 'missing',
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error("Error checking auth status:", error);
-      res.status(500).json({ message: "Failed to check auth status", error: error.message });
-    }
-  });
-
   // Debug endpoint to check database status
   app.get('/api/debug/status', isAuthenticated, async (req: any, res) => {
     try {
