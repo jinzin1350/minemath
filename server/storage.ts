@@ -168,6 +168,7 @@ export class DatabaseStorage implements IStorage {
       lastUpdateAt: new Date(),
     };
 
+    // Try to insert/update the daily progress
     const [progress] = await db
       .insert(dailyProgress)
       .values(dataToInsert)
@@ -187,8 +188,29 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
 
-    // Update user's total score and redeemable points (only if not final)
-    if (!progress.isFinal && dataToInsert.dailyScore > 0) {
+    // If no progress returned (likely because record is final), fetch the existing record
+    if (!progress) {
+      const [existingProgress] = await db
+        .select()
+        .from(dailyProgress)
+        .where(
+          and(
+            eq(dailyProgress.userId, userId),
+            eq(dailyProgress.date, today)
+          )
+        );
+      
+      if (existingProgress) {
+        // Return existing record (likely final)
+        return existingProgress;
+      } else {
+        // This shouldn't happen, but create a basic record as fallback
+        return dataToInsert as DailyProgress;
+      }
+    }
+
+    // Update user's total score and redeemable points (only if not final and points > 0)
+    if (progress && !progress.isFinal && dataToInsert.dailyScore > 0) {
       await db
         .update(users)
         .set({
