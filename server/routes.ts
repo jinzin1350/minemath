@@ -279,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recentProgressCount: recentProgress.length,
         latestProgress: recentProgress[0] || null
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error checking debug status:", error);
       res.status(500).json({ message: "Failed to check status", error: error.message });
     }

@@ -151,6 +151,23 @@ export class DatabaseStorage implements IStorage {
     // Calculate finalizeAt: start of next day in user's timezone
     const finalizeAt = this.calculateNextMidnight(timeZone);
     
+    // First, check if there's already a finalized record for today
+    const existingProgress = await db
+      .select()
+      .from(dailyProgress)
+      .where(
+        and(
+          eq(dailyProgress.userId, userId),
+          eq(dailyProgress.date, today)
+        )
+      )
+      .limit(1);
+
+    // If progress is already finalized, return it without modification
+    if (existingProgress.length > 0 && existingProgress[0].isFinal) {
+      return existingProgress[0];
+    }
+    
     // Prepare data for upsert
     const dataToInsert = {
       userId,
