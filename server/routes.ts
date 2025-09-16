@@ -40,6 +40,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User stats routes
+  // Three-score system endpoints
+  app.get('/api/user/total-score', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const totalScore = await storage.getUserTotalScore(userId);
+      res.json(totalScore);
+    } catch (error) {
+      console.error("Error fetching user total score:", error);
+      res.status(500).json({ message: "Failed to fetch user total score" });
+    }
+  });
+
+  app.get('/api/user/daily-score', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const dailyScore = await storage.getUserDailyScore(userId);
+      res.json(dailyScore);
+    } catch (error) {
+      console.error("Error fetching user daily score:", error);
+      res.status(500).json({ message: "Failed to fetch user daily score" });
+    }
+  });
+
+  app.get('/api/user/redeemable-points', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const redeemablePoints = await storage.getUserRedeemablePoints(userId);
+      res.json(redeemablePoints);
+    } catch (error) {
+      console.error("Error fetching user redeemable points:", error);
+      res.status(500).json({ message: "Failed to fetch user redeemable points" });
+    }
+  });
+
+  // Combined scores endpoint
+  app.get('/api/user/scores', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [totalScore, dailyScore, redeemablePoints] = await Promise.all([
+        storage.getUserTotalScore(userId),
+        storage.getUserDailyScore(userId), 
+        storage.getUserRedeemablePoints(userId)
+      ]);
+      
+      res.json({
+        totalScore,
+        dailyScore,
+        redeemablePoints
+      });
+    } catch (error) {
+      console.error("Error fetching user scores:", error);
+      res.status(500).json({ message: "Failed to fetch user scores" });
+    }
+  });
+
+  // Legacy endpoint for backward compatibility
   app.get('/api/user/total-points', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -120,8 +176,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
+      // Convert pointsEarned to dailyScore for backward compatibility
+      const requestBody = { ...req.body };
+      if (requestBody.pointsEarned && !requestBody.dailyScore) {
+        requestBody.dailyScore = requestBody.pointsEarned;
+      }
+      
       // Validate request body with Zod schema (includes optional timezone)
-      const validatedData = updateTemporaryProgressSchema.parse(req.body);
+      const validatedData = insertTemporaryProgressSchema.parse(requestBody);
       
       const progress = await storage.upsertTemporaryProgress(userId, validatedData);
       
