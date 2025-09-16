@@ -45,7 +45,7 @@ export interface IStorage {
   getLeaderboard(date: string, limit?: number): Promise<Array<{
     userId: string;
     userName: string;
-    pointsEarned: number;
+    dailyScore: number;
     rank: number;
   }>>;
   getLatestFinalizedDate(): Promise<string | null>;
@@ -58,7 +58,10 @@ export interface IStorage {
   getUserAchievements(userId: string): Promise<Achievement[]>;
   createAchievement(achievement: InsertAchievement): Promise<Achievement>;
   markAchievementAsSeen(achievementId: string, userId: string): Promise<void>;
-  getUserTotalPoints(userId: string): Promise<number>;
+  // Three-score system queries
+  getUserTotalScore(userId: string): Promise<number>;
+  getUserDailyScore(userId: string): Promise<number>;
+  getUserRedeemablePoints(userId: string): Promise<number>;
   checkAndAwardPointAchievements(userId: string): Promise<Achievement[]>;
 
   // Reward system operations
@@ -110,7 +113,7 @@ export class DatabaseStorage implements IStorage {
       .onConflictDoUpdate({
         target: [dailyProgress.userId, dailyProgress.date],
         set: {
-          pointsEarned: progressData.pointsEarned,
+          dailyScore: progressData.dailyScore,
           questionsAnswered: progressData.questionsAnswered,
           correctAnswers: progressData.correctAnswers,
           level: progressData.level,
@@ -142,18 +145,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // NEW: Temporary/Final Scoring System Methods
-  async upsertTemporaryProgress(userId: string, progressData: InsertTemporaryProgress): Promise<{
-    id: string;
-    userId: string;
-    date: string;
-    pointsEarned: number;
-    questionsAnswered: number;
-    correctAnswers: number;
-    level: number;
-    isFinal: boolean;
-    finalizeAt: Date;
-    userTimeZone: string;
-  }> {
+  async upsertTemporaryProgress(userId: string, progressData: InsertTemporaryProgress): Promise<DailyProgress> {
     const timeZone = progressData.timeZone || 'UTC';
 
     // Calculate today's date in user's timezone (not UTC)
@@ -166,7 +158,7 @@ export class DatabaseStorage implements IStorage {
     const dataToInsert = {
       userId,
       date: today,
-      pointsEarned: progressData.pointsEarned || 0,
+      dailyScore: progressData.dailyScore || 0,
       questionsAnswered: progressData.questionsAnswered || 0,
       correctAnswers: progressData.correctAnswers || 0,
       level: progressData.level || 1,
@@ -183,7 +175,7 @@ export class DatabaseStorage implements IStorage {
         target: [dailyProgress.userId, dailyProgress.date],
         set: {
           // Add new points and stats to existing values
-          pointsEarned: sql`${dailyProgress.pointsEarned} + ${dataToInsert.pointsEarned}`,
+          dailyScore: sql`${dailyProgress.dailyScore} + ${dataToInsert.dailyScore}`,
           questionsAnswered: sql`${dailyProgress.questionsAnswered} + ${dataToInsert.questionsAnswered}`,
           correctAnswers: sql`${dailyProgress.correctAnswers} + ${dataToInsert.correctAnswers}`,
           level: sql`GREATEST(${dailyProgress.level}, ${dataToInsert.level})`,
@@ -194,6 +186,19 @@ export class DatabaseStorage implements IStorage {
         where: eq(dailyProgress.isFinal, false), // Only update if not final
       })
       .returning();
+
+    // Update user's total score and redeemable points (only if not final)
+    if (!progress.isFinal && dataToInsert.dailyScore > 0) {
+      await db
+        .update(users)
+        .set({
+          totalScore: sql`${users.totalScore} + ${dataToInsert.dailyScore}`,
+          redeemablePoints: sql`${users.redeemablePoints} + ${dataToInsert.dailyScore}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
+    }
+    
     return progress;
   }
 
@@ -237,14 +242,14 @@ export class DatabaseStorage implements IStorage {
   async getLeaderboard(date: string, limit: number = 10): Promise<Array<{
     userId: string;
     userName: string;
-    pointsEarned: number;
+    dailyScore: number;
     rank: number;
   }>> {
     const results = await db
       .select({
         userId: dailyProgress.userId,
         userName: sql<string>`COALESCE(${users.firstName}, 'Player')`,
-        pointsEarned: dailyProgress.pointsEarned,
+        dailyScore: dailyProgress.dailyScore,
       })
       .from(dailyProgress)
       .leftJoin(users, eq(dailyProgress.userId, users.id))
@@ -254,14 +259,14 @@ export class DatabaseStorage implements IStorage {
           eq(dailyProgress.isFinal, true) // Only finalized scores
         )
       )
-      .orderBy(desc(dailyProgress.pointsEarned))
+      .orderBy(desc(dailyProgress.dailyScore))
       .limit(limit);
 
     // Add rank numbers and handle nulls
     return results.map((result, index) => ({
       userId: result.userId,
       userName: result.userName || 'Player',
-      pointsEarned: result.pointsEarned || 0,
+      dailyScore: result.dailyScore || 0,
       rank: index + 1,
     }));
   }
@@ -463,13 +468,28 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(achievements.id, achievementId), eq(achievements.userId, userId)));
   }
 
-  async getUserTotalPoints(userId: string): Promise<number> {
-    const result = await db
-      .select({ total: sum(dailyProgress.pointsEarned) })
-      .from(dailyProgress)
-      .where(eq(dailyProgress.userId, userId));
+  // Three-score system queries
+  async getUserTotalScore(userId: string): Promise<number> {
+    const user = await this.getUser(userId);
+    return user?.totalScore || 0;
+  }
 
-    return result[0]?.total ? Number(result[0].total) : 0;
+  async getUserDailyScore(userId: string): Promise<number> {
+    const timeZone = 'UTC'; // You can pass this as parameter
+    const today = this.getTodayInTimezone(timeZone);
+    
+    const progress = await this.getDailyProgress(userId, today);
+    return progress?.dailyScore || 0;
+  }
+
+  async getUserRedeemablePoints(userId: string): Promise<number> {
+    const user = await this.getUser(userId);
+    return user?.redeemablePoints || 0;
+  }
+
+  async getUserTotalPoints(userId: string): Promise<number> {
+    // Legacy method - return total score for backward compatibility
+    return this.getUserTotalScore(userId);
   }
 
   async checkAndAwardPointAchievements(userId: string): Promise<Achievement[]> {
