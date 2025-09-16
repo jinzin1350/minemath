@@ -237,7 +237,31 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
         </Card>
 
         {/* Enhanced Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
+          {/* Today's Points Card */}
+          <Card className="border-2 md:border-4 border-blue-600 hover-elevate bg-gradient-to-br from-blue-900/50 to-indigo-900/50 shadow-xl relative overflow-hidden group">
+            <CardContent className="p-2 md:p-4 relative z-10">
+              <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3">
+                <div className="p-1 md:p-3 bg-blue-500/30 rounded-lg border border-blue-400 md:border-2 animate-pulse">
+                  <Calendar className="h-4 w-4 md:h-7 md:w-7 text-blue-400 animate-bounce" />
+                </div>
+                <div className="text-center md:text-left">
+                  <p className="text-xl md:text-3xl font-pixel text-blue-200 drop-shadow-lg animate-pulse">
+                    {(dashboardData.recentProgress || []).find(p => {
+                      const today = new Date().toISOString().split('T')[0];
+                      return p.date === today;
+                    })?.pointsEarned || 0}
+                  </p>
+                  <p className="text-xs md:text-sm text-blue-300 font-pixel">📅 Today</p>
+                  <p className="text-xs text-blue-400 font-pixel">Total: {dashboardData.totalStats.totalPoints}</p>
+                </div>
+              </div>
+              {/* Floating effects - hide on mobile */}
+              <div className="absolute top-1 right-1 text-blue-400 animate-bounce hidden md:block">📅</div>
+              <div className="absolute bottom-1 left-1 text-cyan-400 animate-pulse hidden md:block">⭐</div>
+            </CardContent>
+          </Card>
+
           <Card className="border-2 md:border-4 border-yellow-600 hover-elevate bg-gradient-to-br from-yellow-900/50 to-amber-900/50 shadow-xl relative overflow-hidden group">
             <CardContent className="p-2 md:p-4 relative z-10">
               <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3">
