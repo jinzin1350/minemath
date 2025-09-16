@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Check, Trophy } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface ProgressData {
   isFinal: boolean;
@@ -13,15 +13,41 @@ interface ProgressData {
   timeUntilFinalization: string | null;
 }
 
-export function ScoreStatusBar() {
+interface ScoreStatusBarProps {
+  refetchData?: () => Promise<void>;
+}
+
+export function ScoreStatusBar({ refetchData }: ScoreStatusBarProps) {
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const queryClient = useQueryClient();
 
   // Get today's progress with finalization status
   const { data: recentProgress, refetch } = useQuery({
     queryKey: ['/api/progress/recent'],
-    refetchInterval: 30000, // Refresh every 30 seconds
-    refetchIntervalInBackground: true, // Continue refreshing when tab is not active
+    refetchInterval: 10000, // More frequent refresh
+    refetchIntervalInBackground: true,
+    staleTime: 0, // Always consider data stale
   });
+
+  // Force refresh all related data when progress updates
+  useEffect(() => {
+    const forceRefresh = async () => {
+      // Invalidate all related queries to force fresh data
+      await queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/user/total-points'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/achievements'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
+      
+      if (refetchData) {
+        await refetchData();
+      }
+    };
+    
+    // Run refresh every 15 seconds to ensure UI stays updated
+    const interval = setInterval(forceRefresh, 15000);
+    
+    return () => clearInterval(interval);
+  }, [queryClient, refetchData]);
 
   const todayProgress = Array.isArray(recentProgress) && recentProgress.length > 0 
     ? (recentProgress[0] as ProgressData) 

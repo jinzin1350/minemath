@@ -73,19 +73,30 @@ export default function Home() {
       const progressData = await response.json();
       console.log('Progress saved successfully:', progressData);
 
-      // Invalidate and force refetch all queries to refresh dashboard data
-      await queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/achievements'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/rewards/opportunities'] });
+      // Clear all cached data and force fresh requests
+      queryClient.clear(); // This will clear all cached data
       
-      // Force immediate refetch of all queries to ensure UI updates
-      await queryClient.refetchQueries();
+      // Invalidate and force refetch all queries with specific keys
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['/api/user/total-points'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['/api/achievements'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['/api/inventory'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['/api/rewards/opportunities'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'], refetchType: 'all' })
+      ]);
       
-      // Additional force refresh for progress data specifically
-      await queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] });
-      await queryClient.refetchQueries({ queryKey: ['/api/progress/recent'] });
+      // Wait a moment for invalidation to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Force immediate refetch of all queries
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['/api/progress/recent'] }),
+        queryClient.refetchQueries({ queryKey: ['/api/user/total-points'] }),
+        queryClient.refetchQueries({ queryKey: ['/api/achievements'] }),
+        queryClient.refetchQueries({ queryKey: ['/api/inventory'] }),
+        queryClient.refetchQueries({ queryKey: ['/api/rewards/opportunities'] })
+      ]);
 
       toast({
         title: "Game Complete! 🎉",
