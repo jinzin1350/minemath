@@ -27,6 +27,13 @@ export default function Home() {
     });
     
     try {
+      // Don't save if no meaningful progress (score = 0)
+      if (!stats.score || stats.score <= 0) {
+        console.log('No meaningful progress to save (score = 0)');
+        setCurrentView('dashboard');
+        return;
+      }
+
       // Calculate points and game data from stats
       const pointsEarned = stats.score || 0;
       const level = stats.level || 1;
@@ -66,15 +73,19 @@ export default function Home() {
       const progressData = await response.json();
       console.log('Progress saved successfully:', progressData);
 
-      // Invalidate queries to refresh dashboard data
+      // Invalidate and force refetch all queries to refresh dashboard data
       await queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/achievements'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/rewards/opportunities'] });
       
-      // Force refetch of all queries to ensure UI updates
+      // Force immediate refetch of all queries to ensure UI updates
       await queryClient.refetchQueries();
+      
+      // Additional force refresh for progress data specifically
+      await queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/progress/recent'] });
 
       toast({
         title: "Game Complete! 🎉",

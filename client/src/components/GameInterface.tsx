@@ -165,8 +165,12 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
           if (gameStats.level < 5) {
             setGameStats(prev => ({ ...prev, level: prev.level + 1 }));
             setFeedback(`🎊 LEVEL UP! Now Level ${gameStats.level + 1}! 🎊`);
+            // Save progress on level up
+            console.log('Level up - saving progress:', newStats);
+            onGameComplete?.(newStats);
           } else {
             setGameState('levelComplete');
+            console.log('Game complete - saving final progress:', newStats);
             onGameComplete?.(newStats);
           }
         } else {
@@ -368,7 +372,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
   const { score: currentScore, hearts, diamonds, magicPower } = gameStats;
 
   return (
-    // Removed redundant outer div and applied main styles directly
+    // Removed outer div and applied main styles directly
     <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4" style={{ imageRendering: 'pixelated' }}>
       {/* Game Header */}
       <div className="relative z-10 p-3 md:p-6">
