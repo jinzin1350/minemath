@@ -504,11 +504,11 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
               className="absolute bottom-4 transition-all duration-100"
               style={{ right: `${enemyPosition}%`, left: 'auto' }}
             >
-              {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={1.0} />}
-              {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={1.0} />}
-              {currentEnemy.name === 'Creeper' && <MinecraftCreeper isAttacking={enemyAttacking} scale={1.0} />}
-              {currentEnemy.name === 'Witch' && <MinecraftWitch isAttacking={enemyAttacking} scale={1.0} />}
-              {currentEnemy.name === 'Dragon' && <MinecraftDragon isAttacking={enemyAttacking} scale={1.0} />}
+              {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={1.4} />}
+              {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={1.4} />}
+              {currentEnemy.name === 'Creeper' && <MinecraftCreeper isAttacking={enemyAttacking} scale={1.4} />}
+              {currentEnemy.name === 'Witch' && <MinecraftWitch isAttacking={enemyAttacking} scale={1.4} />}
+              {currentEnemy.name === 'Dragon' && <MinecraftDragon isAttacking={enemyAttacking} scale={1.4} />}
               <div className="text-xs text-center font-pixel text-red-400 mt-1">
                 {currentEnemy.name === 'Zombie' && '🧟'}
                 {currentEnemy.name === 'Skeleton' && '💀'}
