@@ -319,28 +319,43 @@ export class DatabaseStorage implements IStorage {
         return tomorrow;
       }
       
+      // Simple and reliable approach:
+      // 1. Get current time in target timezone
+      // 2. Add 1 day 
+      // 3. Set to start of day (midnight)
+      
       const now = new Date();
       
-      // Get tomorrow's date in the target timezone
+      // Get tomorrow's date in the user's timezone
       const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const tomorrowDateStr = new Intl.DateTimeFormat('en-CA', { 
+      const tomorrowStr = new Intl.DateTimeFormat('en-CA', { 
         timeZone, 
         year: 'numeric', 
         month: '2-digit', 
         day: '2-digit' 
       }).format(tomorrow);
       
-      // Create midnight timestamp in the target timezone
-      // This approach is more reliable than manual offset calculations
-      const midnightInTargetTZ = new Date(`${tomorrowDateStr}T00:00:00`);
+      // Create the exact moment of midnight tomorrow in the user's timezone
+      // and convert it to UTC using a more reliable method
+      const parts = tomorrowStr.split('-');
+      const year = parseInt(parts[0]);
+      const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+      const day = parseInt(parts[2]);
       
-      // Get the UTC offset for the target timezone at this specific time
-      const offsetMs = this.getTimezoneOffsetMs(timeZone, midnightInTargetTZ);
+      // Create a date object at midnight in UTC first
+      const utcMidnight = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
       
-      // Convert to UTC timestamp
-      const utcMidnight = new Date(midnightInTargetTZ.getTime() - offsetMs);
+      // Now adjust for the timezone offset
+      // Get the offset between UTC and target timezone at this specific time
+      const offsetInMinutes = this.getTimezoneOffset(timeZone, utcMidnight);
       
-      return utcMidnight;
+      // Adjust the UTC time by the offset to get the correct UTC time 
+      // that corresponds to midnight in the target timezone
+      const adjustedMidnight = new Date(utcMidnight.getTime() - (offsetInMinutes * 60 * 1000));
+      
+      console.log(`calculateNextMidnight: timezone=${timeZone}, tomorrow=${tomorrowStr}, utcResult=${adjustedMidnight.toISOString()}`);
+      
+      return adjustedMidnight;
     } catch (error) {
       console.error('Error calculating next midnight for timezone:', timeZone, error);
       // Fallback to UTC midnight
@@ -363,6 +378,51 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  /**
+   * Gets the timezone offset in minutes for a given timezone at a specific date
+   */
+  private getTimezoneOffset(timeZone: string, date: Date): number {
+    // Create two dates: one in UTC and one in the target timezone
+    const utcTime = new Intl.DateTimeFormat('en', {
+      timeZone: 'UTC',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(date);
+
+    const targetTime = new Intl.DateTimeFormat('en', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(date);
+
+    // Convert to timestamps and find difference
+    const utcMs = Date.UTC(
+      parseInt(utcTime.find(p => p.type === 'year')!.value),
+      parseInt(utcTime.find(p => p.type === 'month')!.value) - 1,
+      parseInt(utcTime.find(p => p.type === 'day')!.value),
+      parseInt(utcTime.find(p => p.type === 'hour')!.value),
+      parseInt(utcTime.find(p => p.type === 'minute')!.value)
+    );
+
+    const targetMs = Date.UTC(
+      parseInt(targetTime.find(p => p.type === 'year')!.value),
+      parseInt(targetTime.find(p => p.type === 'month')!.value) - 1,
+      parseInt(targetTime.find(p => p.type === 'day')!.value),
+      parseInt(targetTime.find(p => p.type === 'hour')!.value),
+      parseInt(targetTime.find(p => p.type === 'minute')!.value)
+    );
+
+    return (targetMs - utcMs) / (60 * 1000); // Return difference in minutes
+  }
+
   /**
    * Gets the timezone offset in milliseconds for a given timezone at a specific date
    * This is more reliable than manual calculations
