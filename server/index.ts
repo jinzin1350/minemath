@@ -69,8 +69,8 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     
-    // Start finalization scheduler for temporary/final scoring system
-    finalizationService.startScheduler();
-    log('Finalization scheduler started');
+    // DISABLED: Finalization scheduler for temporary/final scoring system
+    // finalizationService.startScheduler();
+    // log('Finalization scheduler started');
   });
 })();
