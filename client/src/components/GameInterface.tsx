@@ -115,7 +115,8 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
     // Show different enemies on each question for variety!
     const randomEnemyIndex = Math.floor(Math.random() * enemies.length);
     setCurrentEnemy(enemies[randomEnemyIndex]);
-    setEnemyPosition(100);
+    setEnemyPosition(0); // Start from the right side (0%)
+    setEnemyAttacking(false);
     setEnemyMoving(true);
   };
 
@@ -270,7 +271,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
               } else {
                 setEnemyPosition(0);
                 setEnemyAttacking(false);
-                setEnemyMoving(true);
+                // Don't automatically restart movement - wait for new question
               }
             }, 1000);
             return 100;
@@ -280,7 +281,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
       }, 100);
       return () => clearInterval(interval);
     }
-  }, [enemyMoving, currentEnemy, enemyPosition, gameStats.hearts, onGameComplete, gameStats]); // Added dependencies
+  }, [enemyMoving, currentEnemy, enemyPosition, gameStats.hearts, onGameComplete, gameStats]);
 
   // Game menu state handling
   if (gameState === 'menu') {
@@ -501,7 +502,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
           {currentEnemy && (
             <div
               className="absolute bottom-4 transition-all duration-100"
-              style={{ left: `${enemyPosition}%` }}
+              style={{ right: `${enemyPosition}%`, left: 'auto' }}
             >
               {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={0.8} />}
               {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={0.8} />}
