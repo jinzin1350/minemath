@@ -21,6 +21,9 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  // Three-score system
+  totalScore: integer("total_score").default(0), // Cumulative total score (never resets)
+  redeemablePoints: integer("redeemable_points").default(0), // Points available for rewards
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -30,7 +33,7 @@ export const dailyProgress = pgTable("daily_progress", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
   date: date("date").notNull(),
-  pointsEarned: integer("points_earned").default(0),
+  dailyScore: integer("daily_score").default(0), // Today's score (resets at midnight)
   questionsAnswered: integer("questions_answered").default(0),
   correctAnswers: integer("correct_answers").default(0),
   level: integer("level").default(1),
@@ -142,7 +145,7 @@ export const insertTemporaryProgressSchema = createInsertSchema(dailyProgress).o
 });
 
 export const updateDailyProgressSchema = insertDailyProgressSchema.partial().extend({
-  pointsEarned: z.number().min(0),
+  dailyScore: z.number().min(0),
 });
 
 export const insertGameSessionSchema = createInsertSchema(gameSessions).omit({
