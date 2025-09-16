@@ -115,7 +115,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
     // Show different enemies on each question for variety!
     const randomEnemyIndex = Math.floor(Math.random() * enemies.length);
     setCurrentEnemy(enemies[randomEnemyIndex]);
-    setEnemyPosition(100);
+    setEnemyPosition(0);
     setEnemyMoving(true);
   };
 
@@ -460,8 +460,8 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
           <MinecraftBlock type="dirt" size={8} />
         </div>
 
-        <div className="relative z-10 flex justify-start items-end h-full">
-          {/* Player - positioned on the left */}
+        <div className="relative z-10 flex justify-end items-end h-full">
+          {/* Player - positioned on the right */}
           <div className="flex flex-col items-center relative">
             <MinecraftSteve isDefending={playerDefending} />
             <span className="font-pixel text-xs text-green-400 mt-2 bg-black bg-opacity-50 px-2 py-1 rounded">
@@ -566,7 +566,11 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
 
         {/* Game Inventory Board */}
         <div className="lg:col-span-1">
-          <GameInventoryBoard />
+          <GameInventoryBoard
+            // Pass mock items or actual inventory data here
+            items={mockInventoryItems}
+            onItemClick={(item) => console.log('Clicked on item:', item)} // Placeholder for item click handler
+          />
         </div>
       </div>
 
