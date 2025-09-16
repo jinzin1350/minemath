@@ -211,14 +211,21 @@ export class DatabaseStorage implements IStorage {
 
     // Update user's total score and redeemable points (only if not final and points > 0)
     if (progress && !progress.isFinal && dataToInsert.dailyScore > 0) {
-      await db
+      console.log(`Updating user scores: progress.isFinal=${progress.isFinal}, dailyScore=${dataToInsert.dailyScore}, userId=${userId}`);
+      
+      const updateResult = await db
         .update(users)
         .set({
           totalScore: sql`${users.totalScore} + ${dataToInsert.dailyScore}`,
           redeemablePoints: sql`${users.redeemablePoints} + ${dataToInsert.dailyScore}`,
           updatedAt: new Date(),
         })
-        .where(eq(users.id, userId));
+        .where(eq(users.id, userId))
+        .returning();
+      
+      console.log(`User update result:`, updateResult);
+    } else {
+      console.log(`Skipping user update: progress=${!!progress}, isFinal=${progress?.isFinal}, dailyScore=${dataToInsert.dailyScore}`);
     }
     
     return progress;
