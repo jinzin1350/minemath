@@ -464,7 +464,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
         <div className="relative z-10 flex justify-start items-end h-full">
           {/* Player - positioned on the left */}
           <div className="flex flex-col items-center relative">
-            <MinecraftSteve isDefending={playerDefending} />
+            <MinecraftSteve isDefending={playerDefending} scale={1.0} />
             <span className="font-pixel text-xs text-green-400 mt-2 bg-black bg-opacity-50 px-2 py-1 rounded">
               🛡️ STEVE
             </span>
@@ -504,11 +504,11 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
               className="absolute bottom-4 transition-all duration-100"
               style={{ right: `${enemyPosition}%`, left: 'auto' }}
             >
-              {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={0.8} />}
-              {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={0.8} />}
-              {currentEnemy.name === 'Creeper' && <MinecraftCreeper isAttacking={enemyAttacking} scale={0.8} />}
-              {currentEnemy.name === 'Witch' && <MinecraftWitch isAttacking={enemyAttacking} scale={0.8} />}
-              {currentEnemy.name === 'Dragon' && <MinecraftDragon isAttacking={enemyAttacking} scale={0.6} />}
+              {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={1.0} />}
+              {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={1.0} />}
+              {currentEnemy.name === 'Creeper' && <MinecraftCreeper isAttacking={enemyAttacking} scale={1.0} />}
+              {currentEnemy.name === 'Witch' && <MinecraftWitch isAttacking={enemyAttacking} scale={1.0} />}
+              {currentEnemy.name === 'Dragon' && <MinecraftDragon isAttacking={enemyAttacking} scale={1.0} />}
               <div className="text-xs text-center font-pixel text-red-400 mt-1">
                 {currentEnemy.name === 'Zombie' && '🧟'}
                 {currentEnemy.name === 'Skeleton' && '💀'}
