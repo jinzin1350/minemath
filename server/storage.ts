@@ -209,9 +209,17 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    // Debug all variables before condition check
+    console.log(`=== Debug upsertTemporaryProgress ===`);
+    console.log(`progress exists:`, !!progress);
+    console.log(`progress.isFinal:`, progress?.isFinal);
+    console.log(`dataToInsert.dailyScore:`, dataToInsert.dailyScore);
+    console.log(`userId:`, userId);
+    console.log(`Complete progress object:`, JSON.stringify(progress, null, 2));
+
     // Update user's total score and redeemable points (only if not final and points > 0)
     if (progress && !progress.isFinal && dataToInsert.dailyScore > 0) {
-      console.log(`Updating user scores: progress.isFinal=${progress.isFinal}, dailyScore=${dataToInsert.dailyScore}, userId=${userId}`);
+      console.log(`✅ Updating user scores: progress.isFinal=${progress.isFinal}, dailyScore=${dataToInsert.dailyScore}, userId=${userId}`);
       
       const updateResult = await db
         .update(users)
@@ -223,9 +231,9 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, userId))
         .returning();
       
-      console.log(`User update result:`, updateResult);
+      console.log(`✅ User update result:`, updateResult);
     } else {
-      console.log(`Skipping user update: progress=${!!progress}, isFinal=${progress?.isFinal}, dailyScore=${dataToInsert.dailyScore}`);
+      console.log(`❌ Skipping user update: progress=${!!progress}, isFinal=${progress?.isFinal}, dailyScore=${dataToInsert.dailyScore}`);
     }
     
     return progress;
