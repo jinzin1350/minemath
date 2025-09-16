@@ -97,6 +97,13 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
+  // Fetch total user stats including all-time total points
+  const { data: userTotalPoints, refetch: refetchTotalPoints } = useQuery<number>({
+    queryKey: ['/api/user/total-points'],
+    enabled: !mockMode,
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+  });
+
   // Fetch achievements if not in mock mode
   const { data: achievementsData, refetch: refetchAchievements } = useQuery({
     queryKey: ['/api/achievements'],
@@ -110,28 +117,28 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     }
   }, [achievementsData]);
 
-  // Calculate total stats from recent progress
-  const calculateTotalStats = (progressData: any[]) => {
+  // Calculate total stats from recent progress but use API for total points
+  const calculateTotalStats = (progressData: any[], apiTotalPoints?: number) => {
     if (!progressData || progressData.length === 0) {
       return {
-        totalPoints: 0,
+        totalPoints: apiTotalPoints || 0,
         totalQuestions: 0,
         correctAnswers: 0,
         currentStreak: 0,
-        bestLevel: 1
+        bestLevel: Math.max(1, Math.floor((apiTotalPoints || 0) / 200))
       };
     }
 
-    const totals = progressData.reduce((acc, day) => ({
-      totalPoints: acc.totalPoints + day.pointsEarned,
+    const recentTotals = progressData.reduce((acc, day) => ({
       totalQuestions: acc.totalQuestions + day.questionsAnswered,
       correctAnswers: acc.correctAnswers + day.correctAnswers
-    }), { totalPoints: 0, totalQuestions: 0, correctAnswers: 0 });
+    }), { totalQuestions: 0, correctAnswers: 0 });
 
     return {
-      ...totals,
+      totalPoints: apiTotalPoints || 0, // Use API total points, not just recent
+      ...recentTotals,
       currentStreak: progressData.length, // Simple approximation
-      bestLevel: Math.max(1, Math.floor(totals.totalPoints / 200))
+      bestLevel: Math.max(1, Math.floor((apiTotalPoints || 0) / 200))
     };
   };
 
@@ -143,7 +150,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
       profileImageUrl: userInfo.profileImageUrl
     },
     recentProgress: recentProgress || [],
-    totalStats: calculateTotalStats(recentProgress || [])
+    totalStats: calculateTotalStats(recentProgress || [], userTotalPoints)
   };
 
   const displayName = dashboardData.user.firstName || 'Player';
@@ -172,7 +179,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Score Status Bar with Finalization Info */}
-        <ScoreStatusBar refetchData={() => { refetchProgress(); refetchAchievements(); }} />
+        <ScoreStatusBar refetchData={() => { refetchProgress(); refetchAchievements(); refetchTotalPoints(); }} />
         {/* Enhanced Header with Minecraft Style */}
         <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90 shadow-2xl backdrop-blur-sm relative overflow-hidden">
           {/* Floating decorative blocks */}
@@ -217,6 +224,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
                       userPoints={dashboardData.totalStats.totalPoints}
                       onRewardSelected={() => {
                         refetchAchievements(); // Refresh achievements after selection
+                        refetchTotalPoints(); // Refresh total points after selection
                       }}
                     />
                   </div>

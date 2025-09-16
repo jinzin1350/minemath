@@ -39,6 +39,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User stats routes
+  app.get('/api/user/total-points', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const totalPoints = await storage.getUserTotalPoints(userId);
+      res.json(totalPoints);
+    } catch (error) {
+      console.error("Error fetching user total points:", error);
+      res.status(500).json({ message: "Failed to fetch user total points" });
+    }
+  });
+
   // Achievement routes
   app.get('/api/achievements', isAuthenticated, async (req: any, res) => {
     try {
