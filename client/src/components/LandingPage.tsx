@@ -43,18 +43,40 @@ export function LandingPage({ onLogin }: LandingPageProps) {
               level up, and track your daily progress.
             </p>
             
-            <div className="space-y-4">
+            <div className="space-y-6">
               <Button
                 onClick={handleLogin}
                 className="font-pixel text-lg px-8 py-4 bg-green-600 hover:bg-green-700 text-white border-2 border-green-400"
                 data-testid="button-start-adventure"
               >
-                START YOUR ADVENTURE
+                <div className="flex items-center gap-2">
+                  <Zap className="h-5 w-5" />
+                  PLAY NOW - FREE
+                </div>
               </Button>
               
-              <p className="text-sm text-gray-300">
-                Sign in to track your progress and compete with friends!
-              </p>
+              <div className="bg-black/20 rounded-lg p-4 border border-green-400/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="h-5 w-5 text-green-400" />
+                  <p className="text-lg text-green-200 font-pixel">
+                    Quick & Secure Sign In
+                  </p>
+                </div>
+                <div className="text-sm text-gray-300 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Calculator className="h-4 w-4 text-blue-400" />
+                    <p>Safe sign-in through secure provider</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-yellow-400" />
+                    <p>Track your progress & compete with friends</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Heart className="h-4 w-4 text-red-400" />
+                    <p>No credit card needed • Play instantly</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -220,20 +242,29 @@ export function LandingPage({ onLogin }: LandingPageProps) {
       <div className="py-16 px-4 bg-gradient-to-b from-green-800 to-blue-900">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl font-pixel text-white mb-6">
-            READY TO START YOUR MATH ADVENTURE?
+            READY TO START PLAYING?
           </h2>
           
           <p className="text-lg text-gray-200 mb-8">
-            Join thousands of students who are making math fun with Minecraft!
+            Join thousands of students making math fun and easy!
           </p>
           
-          <Button
-            onClick={handleLogin}
-            className="font-pixel text-xl px-12 py-6 bg-orange-600 hover:bg-orange-700 text-white border-2 border-orange-400"
-            data-testid="button-join-adventure"
-          >
-            JOIN THE ADVENTURE
-          </Button>
+          <div className="space-y-4">
+            <Button
+              onClick={handleLogin}
+              className="font-pixel text-xl px-12 py-6 bg-orange-600 hover:bg-orange-700 text-white border-2 border-orange-400"
+              data-testid="button-join-adventure"
+            >
+              <div className="flex items-center gap-3">
+                <Users className="h-6 w-6" />
+                START PLAYING NOW
+              </div>
+            </Button>
+            
+            <p className="text-sm text-orange-200">
+              Free forever • No credit card needed • Play instantly
+            </p>
+          </div>
         </div>
       </div>
 
