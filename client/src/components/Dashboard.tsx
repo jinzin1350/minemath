@@ -20,14 +20,12 @@ interface DashboardData {
   };
   recentProgress: Array<{
     date: string;
-    dailyScore: number;
+    pointsEarned: number;
     questionsAnswered: number;
     correctAnswers: number;
   }>;
   totalStats: {
-    dailyScore: number;
-    totalScore: number;
-    redeemablePoints: number;
+    totalPoints: number;
     totalQuestions: number;
     correctAnswers: number;
     currentStreak: number;
@@ -57,18 +55,16 @@ const mockData: DashboardData = {
     lastName: 'Miner',
   },
   recentProgress: [
-    { date: '2024-01-15', dailyScore: 150, questionsAnswered: 25, correctAnswers: 20 },
-    { date: '2024-01-14', dailyScore: 120, questionsAnswered: 20, correctAnswers: 18 },
-    { date: '2024-01-13', dailyScore: 180, questionsAnswered: 30, correctAnswers: 24 },
-    { date: '2024-01-12', dailyScore: 90, questionsAnswered: 15, correctAnswers: 12 },
-    { date: '2024-01-11', dailyScore: 200, questionsAnswered: 35, correctAnswers: 28 },
-    { date: '2024-01-10', dailyScore: 160, questionsAnswered: 28, correctAnswers: 22 },
-    { date: '2024-01-09', dailyScore: 140, questionsAnswered: 22, correctAnswers: 19 },
+    { date: '2024-01-15', pointsEarned: 150, questionsAnswered: 25, correctAnswers: 20 },
+    { date: '2024-01-14', pointsEarned: 120, questionsAnswered: 20, correctAnswers: 18 },
+    { date: '2024-01-13', pointsEarned: 180, questionsAnswered: 30, correctAnswers: 24 },
+    { date: '2024-01-12', pointsEarned: 90, questionsAnswered: 15, correctAnswers: 12 },
+    { date: '2024-01-11', pointsEarned: 200, questionsAnswered: 35, correctAnswers: 28 },
+    { date: '2024-01-10', pointsEarned: 160, questionsAnswered: 28, correctAnswers: 22 },
+    { date: '2024-01-09', pointsEarned: 140, questionsAnswered: 22, correctAnswers: 19 },
   ],
   totalStats: {
-    dailyScore: 0, // Today's score
-    totalScore: 1040, // Cumulative total
-    redeemablePoints: 500, // Available for rewards
+    totalPoints: 1040,
     totalQuestions: 175,
     correctAnswers: 143,
     currentStreak: 5,
@@ -92,22 +88,11 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
 
   const { data: recentProgress, isLoading: progressLoading, refetch: refetchProgress } = useQuery<Array<{
     date: string;
-    dailyScore: number;
+    pointsEarned: number;
     questionsAnswered: number;
     correctAnswers: number;
   }>>({
     queryKey: [`/api/progress/recent?days=${selectedTimeframe === '7d' ? 7 : 30}`],
-    enabled: !mockMode,
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
-  });
-
-  // Fetch three-score system stats
-  const { data: userScores, refetch: refetchScores } = useQuery<{
-    dailyScore: number;
-    totalScore: number;
-    redeemablePoints: number;
-  }>({
-    queryKey: ['/api/user/scores'],
     enabled: !mockMode,
     refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
@@ -125,34 +110,40 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     }
   }, [achievementsData]);
 
-  // Calculate total stats from recent progress and three-score system
-  const calculateTotalStats = (progressData: any[], scores?: { dailyScore: number; totalScore: number; redeemablePoints: number; }) => {
-    const recentTotals = progressData && progressData.length > 0 
-      ? progressData.reduce((acc, day) => ({
-          totalQuestions: acc.totalQuestions + day.questionsAnswered,
-          correctAnswers: acc.correctAnswers + day.correctAnswers
-        }), { totalQuestions: 0, correctAnswers: 0 })
-      : { totalQuestions: 0, correctAnswers: 0 };
+  // Calculate total stats from recent progress
+  const calculateTotalStats = (progressData: any[]) => {
+    if (!progressData || progressData.length === 0) {
+      return {
+        totalPoints: 0,
+        totalQuestions: 0,
+        correctAnswers: 0,
+        currentStreak: 0,
+        bestLevel: 1
+      };
+    }
+
+    const totals = progressData.reduce((acc, day) => ({
+      totalPoints: acc.totalPoints + day.pointsEarned,
+      totalQuestions: acc.totalQuestions + day.questionsAnswered,
+      correctAnswers: acc.correctAnswers + day.correctAnswers
+    }), { totalPoints: 0, totalQuestions: 0, correctAnswers: 0 });
 
     return {
-      dailyScore: scores?.dailyScore || 0,
-      totalScore: scores?.totalScore || 0,
-      redeemablePoints: scores?.redeemablePoints || 0,
-      ...recentTotals,
-      currentStreak: progressData?.length || 0, // Simple approximation
-      bestLevel: Math.max(1, Math.floor((scores?.totalScore || 0) / 200))
+      ...totals,
+      currentStreak: progressData.length, // Simple approximation
+      bestLevel: Math.max(1, Math.floor(totals.totalPoints / 200))
     };
   };
 
   // Use real data if available, otherwise fall back to mock data
-  const dashboardData = mockMode || !userInfo || !recentProgress || !userScores ? data : {
+  const dashboardData = mockMode || !userInfo || !recentProgress ? data : {
     user: {
       firstName: userInfo.firstName || 'Player',
       lastName: userInfo.lastName || '',
       profileImageUrl: userInfo.profileImageUrl
     },
     recentProgress: recentProgress || [],
-    totalStats: calculateTotalStats(recentProgress || [], userScores)
+    totalStats: calculateTotalStats(recentProgress || [])
   };
 
   const displayName = dashboardData.user.firstName || 'Player';
@@ -170,7 +161,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
         day: 'numeric',
         timeZone: 'UTC'
       }),
-      points: day.dailyScore,
+      points: day.pointsEarned,
       accuracy: day.questionsAnswered > 0 
         ? Math.round((day.correctAnswers / day.questionsAnswered) * 100)
         : 0
@@ -181,7 +172,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Score Status Bar with Finalization Info */}
-        <ScoreStatusBar refetchData={() => { refetchProgress(); refetchAchievements(); refetchScores(); }} />
+        <ScoreStatusBar refetchData={() => { refetchProgress(); refetchAchievements(); }} />
         {/* Enhanced Header with Minecraft Style */}
         <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90 shadow-2xl backdrop-blur-sm relative overflow-hidden">
           {/* Floating decorative blocks */}
@@ -219,14 +210,13 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
               <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full md:w-auto">
                 <div className="flex gap-2">
                   <div className="animate-bounce-slow">
-                    <InventoryDisplay userPoints={dashboardData.totalStats.totalScore} />
+                    <InventoryDisplay userPoints={dashboardData.totalStats.totalPoints} />
                   </div>
                   <div className="animate-pulse">
                     <RewardSelector 
-                      userPoints={dashboardData.totalStats.redeemablePoints}
+                      userPoints={dashboardData.totalStats.totalPoints}
                       onRewardSelected={() => {
                         refetchAchievements(); // Refresh achievements after selection
-                        refetchScores(); // Refresh scores after selection
                       }}
                     />
                   </div>
@@ -246,62 +236,25 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
           </CardHeader>
         </Card>
 
-        {/* Enhanced Stats Overview - Three Score System */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-4">
-          {/* Daily Score */}
-          <Card className="border-2 md:border-4 border-blue-600 hover-elevate bg-gradient-to-br from-blue-900/50 to-cyan-900/50 shadow-xl relative overflow-hidden group lg:col-span-2">
-            <CardContent className="p-2 md:p-4 relative z-10">
-              <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3">
-                <div className="p-1 md:p-3 bg-blue-500/30 rounded-lg border border-blue-400 md:border-2 animate-pulse">
-                  <Calendar className="h-4 w-4 md:h-7 md:w-7 text-blue-400 animate-bounce" />
-                </div>
-                <div className="text-center md:text-left">
-                  <p className="text-xl md:text-3xl font-pixel text-blue-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.dailyScore}</p>
-                  <p className="text-xs md:text-sm text-blue-300 font-pixel">📅 Today's Score</p>
-                </div>
-              </div>
-              <div className="absolute top-1 right-1 text-blue-400 animate-pulse hidden md:block">🌟</div>
-              <div className="absolute bottom-1 left-1 text-cyan-400 animate-bounce hidden md:block">⚡</div>
-            </CardContent>
-          </Card>
-
-          {/* Total Score */}
-          <Card className="border-2 md:border-4 border-yellow-600 hover-elevate bg-gradient-to-br from-yellow-900/50 to-amber-900/50 shadow-xl relative overflow-hidden group lg:col-span-2">
+        {/* Enhanced Stats Overview */}
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
+          <Card className="border-2 md:border-4 border-yellow-600 hover-elevate bg-gradient-to-br from-yellow-900/50 to-amber-900/50 shadow-xl relative overflow-hidden group">
             <CardContent className="p-2 md:p-4 relative z-10">
               <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3">
                 <div className="p-1 md:p-3 bg-yellow-500/30 rounded-lg border border-yellow-400 md:border-2 animate-pulse">
                   <Trophy className="h-4 w-4 md:h-7 md:w-7 text-yellow-400 animate-bounce" />
                 </div>
                 <div className="text-center md:text-left">
-                  <p className="text-xl md:text-3xl font-pixel text-yellow-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.totalScore}</p>
-                  <p className="text-xs md:text-sm text-yellow-300 font-pixel">🏆 Total Score</p>
+                  <p className="text-xl md:text-3xl font-pixel text-yellow-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.totalPoints}</p>
+                  <p className="text-xs md:text-sm text-yellow-300 font-pixel">🏆 Points</p>
                 </div>
               </div>
+              {/* Floating sparkles - hide on mobile */}
               <div className="absolute top-1 right-1 text-yellow-400 animate-spin hidden md:block">✨</div>
               <div className="absolute bottom-1 left-1 text-amber-400 animate-ping hidden md:block">⭐</div>
             </CardContent>
           </Card>
 
-          {/* Redeemable Points */}
-          <Card className="border-2 md:border-4 border-emerald-600 hover-elevate bg-gradient-to-br from-emerald-900/50 to-green-900/50 shadow-xl relative overflow-hidden group lg:col-span-2">
-            <CardContent className="p-2 md:p-4 relative z-10">
-              <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3">
-                <div className="p-1 md:p-3 bg-emerald-500/30 rounded-lg border border-emerald-400 md:border-2 animate-pulse">
-                  <Diamond className="h-4 w-4 md:h-7 md:w-7 text-emerald-400 animate-bounce" />
-                </div>
-                <div className="text-center md:text-left">
-                  <p className="text-xl md:text-3xl font-pixel text-emerald-200 drop-shadow-lg animate-pulse">{dashboardData.totalStats.redeemablePoints}</p>
-                  <p className="text-xs md:text-sm text-emerald-300 font-pixel">💎 Redeemable</p>
-                </div>
-              </div>
-              <div className="absolute top-1 right-1 text-emerald-400 animate-pulse hidden md:block">💰</div>
-              <div className="absolute bottom-1 left-1 text-green-400 animate-bounce hidden md:block">🎁</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Secondary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4">
           <Card className="border-2 md:border-4 border-green-600 hover-elevate bg-gradient-to-br from-green-900/50 to-emerald-900/50 shadow-xl relative overflow-hidden group">
             <CardContent className="p-2 md:p-4 relative z-10">
               <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3">
@@ -451,7 +404,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
           {/* Dashboard Inventory Board */}
           <div className="lg:col-span-1">
-            <DashboardInventoryBoard userPoints={dashboardData.totalStats.totalScore} />
+            <DashboardInventoryBoard userPoints={dashboardData.totalStats.totalPoints} />
           </div>
 
           <Card className="border-2 border-card-border lg:col-span-1">
@@ -516,7 +469,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-pixel text-sm text-foreground">{day.dailyScore} pts</p>
+                      <p className="font-pixel text-sm text-foreground">{day.pointsEarned} pts</p>
                       <p className="text-xs text-green-400">
                         {Math.round((day.correctAnswers / day.questionsAnswered) * 100)}% accuracy
                       </p>

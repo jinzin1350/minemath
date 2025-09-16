@@ -280,7 +280,7 @@ export const MinecraftDragon = ({ isAttacking = false, scale = 1 }: MinecraftCha
     <img 
       src="/dragon-minecraft.png" 
       alt="Minecraft Ender Dragon" 
-      className="w-16 h-16 pixelated"
+      className="w-20 h-20 pixelated"
       style={{ 
         imageRendering: 'pixelated',
         transform: isAttacking ? 'rotate(-5deg) scale(1.1)' : 'rotate(0deg) scale(1)',
@@ -309,7 +309,7 @@ export const MinecraftDragon = ({ isAttacking = false, scale = 1 }: MinecraftCha
         // If all paths fail, hide the image and show fallback
         current.style.display = 'none';
         const fallback = document.createElement('div');
-        fallback.className = 'w-16 h-16 bg-black flex items-center justify-center text-purple-400 font-bold text-xs';
+        fallback.className = 'w-20 h-20 bg-black flex items-center justify-center text-purple-400 font-bold text-xs';
         fallback.textContent = 'DRAGON';
         current.parentNode?.appendChild(fallback);
       }}

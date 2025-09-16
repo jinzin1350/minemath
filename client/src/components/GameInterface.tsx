@@ -115,8 +115,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
     // Show different enemies on each question for variety!
     const randomEnemyIndex = Math.floor(Math.random() * enemies.length);
     setCurrentEnemy(enemies[randomEnemyIndex]);
-    setEnemyPosition(0); // Start from the right side (0%)
-    setEnemyAttacking(false);
+    setEnemyPosition(100);
     setEnemyMoving(true);
   };
 
@@ -165,12 +164,8 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
           if (gameStats.level < 5) {
             setGameStats(prev => ({ ...prev, level: prev.level + 1 }));
             setFeedback(`🎊 LEVEL UP! Now Level ${gameStats.level + 1}! 🎊`);
-            // Save progress on level up
-            console.log('Level up - saving progress:', newStats);
-            onGameComplete?.(newStats);
           } else {
             setGameState('levelComplete');
-            console.log('Game complete - saving final progress:', newStats);
             onGameComplete?.(newStats);
           }
         } else {
@@ -275,7 +270,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
               } else {
                 setEnemyPosition(0);
                 setEnemyAttacking(false);
-                // Don't automatically restart movement - wait for new question
+                setEnemyMoving(true);
               }
             }, 1000);
             return 100;
@@ -285,7 +280,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
       }, 100);
       return () => clearInterval(interval);
     }
-  }, [enemyMoving, currentEnemy, enemyPosition, gameStats.hearts, onGameComplete, gameStats]);
+  }, [enemyMoving, currentEnemy, enemyPosition, gameStats.hearts, onGameComplete, gameStats]); // Added dependencies
 
   // Game menu state handling
   if (gameState === 'menu') {
@@ -372,7 +367,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
   const { score: currentScore, hearts, diamonds, magicPower } = gameStats;
 
   return (
-    // Removed outer div and applied main styles directly
+    // Removed redundant outer div and applied main styles directly
     <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4" style={{ imageRendering: 'pixelated' }}>
       {/* Game Header */}
       <div className="relative z-10 p-3 md:p-6">
@@ -468,7 +463,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
         <div className="relative z-10 flex justify-start items-end h-full">
           {/* Player - positioned on the left */}
           <div className="flex flex-col items-center relative">
-            <MinecraftSteve isDefending={playerDefending} scale={1.0} />
+            <MinecraftSteve isDefending={playerDefending} />
             <span className="font-pixel text-xs text-green-400 mt-2 bg-black bg-opacity-50 px-2 py-1 rounded">
               🛡️ STEVE
             </span>
@@ -506,13 +501,13 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
           {currentEnemy && (
             <div
               className="absolute bottom-4 transition-all duration-100"
-              style={{ right: `${enemyPosition}%`, left: 'auto' }}
+              style={{ left: `${enemyPosition}%` }}
             >
-              {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={1.4} />}
-              {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={1.4} />}
-              {currentEnemy.name === 'Creeper' && <MinecraftCreeper isAttacking={enemyAttacking} scale={1.4} />}
-              {currentEnemy.name === 'Witch' && <MinecraftWitch isAttacking={enemyAttacking} scale={1.4} />}
-              {currentEnemy.name === 'Dragon' && <MinecraftDragon isAttacking={enemyAttacking} scale={1.4} />}
+              {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={0.8} />}
+              {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={0.8} />}
+              {currentEnemy.name === 'Creeper' && <MinecraftCreeper isAttacking={enemyAttacking} scale={0.8} />}
+              {currentEnemy.name === 'Witch' && <MinecraftWitch isAttacking={enemyAttacking} scale={0.8} />}
+              {currentEnemy.name === 'Dragon' && <MinecraftDragon isAttacking={enemyAttacking} scale={0.6} />}
               <div className="text-xs text-center font-pixel text-red-400 mt-1">
                 {currentEnemy.name === 'Zombie' && '🧟'}
                 {currentEnemy.name === 'Skeleton' && '💀'}
