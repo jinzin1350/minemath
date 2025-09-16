@@ -1,12 +1,12 @@
-import { 
-  users, 
-  dailyProgress, 
+import {
+  users,
+  dailyProgress,
   gameSessions,
   achievements,
   availableRewards,
   userInventory,
   rewardOpportunities,
-  type User, 
+  type User,
   type UpsertUser,
   type DailyProgress,
   type InsertDailyProgress,
@@ -32,12 +32,12 @@ export interface IStorage {
   // User operations - required for Replit Auth
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  
+
   // Game progress operations
   getDailyProgress(userId: string, date: string): Promise<DailyProgress | undefined>;
   upsertDailyProgress(progress: InsertDailyProgress): Promise<DailyProgress>;
   getRecentProgress(userId: string, days: number): Promise<DailyProgress[]>;
-  
+
   // NEW: Temporary/Final scoring system
   upsertTemporaryProgress(userId: string, progressData: InsertTemporaryProgress): Promise<DailyProgress>;
   finalizeDueForUser(userId: string): Promise<void>;
@@ -49,18 +49,18 @@ export interface IStorage {
     rank: number;
   }>>;
   getLatestFinalizedDate(): Promise<string | null>;
-  
+
   // Game session operations
   createGameSession(session: InsertGameSession): Promise<GameSession>;
   getUserGameSessions(userId: string, limit?: number): Promise<GameSession[]>;
-  
+
   // Achievement operations
   getUserAchievements(userId: string): Promise<Achievement[]>;
   createAchievement(achievement: InsertAchievement): Promise<Achievement>;
   markAchievementAsSeen(achievementId: string, userId: string): Promise<void>;
   getUserTotalPoints(userId: string): Promise<number>;
   checkAndAwardPointAchievements(userId: string): Promise<Achievement[]>;
-  
+
   // Reward system operations
   getAvailableRewards(): Promise<AvailableReward[]>;
   createAvailableReward(reward: InsertAvailableReward): Promise<AvailableReward>;
@@ -125,10 +125,10 @@ export class DatabaseStorage implements IStorage {
   async getRecentProgress(userId: string, days: number): Promise<DailyProgress[]> {
     // Lazy finalization: Check for due finalizations before fetching
     await this.finalizeDueForUser(userId);
-    
+
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
-    
+
     return await db
       .select()
       .from(dailyProgress)
@@ -142,15 +142,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   // NEW: Temporary/Final Scoring System Methods
-  async upsertTemporaryProgress(userId: string, progressData: InsertTemporaryProgress): Promise<DailyProgress> {
+  async upsertTemporaryProgress(userId: string, progressData: InsertTemporaryProgress): Promise<{
+    id: string;
+    userId: string;
+    date: string;
+    pointsEarned: number;
+    questionsAnswered: number;
+    correctAnswers: number;
+    level: number;
+    isFinal: boolean;
+    finalizeAt: Date;
+    userTimeZone: string;
+  }> {
     const timeZone = progressData.timeZone || 'UTC';
-    
+
     // Calculate today's date in user's timezone (not UTC)
     const today = this.getTodayInTimezone(timeZone);
-    
+
     // Calculate finalizeAt: start of next day in user's timezone
     const finalizeAt = this.calculateNextMidnight(timeZone);
-    
+
     // Prepare data for upsert
     const dataToInsert = {
       userId,
@@ -188,7 +199,7 @@ export class DatabaseStorage implements IStorage {
 
   async finalizeDueForUser(userId: string): Promise<void> {
     const now = new Date();
-    
+
     await db
       .update(dailyProgress)
       .set({
@@ -207,7 +218,7 @@ export class DatabaseStorage implements IStorage {
 
   async finalizeDueAll(): Promise<void> {
     const now = new Date();
-    
+
     await db
       .update(dailyProgress)
       .set({
@@ -262,7 +273,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(dailyProgress.isFinal, true))
       .orderBy(desc(dailyProgress.date))
       .limit(1);
-    
+
     return result?.date || null;
   }
 
@@ -273,16 +284,16 @@ export class DatabaseStorage implements IStorage {
         console.warn(`Invalid timezone: ${timeZone}, falling back to UTC`);
         return new Date().toISOString().split('T')[0];
       }
-      
+
       const now = new Date();
       // Use Intl.DateTimeFormat for reliable timezone conversion
-      const formatter = new Intl.DateTimeFormat('en-CA', { 
-        timeZone, 
-        year: 'numeric', 
-        month: '2-digit', 
-        day: '2-digit' 
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
       });
-      
+
       return formatter.format(now); // Returns YYYY-MM-DD format directly
     } catch (error) {
       console.error('Error calculating today in timezone:', timeZone, error);
@@ -301,28 +312,28 @@ export class DatabaseStorage implements IStorage {
         tomorrow.setUTCHours(0, 0, 0, 0);
         return tomorrow;
       }
-      
+
       const now = new Date();
-      
+
       // Get tomorrow's date in the target timezone
       const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const tomorrowDateStr = new Intl.DateTimeFormat('en-CA', { 
-        timeZone, 
-        year: 'numeric', 
-        month: '2-digit', 
-        day: '2-digit' 
+      const tomorrowDateStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
       }).format(tomorrow);
-      
+
       // Create midnight timestamp in the target timezone
       // This approach is more reliable than manual offset calculations
       const midnightInTargetTZ = new Date(`${tomorrowDateStr}T00:00:00`);
-      
+
       // Get the UTC offset for the target timezone at this specific time
       const offsetMs = this.getTimezoneOffsetMs(timeZone, midnightInTargetTZ);
-      
+
       // Convert to UTC timestamp
       const utcMidnight = new Date(midnightInTargetTZ.getTime() - offsetMs);
-      
+
       return utcMidnight;
     } catch (error) {
       console.error('Error calculating next midnight for timezone:', timeZone, error);
@@ -345,7 +356,7 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
-  
+
   /**
    * Gets the timezone offset in milliseconds for a given timezone at a specific date
    * This is more reliable than manual calculations
@@ -363,7 +374,7 @@ export class DatabaseStorage implements IStorage {
         second: '2-digit',
         hour12: false
       });
-      
+
       const targetFormatter = new Intl.DateTimeFormat('en-US', {
         timeZone,
         year: 'numeric',
@@ -374,39 +385,39 @@ export class DatabaseStorage implements IStorage {
         second: '2-digit',
         hour12: false
       });
-      
+
       // Parse the formatted dates to get the actual time difference
       const utcParts = utcFormatter.formatToParts(date);
       const targetParts = targetFormatter.formatToParts(date);
-      
+
       const utcTime = this.parseFormattedDate(utcParts);
       const targetTime = this.parseFormattedDate(targetParts);
-      
+
       return utcTime - targetTime;
     } catch (error) {
       console.error('Error calculating timezone offset:', error);
       return 0; // Default to no offset (UTC)
     }
   }
-  
+
   /**
    * Helper to parse Intl.DateTimeFormat parts into a timestamp
    */
   private parseFormattedDate(parts: Intl.DateTimeFormatPart[]): number {
-    const values: {[key: string]: string} = {};
+    const values: { [key: string]: string } = {};
     parts.forEach(part => {
       if (part.type !== 'literal') {
         values[part.type] = part.value;
       }
     });
-    
+
     const year = parseInt(values.year);
     const month = parseInt(values.month) - 1; // JavaScript months are 0-based
     const day = parseInt(values.day);
     const hour = parseInt(values.hour || '0');
     const minute = parseInt(values.minute || '0');
     const second = parseInt(values.second || '0');
-    
+
     return new Date(year, month, day, hour, minute, second).getTime();
   }
 
@@ -457,7 +468,7 @@ export class DatabaseStorage implements IStorage {
       .select({ total: sum(dailyProgress.pointsEarned) })
       .from(dailyProgress)
       .where(eq(dailyProgress.userId, userId));
-    
+
     return result[0]?.total ? Number(result[0].total) : 0;
   }
 
@@ -465,7 +476,7 @@ export class DatabaseStorage implements IStorage {
     // Calculate total points from actual database records
     const totalPoints = await this.getUserTotalPoints(userId);
     const newAchievements: Achievement[] = [];
-    
+
     // Define Minecraft-style achievements every 500 points
     const pointMilestones = [
       { points: 500, name: "Novice Miner", icon: "iron", desc: "Earned your first 500 points!" },
@@ -594,10 +605,10 @@ export class DatabaseStorage implements IStorage {
 
     // Create opportunities every 500 points
     const completedMilestones = Math.floor(totalPoints / 500);
-    
+
     for (let milestone = 1; milestone <= completedMilestones; milestone++) {
       const pointsMilestone = milestone * 500;
-      
+
       // Check if opportunity already exists
       const [existing] = await db
         .select()
