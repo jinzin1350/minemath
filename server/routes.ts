@@ -116,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         ...progress,
         status: progress && progress.isFinal ? 'final' : 'temporary',
-        timeUntilFinalization: progress && progress.isFinal ? null : progress.finalizeAt
+        timeUntilFinalization: progress && progress.isFinal ? null : progress?.finalizeAt
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
