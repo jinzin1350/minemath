@@ -106,7 +106,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
 
   useEffect(() => {
     if (achievementsData) {
-      setAchievements(achievementsData);
+      setAchievements(achievementsData as DashboardData['achievements']);
     }
   }, [achievementsData]);
 
@@ -172,7 +172,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Score Status Bar with Finalization Info */}
-        <ScoreStatusBar refetchData={() => { refetchProgress(); refetchAchievements(); }} />
+        <ScoreStatusBar />
         {/* Enhanced Header with Minecraft Style */}
         <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90 shadow-2xl backdrop-blur-sm relative overflow-hidden">
           {/* Floating decorative blocks */}
