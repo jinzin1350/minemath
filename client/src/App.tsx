@@ -9,7 +9,7 @@ import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, error } = useAuth();
 
   if (isLoading) {
     return (
@@ -22,13 +22,19 @@ function Router() {
     );
   }
 
+  // If there's an auth error or user is not authenticated, show landing page
+  if (error || !isAuthenticated) {
+    return (
+      <Switch>
+        <Route path="/" component={LandingPage} />
+        <Route component={NotFound} />
+      </Switch>
+    );
+  }
+
   return (
     <Switch>
-      {!isAuthenticated ? (
-        <Route path="/" component={LandingPage} />
-      ) : (
-        <Route path="/" component={Home} />
-      )}
+      <Route path="/" component={Home} />
       <Route component={NotFound} />
     </Switch>
   );

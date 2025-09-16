@@ -44,12 +44,16 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 0, // Always consider data stale for real-time updates
-      cacheTime: 1000 * 60 * 5, // Keep cache for 5 minutes
-      retry: 2,
-      refetchOnMount: true,
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes
+      retry: (failureCount, error) => {
+        // Don't retry on 401 errors (unauthorized)
+        if (error.message.includes('401')) {
+          return false;
+        }
+        return failureCount < 3;
+      },
     },
   },
 });
