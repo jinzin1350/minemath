@@ -176,26 +176,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      console.log(`🔥 API /api/progress/temporary called`);
-      console.log(`🔥 Original request body:`, JSON.stringify(req.body, null, 2));
-      console.log(`🔥 userId:`, userId);
-      
       // Convert pointsEarned to dailyScore for backward compatibility
       const requestBody = { ...req.body };
       if (requestBody.pointsEarned && !requestBody.dailyScore) {
         requestBody.dailyScore = requestBody.pointsEarned;
-        console.log(`🔥 Converted pointsEarned(${requestBody.pointsEarned}) to dailyScore`);
       }
-      
-      console.log(`🔥 Final request body:`, JSON.stringify(requestBody, null, 2));
       
       // Validate request body with Zod schema (includes optional timezone)
       const validatedData = insertTemporaryProgressSchema.parse(requestBody);
-      console.log(`🔥 Validated data:`, JSON.stringify(validatedData, null, 2));
       
       const progress = await storage.upsertTemporaryProgress(userId, validatedData);
-      
-      console.log(`🔥 Final result:`, JSON.stringify(progress, null, 2));
       
       res.json({
         ...progress,
