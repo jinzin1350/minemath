@@ -538,7 +538,12 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
                 placeholder="Your answer"
                 className="text-center font-pixel"
                 data-testid="input-answer"
-                onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
               />
               <Button
                 onClick={handleSubmit}
