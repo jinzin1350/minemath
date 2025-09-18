@@ -121,8 +121,9 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
     // Show different enemies on each question for variety!
     const randomEnemyIndex = Math.floor(Math.random() * enemies.length);
     setCurrentEnemy(enemies[randomEnemyIndex]);
-    setEnemyPosition(0);
-    setEnemyMoving(true);
+    setEnemyPosition(0); // Start from left side
+    setEnemyAttacking(false); // Reset attack state
+    setEnemyMoving(true); // Start moving
   };
 
   const handleSubmit = () => {
@@ -298,20 +299,29 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
     }
   }, [gameState, timeLeft, gameStats.hearts, onGameComplete, gameStats]);
 
-  // Enemy movement effect - slower movement over 15 seconds
+  // Enemy movement effect - consistent movement over 15 seconds
   useEffect(() => {
-    if (enemyMoving && currentEnemy && enemyPosition < 100 && timeLeft > 0) {
+    if (enemyMoving && currentEnemy && enemyPosition < 100) {
+      const startTime = Date.now();
+      const duration = 15000; // 15 seconds in milliseconds
+      
       const interval = setInterval(() => {
-        setEnemyPosition(prev => {
-          // Calculate position based on time elapsed (15 seconds total)
-          const timeElapsed = 15 - timeLeft;
-          const progressPercentage = (timeElapsed / 15) * 100;
-          return Math.min(progressPercentage, 100);
-        });
-      }, 100);
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1); // 0 to 1
+        const newPosition = progress * 100; // 0 to 100%
+        
+        setEnemyPosition(newPosition);
+        
+        // Stop when enemy reaches player or time is up
+        if (progress >= 1) {
+          setEnemyMoving(false);
+          clearInterval(interval);
+        }
+      }, 50); // Update every 50ms for smooth animation
+      
       return () => clearInterval(interval);
     }
-  }, [enemyMoving, currentEnemy, timeLeft]);
+  }, [enemyMoving, currentEnemy]);
 
   // Game menu state handling
   if (gameState === 'menu') {
@@ -491,10 +501,10 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
         <div className="relative z-10 flex justify-between items-center h-full px-1 md:px-0">
           {/* Enemy - Enhanced mobile positioning */}
           {currentEnemy && (
-            <div className="flex flex-col items-center relative scale-90 md:scale-100 md:absolute md:bottom-4 transition-all duration-200"
+            <div className="flex flex-col items-center absolute bottom-4 scale-90 md:scale-100 transition-all duration-200"
                  style={{ 
-                   left: window.innerWidth < 768 ? 'auto' : `${enemyPosition}%`,
-                   transform: window.innerWidth < 768 ? 'translateX(0)' : undefined
+                   left: `${enemyPosition}%`,
+                   transform: `translateX(-50%)` // Center the enemy on its position
                  }}>
               {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={0.7} />}
               {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={0.7} />}
