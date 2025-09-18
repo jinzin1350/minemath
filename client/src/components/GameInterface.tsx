@@ -474,41 +474,61 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
         </div>
       </div>
 
-      {/* Game Arena */}
-      <Card className="p-4 mb-4 border-2 border-card-border relative min-h-[300px] bg-gradient-to-b from-sky-300 to-green-400 overflow-hidden">
-        {/* Minecraft-style background blocks */}
-        <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-r from-green-600 via-green-700 to-green-600 opacity-30"></div>
-        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-r from-amber-800 via-amber-900 to-amber-800"></div>
+      {/* Game Arena - Compact for mobile */}
+      <Card className="p-2 md:p-4 mb-2 md:mb-4 border-2 border-card-border relative min-h-[120px] md:min-h-[300px] bg-gradient-to-b from-sky-300 to-green-400 overflow-hidden">
+        {/* Minecraft-style background blocks - smaller on mobile */}
+        <div className="absolute top-0 left-0 right-0 h-4 md:h-8 bg-gradient-to-r from-green-600 via-green-700 to-green-600 opacity-30"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-4 md:h-8 bg-gradient-to-r from-amber-800 via-amber-900 to-amber-800"></div>
 
-        {/* Floating blocks decoration */}
-        <div className="absolute top-4 left-4">
+        {/* Floating blocks decoration - hidden on mobile to save space */}
+        <div className="hidden md:block absolute top-4 left-4">
           <MinecraftBlock type="grass" size={12} />
         </div>
-        <div className="absolute top-4 right-4">
+        <div className="hidden md:block absolute top-4 right-4">
           <MinecraftBlock type="stone" size={12} />
         </div>
-        <div className="absolute top-1/2 left-8 transform -translate-y-1/2">
+        <div className="hidden md:block absolute top-1/2 left-8 transform -translate-y-1/2">
           <MinecraftBlock type="dirt" size={8} />
         </div>
 
-        <div className="relative z-10 flex justify-end items-end h-full">
-          {/* Player - positioned on the right */}
-          <div className="flex flex-col items-center relative">
+        <div className="relative z-10 flex justify-between items-center md:justify-end md:items-end h-full px-2 md:px-0">
+          {/* Enemy - Left side on mobile */}
+          {currentEnemy && (
+            <div className="flex flex-col items-center relative scale-75 md:scale-100 md:absolute md:bottom-4 transition-all duration-100"
+                 style={{ left: window.innerWidth < 768 ? 'auto' : `${enemyPosition}%` }}>
+              {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={0.6} />}
+              {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={0.6} />}
+              {currentEnemy.name === 'Creeper' && <MinecraftCreeper isAttacking={enemyAttacking} scale={0.6} />}
+              {currentEnemy.name === 'Witch' && <MinecraftWitch isAttacking={enemyAttacking} scale={0.6} />}
+              {currentEnemy.name === 'Dragon' && <MinecraftDragon isAttacking={enemyAttacking} scale={0.4} />}
+              <div className="text-xs text-center font-pixel text-red-400 mt-1">
+                {currentEnemy.name === 'Zombie' && '🧟'}
+                {currentEnemy.name === 'Skeleton' && '💀'}
+                {currentEnemy.name === 'Creeper' && '💣'}
+                {currentEnemy.name === 'Witch' && '🧙‍♀️'}
+                {currentEnemy.name === 'Dragon' && '🐲'}
+                <span className="hidden md:inline">{currentEnemy.name}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Player - Right side, always visible */}
+          <div className="flex flex-col items-center relative scale-75 md:scale-100">
             <MinecraftSteve isDefending={playerDefending} />
-            <span className="font-pixel text-xs text-green-400 mt-2 bg-black bg-opacity-50 px-2 py-1 rounded">
-              🛡️ STEVE
+            <span className="font-pixel text-xs text-green-400 mt-1 md:mt-2 bg-black bg-opacity-50 px-1 md:px-2 py-1 rounded">
+              🛡️ <span className="hidden md:inline">STEVE</span>
             </span>
             {/* Magic power indicator */}
             {magicPower > 0 && (
-              <div className="absolute -top-4 -right-4 bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-pixel animate-pulse">
+              <div className="absolute -top-2 md:-top-4 -right-2 md:-right-4 bg-purple-600 text-white rounded-full w-4 h-4 md:w-6 md:h-6 flex items-center justify-center text-xs font-pixel animate-pulse">
                 {magicPower}
               </div>
             )}
           </div>
 
-          {/* Battle Effects */}
+          {/* Battle Effects - Centered */}
           {showMagicBlast && (
-            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl animate-ping z-20">
+            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl md:text-4xl animate-ping z-20">
               <div className="text-yellow-400 animate-spin">⚡</div>
               <div className="text-blue-400 animate-pulse">💫</div>
               <div className="text-purple-400 animate-bounce">✨</div>
@@ -516,37 +536,15 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
           )}
 
           {showPointsAnimation && (
-            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 font-pixel text-yellow-400 animate-bounce text-lg z-20 bg-black bg-opacity-50 px-3 py-1 rounded-lg border-2 border-yellow-400">
+            <div className="absolute top-2 md:top-4 left-1/2 transform -translate-x-1/2 font-pixel text-yellow-400 animate-bounce text-sm md:text-lg z-20 bg-black bg-opacity-50 px-2 md:px-3 py-1 rounded-lg border-2 border-yellow-400">
               +{pointsEarned} XP
             </div>
           )}
 
-          {/* Enemy approaching warning */}
+          {/* Enemy approaching warning - Compact for mobile */}
           {currentEnemy && enemyPosition >= 70 && !playerDefending && (
-            <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 text-red-500 font-pixel text-sm animate-pulse bg-black bg-opacity-70 px-4 py-2 rounded-lg border-2 border-red-500">
-              ⚠️ {currentEnemy.sound} ⚠️
-            </div>
-          )}
-
-          {/* Enemy */}
-          {currentEnemy && (
-            <div
-              className="absolute bottom-4 transition-all duration-100"
-              style={{ left: `${enemyPosition}%` }}
-            >
-              {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={0.8} />}
-              {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={0.8} />}
-              {currentEnemy.name === 'Creeper' && <MinecraftCreeper isAttacking={enemyAttacking} scale={0.8} />}
-              {currentEnemy.name === 'Witch' && <MinecraftWitch isAttacking={enemyAttacking} scale={0.8} />}
-              {currentEnemy.name === 'Dragon' && <MinecraftDragon isAttacking={enemyAttacking} scale={0.6} />}
-              <div className="text-xs text-center font-pixel text-red-400 mt-1">
-                {currentEnemy.name === 'Zombie' && '🧟'}
-                {currentEnemy.name === 'Skeleton' && '💀'}
-                {currentEnemy.name === 'Creeper' && '💣'}
-                {currentEnemy.name === 'Witch' && '🧙‍♀️'}
-                {currentEnemy.name === 'Dragon' && '🐲'}
-                {currentEnemy.name}
-              </div>
+            <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 text-red-500 font-pixel text-xs md:text-sm animate-pulse bg-black bg-opacity-70 px-2 md:px-4 py-1 md:py-2 rounded-lg border-2 border-red-500">
+              ⚠️ <span className="hidden md:inline">{currentEnemy.sound}</span> ⚠️
             </div>
           )}
         </div>
@@ -554,23 +552,23 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
 
       {/* Main Game Content - Side by side layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Question and Answer */}
-        <Card className="lg:col-span-2 p-4 border-2 border-card-border">
-          <div className="text-center space-y-4">
-            <div className="space-y-3">
-              <h2 className="text-xl font-pixel text-foreground bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent border-2 border-blue-400 bg-black bg-opacity-30 px-4 py-2 rounded-lg">
+        {/* Question and Answer - Compact for mobile */}
+        <Card className="lg:col-span-2 p-2 md:p-4 border-2 border-card-border">
+          <div className="text-center space-y-2 md:space-y-4">
+            <div className="space-y-2 md:space-y-3">
+              <h2 className="text-lg md:text-xl font-pixel text-foreground bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent border-2 border-blue-400 bg-black bg-opacity-30 px-2 md:px-4 py-1 md:py-2 rounded-lg">
                 ⚡ {currentQuestion.num1} + {currentQuestion.num2} = ? ⚡
               </h2>
               
-              {/* Timer Display */}
-              <div className={`text-center font-pixel text-lg px-4 py-2 rounded-lg border-2 ${
+              {/* Timer Display - More compact on mobile */}
+              <div className={`text-center font-pixel text-sm md:text-lg px-2 md:px-4 py-1 md:py-2 rounded-lg border-2 ${
                 timeLeft <= 5 
                   ? 'bg-red-900/50 border-red-500 text-red-200 animate-pulse' 
                   : timeLeft <= 10 
                   ? 'bg-yellow-900/50 border-yellow-500 text-yellow-200' 
                   : 'bg-green-900/50 border-green-500 text-green-200'
               }`}>
-                ⏰ Time left: {timeLeft} seconds
+                ⏰ <span className="hidden md:inline">Time left: </span>{timeLeft}<span className="hidden md:inline"> seconds</span>s
               </div>
             </div>
 
@@ -580,7 +578,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
                 placeholder="Your answer"
-                className="text-center font-pixel"
+                className="text-center font-pixel text-sm md:text-base h-8 md:h-9"
                 data-testid="input-answer"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -592,29 +590,29 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
               <Button
                 onClick={handleSubmit}
                 disabled={!userAnswer}
-                className="font-pixel px-6 bg-red-600 hover:bg-red-700 border-2 border-red-800 text-white shadow-lg hover:scale-105 transition-all duration-200"
+                className="font-pixel px-3 md:px-6 text-xs md:text-sm bg-red-600 hover:bg-red-700 border-2 border-red-800 text-white shadow-lg hover:scale-105 transition-all duration-200 h-8 md:h-9"
                 data-testid="button-submit"
               >
-                ⚔️ ATTACK!
+                ⚔️ <span className="hidden md:inline">ATTACK!</span>
               </Button>
             </div>
 
             {feedback && (
-              <div className="font-pixel text-sm text-yellow-400 animate-pulse bg-black bg-opacity-50 px-4 py-2 rounded-lg border border-yellow-400">
+              <div className="font-pixel text-xs md:text-sm text-yellow-400 animate-pulse bg-black bg-opacity-50 px-2 md:px-4 py-1 md:py-2 rounded-lg border border-yellow-400">
                 {feedback}
               </div>
             )}
 
             {showCelebration && (
-              <div className="text-2xl animate-bounce flex gap-2">
+              <div className="text-lg md:text-2xl animate-bounce flex gap-2 justify-center">
                 🎉 🏆 🎉
               </div>
             )}
           </div>
         </Card>
 
-        {/* Game Inventory Board */}
-        <div className="lg:col-span-1">
+        {/* Game Inventory Board - Hidden on mobile to save space */}
+        <div className="lg:col-span-1 hidden md:block">
           <GameInventoryBoard
             // Pass mock items or actual inventory data here
             items={mockInventoryItems}
