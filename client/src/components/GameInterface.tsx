@@ -86,6 +86,8 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
   const [pointsEarned, setPointsEarned] = useState(0);
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
   const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(15); // 15 seconds timer
+  const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
 
   // Mock data and states for the old `handleAnswerSubmit` function, which are not directly used in the new implementation but were part of the original structure that needed replacement.
   // These are kept to ensure the context of the change is clear, but their values are not critical as the new `handleSubmit` logic supersedes them.
@@ -99,11 +101,11 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
   const [answer, setAnswer] = useState(''); // Placeholder for the old structure
 
   const enemies: Enemy[] = [
-    { name: 'Zombie', speed: 8, sound: '💀 GRRRR!', defeatSound: '💥 ARGHHHH!' },
-    { name: 'Skeleton', speed: 6, sound: '🏹 CLACK CLACK!', defeatSound: '💀 CRACK!' },
-    { name: 'Creeper', speed: 10, sound: '💣 SSSSSS!', defeatSound: '💥 BOOM!' },
-    { name: 'Witch', speed: 5, sound: '🧙‍♀️ CACKLE!', defeatSound: '⚡ NOOO!' },
-    { name: 'Dragon', speed: 12, sound: '🐲 ROAAAAR!', defeatSound: '🔥 DEFEATED!' }
+    { name: 'Zombie', speed: 1.5, sound: '💀 GRRRR!', defeatSound: '💥 ARGHHHH!' },
+    { name: 'Skeleton', speed: 1.2, sound: '🏹 CLACK CLACK!', defeatSound: '💀 CRACK!' },
+    { name: 'Creeper', speed: 1.8, sound: '💣 SSSSSS!', defeatSound: '💥 BOOM!' },
+    { name: 'Witch', speed: 1.0, sound: '🧙‍♀️ CACKLE!', defeatSound: '⚡ NOOO!' },
+    { name: 'Dragon', speed: 2.0, sound: '🐲 ROAAAAR!', defeatSound: '🔥 DEFEATED!' }
   ];
 
   const generateQuestion = () => {
@@ -111,6 +113,10 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
     const num1 = Math.floor(Math.random() * maxNum) + 1;
     const num2 = Math.floor(Math.random() * maxNum) + 1;
     setCurrentQuestion({ num1, num2 });
+
+    // Reset timer to 15 seconds
+    setTimeLeft(15);
+    setQuestionStartTime(Date.now());
 
     // Show different enemies on each question for variety!
     const randomEnemyIndex = Math.floor(Math.random() * enemies.length);
@@ -164,6 +170,10 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
           if (gameStats.level < 5) {
             setGameStats(prev => ({ ...prev, level: prev.level + 1 }));
             setFeedback(`🎊 LEVEL UP! Now Level ${gameStats.level + 1}! 🎊`);
+            setTimeout(() => {
+              setFeedback('');
+              generateQuestion();
+            }, 2000);
           } else {
             setGameState('levelComplete');
             onGameComplete?.(newStats);
@@ -173,8 +183,10 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
         }
       }, 2000);
     } else {
-      setFeedback(`❌ Wrong! Answer: ${correct} (No points)`);
-      setEnemyPosition(prev => Math.max(0, prev - 25));
+      setFeedback(`❌ پاسخ نادرست! جواب: ${correct} (امتیازی نگرفتی)`);
+      
+      // Wrong answer gives enemy advantage - reduces time by 3 seconds
+      setTimeLeft(prev => Math.max(1, prev - 3));
 
       setTimeout(() => {
         setFeedback('');
@@ -252,15 +264,17 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
     }
   };
 
-  // Enemy movement effect
+  // Timer countdown effect
   useEffect(() => {
-    if (enemyMoving && currentEnemy && enemyPosition < 100) {
-      const interval = setInterval(() => {
-        setEnemyPosition(prev => {
-          const newPos = prev + (currentEnemy.speed / 10);
-          if (newPos >= 100) {
+    if (gameState === 'playing' && timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            // Time's up! Enemy wins
             setEnemyAttacking(true);
             setEnemyMoving(false);
+            setFeedback('⏰ زمان تمام شد! دشمن حمله کرد!');
+            
             setTimeout(() => {
               const newHearts = gameStats.hearts - 1;
               setGameStats(prev => ({ ...prev, hearts: newHearts }));
@@ -268,19 +282,36 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
                 setGameState('gameOver');
                 onGameComplete?.(gameStats);
               } else {
-                setEnemyPosition(0);
-                setEnemyAttacking(false);
-                setEnemyMoving(true);
+                setFeedback('');
+                setUserAnswer('');
+                generateQuestion();
               }
-            }, 1000);
-            return 100;
+            }, 2000);
+            
+            return 0;
           }
-          return newPos;
+          return prev - 1;
+        });
+      }, 1000);
+      
+      return () => clearInterval(timer);
+    }
+  }, [gameState, timeLeft, gameStats.hearts, onGameComplete, gameStats]);
+
+  // Enemy movement effect - slower movement over 15 seconds
+  useEffect(() => {
+    if (enemyMoving && currentEnemy && enemyPosition < 100 && timeLeft > 0) {
+      const interval = setInterval(() => {
+        setEnemyPosition(prev => {
+          // Calculate position based on time elapsed (15 seconds total)
+          const timeElapsed = 15 - timeLeft;
+          const progressPercentage = (timeElapsed / 15) * 100;
+          return Math.min(progressPercentage, 100);
         });
       }, 100);
       return () => clearInterval(interval);
     }
-  }, [enemyMoving, currentEnemy, enemyPosition, gameStats.hearts, onGameComplete, gameStats]); // Added dependencies
+  }, [enemyMoving, currentEnemy, timeLeft]);
 
   // Game menu state handling
   if (gameState === 'menu') {
@@ -526,9 +557,22 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
         {/* Question and Answer */}
         <Card className="lg:col-span-2 p-4 border-2 border-card-border">
           <div className="text-center space-y-4">
-            <h2 className="text-xl font-pixel text-foreground bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent border-2 border-blue-400 bg-black bg-opacity-30 px-4 py-2 rounded-lg">
-              ⚡ {currentQuestion.num1} + {currentQuestion.num2} = ? ⚡
-            </h2>
+            <div className="space-y-3">
+              <h2 className="text-xl font-pixel text-foreground bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent border-2 border-blue-400 bg-black bg-opacity-30 px-4 py-2 rounded-lg">
+                ⚡ {currentQuestion.num1} + {currentQuestion.num2} = ? ⚡
+              </h2>
+              
+              {/* Timer Display */}
+              <div className={`text-center font-pixel text-lg px-4 py-2 rounded-lg border-2 ${
+                timeLeft <= 5 
+                  ? 'bg-red-900/50 border-red-500 text-red-200 animate-pulse' 
+                  : timeLeft <= 10 
+                  ? 'bg-yellow-900/50 border-yellow-500 text-yellow-200' 
+                  : 'bg-green-900/50 border-green-500 text-green-200'
+              }`}>
+                ⏰ زمان باقی‌مانده: {timeLeft} ثانیه
+              </div>
+            </div>
 
             <div className="flex gap-2 max-w-xs mx-auto">
               <Input
