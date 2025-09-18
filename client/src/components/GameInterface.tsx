@@ -183,7 +183,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
         }
       }, 2000);
     } else {
-      setFeedback(`❌ پاسخ نادرست! جواب: ${correct} (امتیازی نگرفتی)`);
+      setFeedback(`❌ Wrong answer! Correct answer: ${correct} (No points earned)`);
       
       // Wrong answer gives enemy advantage - reduces time by 3 seconds
       setTimeLeft(prev => Math.max(1, prev - 3));
@@ -273,7 +273,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
             // Time's up! Enemy wins
             setEnemyAttacking(true);
             setEnemyMoving(false);
-            setFeedback('⏰ زمان تمام شد! دشمن حمله کرد!');
+            setFeedback('⏰ Time\'s up! Enemy attacks!');
             
             setTimeout(() => {
               const newHearts = gameStats.hearts - 1;
@@ -570,7 +570,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
                   ? 'bg-yellow-900/50 border-yellow-500 text-yellow-200' 
                   : 'bg-green-900/50 border-green-500 text-green-200'
               }`}>
-                ⏰ زمان باقی‌مانده: {timeLeft} ثانیه
+                ⏰ Time left: {timeLeft} seconds
               </div>
             </div>
 
