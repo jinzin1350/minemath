@@ -23,18 +23,24 @@ export default function EnglishDictation() {
   };
 
   const handleGameComplete = (stats: GameStats) => {
+    console.log(`🎮 Game Complete Handler - Mode: ${stats.mode}, Level: ${stats.level}`);
+    console.log(`📊 Stats:`, stats);
+    
     setGameStats(stats);
     setGameState("results");
 
-    // Save to database
-    saveGameHistory({
+    // Save to database with logging
+    const gameData = {
       gameMode: stats.mode,
       score: stats.score,
       accuracy: stats.accuracy,
       levelReached: stats.level,
       wordsTotal: stats.totalWords,
       wordsCorrect: stats.correctWords,
-    });
+    };
+    
+    console.log(`💾 Saving game data:`, gameData);
+    saveGameHistory(gameData);
 
     // Update user progress
     if (progress) {

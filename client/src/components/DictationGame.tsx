@@ -191,17 +191,24 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
     
     // Move to next question after delay
     setTimeout(() => {
-      if (currentIndex < words.length - 1 && (isCorrect || (!isCorrect && lives > 1))) {
+      const newLives = isCorrect ? lives : lives - 1;
+      
+      if (currentIndex < words.length - 1 && (isCorrect || (!isCorrect && newLives > 0))) {
         setCurrentIndex(prev => prev + 1);
         setUserInput("");
         setShowFeedback(false);
         initializeQuestion(words[currentIndex + 1], words);
       } else {
-        // Game over
+        // Game over - calculate final stats
         const totalWords = currentIndex + 1;
         const correctWords = [...answers, isCorrect].filter(Boolean).length;
+        const finalScore = isCorrect ? score + 10 : score;
+        
+        console.log(`🎮 Game Complete - Mode: ${mode}, Level: ${level}`);
+        console.log(`📊 Final Stats: ${correctWords}/${totalWords} correct, Score: ${finalScore}`);
+        
         onGameComplete({
-          score: isCorrect ? score + 10 : score,
+          score: finalScore,
           accuracy: Math.round((correctWords / totalWords) * 100),
           correctWords,
           totalWords,

@@ -177,25 +177,31 @@ router.post("/game-history", async (req: any, res) => {
     }
 
     const userId = req.user.claims.sub;
+    console.log(`📝 Saving dictation game history for user ${userId}:`, req.body);
+    
     const validatedData = insertDictationGameHistorySchema.parse({
       ...req.body,
       userId,
     });
+
+    console.log(`✅ Validated data:`, validatedData);
 
     const result = await db
       .insert(dictationGameHistory)
       .values(validatedData)
       .returning();
 
+    console.log(`💾 Game history saved successfully:`, result[0]);
     res.json(result[0]);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error("❌ Validation error:", error.errors);
       return res.status(400).json({ 
         message: "Invalid request data", 
         errors: error.errors 
       });
     }
-    console.error("Error saving game history:", error);
+    console.error("❌ Error saving game history:", error);
     res.status(500).json({ message: "Failed to save game history" });
   }
 });
