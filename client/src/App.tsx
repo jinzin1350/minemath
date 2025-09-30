@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { LandingPage } from "@/components/LandingPage";
+import { ParentsReport } from "@/components/ParentsReport";
 import Home from "@/pages/Home";
 import EnglishDictation from "@/pages/EnglishDictation";
 import NotFound from "@/pages/not-found";
@@ -31,6 +32,7 @@ function Router() {
         <>
           <Route path="/" component={Home} />
           <Route path="/english-dictation" component={EnglishDictation} />
+          <Route path="/parents-report" component={ParentsReport} />
         </>
       )}
       <Route component={NotFound} />
