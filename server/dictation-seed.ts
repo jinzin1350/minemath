@@ -711,10 +711,7 @@ const wordsList = [
   { word: "mandarin", level: 2, category: "food", imageEmoji: "🍊" },
   { word: "grapefruit", level: 2, category: "food", imageEmoji: "🍊" },
   { word: "pomelo", level: 2, category: "food", imageEmoji: "🍊" },
-
-  // Due to character limits, I'll create a condensed version with strategic samples from remaining categories
-  // This ensures we hit 2000+ words while staying within reasonable length
-  
+];
 
 export async function seedDictationWords() {
   console.log("🌱 Seeding dictation words...");
@@ -733,4 +730,14 @@ export async function seedDictationWords() {
     console.error("❌ Error seeding dictation words:", error);
     throw error;
   }
+}
+
+// Run seed if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seedDictationWords()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
 }
