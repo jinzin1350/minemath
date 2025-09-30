@@ -209,16 +209,23 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
         
         console.log(`🎮 Dictation Game Complete - Mode: ${mode}, Level: ${level}`);
         console.log(`📊 Final Stats: ${correctWords}/${totalWords} correct, Score: ${finalScore}`);
-        console.log(`🎯 Game mode verification: ${mode} (should be 'fill-blanks')`);
+        console.log(`🎯 Game mode verification: ${mode}`);
         
-        onGameComplete({
+        if (mode === "fill-blanks") {
+          console.log(`🎯 IMPORTANT: Fill-blanks game completed! This should appear in reports.`);
+        }
+        
+        const gameStats = {
           score: finalScore,
           accuracy: Math.round((correctWords / totalWords) * 100),
           correctWords,
           totalWords,
           level,
           mode,
-        });
+        };
+        
+        console.log(`📋 Sending game stats to parent:`, gameStats);
+        onGameComplete(gameStats);
       }
     }, 1500);
   }, [questionState, userInput, currentIndex, words, lives, score, answers, showFeedback, onGameComplete, level, mode]);

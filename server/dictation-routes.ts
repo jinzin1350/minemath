@@ -323,6 +323,9 @@ router.get("/progress-report", async (req: any, res) => {
       )
       .groupBy(dictationGameHistory.gameMode);
 
+    console.log(`🎮 Found ${modeStats.length} distinct game modes for user ${userId} in ${month}:`, 
+      modeStats.map(m => `${m.gameMode} (${m.totalGames} games)`).join(', '));
+
     // Get overall monthly summary
     const monthlySummary = await db
       .select({

@@ -398,6 +398,11 @@ export const ParentsReport: React.FC = () => {
     const allModes = ['typing', 'multiple-choice', 'fill-blanks'];
     const enhancedModeStats = allModes.map(mode => {
       const existingMode = modeStats.find((m: DictationModeStats) => m.gameMode === mode);
+      if (existingMode) {
+        console.log(`📊 Found existing mode data for '${mode}':`, existingMode);
+      } else {
+        console.log(`⚪ No data found for mode '${mode}', creating placeholder`);
+      }
       return existingMode || {
         gameMode: mode,
         totalGames: 0,

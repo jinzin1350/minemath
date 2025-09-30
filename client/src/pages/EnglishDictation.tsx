@@ -28,7 +28,15 @@ export default function EnglishDictation() {
     
     // Verify mode is correctly passed
     if (stats.mode === "fill-blanks") {
-      console.log(`✅ Fill-blanks mode detected and ready to save`);
+      console.log(`✅ Fill-blanks mode detected and ready to save to database`);
+      console.log(`🔍 Fill-blanks stats details:`, {
+        mode: stats.mode,
+        score: stats.score,
+        accuracy: stats.accuracy,
+        level: stats.level,
+        correctWords: stats.correctWords,
+        totalWords: stats.totalWords
+      });
     }
     
     setGameStats(stats);
