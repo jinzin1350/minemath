@@ -48,7 +48,7 @@ export function ParentsReport() {
 
   // Fetch monthly progress data
   const { data: monthlyProgress, isLoading } = useQuery({
-    queryKey: ['/api/progress/recent', { days: 30, month: selectedMonth }],
+    queryKey: [`/api/progress/recent?month=${selectedMonth}`],
     refetchInterval: 30000,
   }) as { data: MonthlyProgress[] | undefined, isLoading: boolean };
 

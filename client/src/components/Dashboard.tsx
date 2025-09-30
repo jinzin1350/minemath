@@ -161,7 +161,7 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
         day: 'numeric',
         timeZone: 'UTC'
       }),
-      points: day.pointsEarned,
+      points: day.pointsEarned || 0,
       accuracy: day.questionsAnswered > 0 
         ? Math.round((day.correctAnswers / day.questionsAnswered) * 100)
         : 0
