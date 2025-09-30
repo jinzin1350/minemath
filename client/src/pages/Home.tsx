@@ -5,9 +5,10 @@ import { GameInterface } from '@/components/GameInterface';
 import { Leaderboard } from '@/components/Leaderboard';
 import { ParentsReport } from '@/components/ParentsReport';
 import { Button } from '@/components/ui/button';
-import { LogOut, BarChart3, Gamepad2, Trophy, FileText } from 'lucide-react';
+import { LogOut, BarChart3, Gamepad2, Trophy, FileText, Volume2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
+import { Link } from 'wouter';
 
 export default function Home() {
   const { user } = useAuth();
@@ -124,6 +125,18 @@ export default function Home() {
                 <Gamepad2 className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                 PLAY
               </Button>
+              <Link href="/english-dictation">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="font-pixel text-xs flex-1 md:flex-none"
+                  data-testid="button-english-dictation"
+                >
+                  <Volume2 className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                  <span className="hidden sm:inline">ENGLISH</span>
+                  <span className="sm:hidden">ENG</span>
+                </Button>
+              </Link>
               <Button
                 variant={currentView === 'leaderboard' ? 'default' : 'ghost'}
                 size="sm"

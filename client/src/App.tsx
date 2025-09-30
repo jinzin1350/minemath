@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { LandingPage } from "@/components/LandingPage";
 import Home from "@/pages/Home";
+import EnglishDictation from "@/pages/EnglishDictation";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -27,7 +28,10 @@ function Router() {
       {!isAuthenticated ? (
         <Route path="/" component={LandingPage} />
       ) : (
-        <Route path="/" component={Home} />
+        <>
+          <Route path="/" component={Home} />
+          <Route path="/english-dictation" component={EnglishDictation} />
+        </>
       )}
       <Route component={NotFound} />
     </Switch>
