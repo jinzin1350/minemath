@@ -3,8 +3,9 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MinecraftSteve, MinecraftBlock } from './MinecraftCharacters';
+import { AgeSelector } from './AgeSelector';
 import { 
   Calendar, 
   TrendingUp, 
@@ -16,7 +17,9 @@ import {
   BarChart3,
   FileText,
   Download,
-  Printer
+  Printer,
+  Settings,
+  User
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
@@ -44,6 +47,31 @@ export function ParentsReport() {
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [showAgeSelector, setShowAgeSelector] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Get user info for current age
+  const { data: userInfo } = useQuery({
+    queryKey: ['/api/auth/user'],
+  });
+
+  // Mutation for updating age
+  const updateAgeMutation = useMutation({
+    mutationFn: async (age: number) => {
+      const response = await fetch('/api/auth/user/age', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ age }),
+      });
+      if (!response.ok) throw new Error('Failed to update age');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      setShowAgeSelector(false);
+    },
   });
 
   // Fetch monthly progress data
@@ -144,6 +172,10 @@ export function ParentsReport() {
     window.print();
   };
 
+  const handleAgeChange = (age: number) => {
+    updateAgeMutation.mutate(age);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
@@ -194,6 +226,14 @@ export function ParentsReport() {
                   onChange={(e) => setSelectedMonth(e.target.value)}
                   className="font-pixel px-3 py-2 border-2 border-amber-600 rounded bg-stone-800 text-amber-200"
                 />
+                <Button 
+                  onClick={() => setShowAgeSelector(true)}
+                  variant="outline"
+                  className="font-pixel border-2 border-blue-600 text-blue-300 hover:bg-blue-600 hover:text-white"
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Age: {(userInfo as any)?.age || 'Not Set'}
+                </Button>
                 <Button 
                   onClick={generateReport}
                   className="font-pixel bg-green-700 hover:bg-green-800 border-2 border-green-900"
@@ -492,6 +532,26 @@ export function ParentsReport() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Age Selector Modal */}
+      {showAgeSelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/80" onClick={() => setShowAgeSelector(false)} />
+          <div className="relative z-10 max-w-4xl w-full">
+            <AgeSelector 
+              currentAge={(userInfo as any)?.age}
+              onAgeSelected={handleAgeChange}
+            />
+            <Button
+              onClick={() => setShowAgeSelector(false)}
+              variant="outline"
+              className="absolute top-4 right-4 font-pixel bg-red-600 hover:bg-red-700 text-white border-red-800"
+            >
+              ✕ Close
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
