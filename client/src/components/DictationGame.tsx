@@ -174,6 +174,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
       // Check if selected letter is correct
       const correctLetter = questionState.word.word[questionState.missingLetterIndex!].toLowerCase();
       isCorrect = userInput.toLowerCase() === correctLetter;
+      console.log(`🎯 Fill-blanks check: Expected '${correctLetter}', Got '${userInput.toLowerCase()}', Correct: ${isCorrect}`);
     } else {
       // For typing and multiple-choice modes
       isCorrect = userInput.toLowerCase().trim() === questionState.word.word.toLowerCase();
@@ -188,6 +189,8 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
     } else {
       setLives(prev => prev - 1);
     }
+    
+    console.log(`📊 Current game stats - Mode: ${mode}, Score: ${isCorrect ? score + 10 : score}, Question: ${currentIndex + 1}/${words.length}`);
     
     // Move to next question after delay
     setTimeout(() => {
@@ -204,8 +207,9 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
         const correctWords = [...answers, isCorrect].filter(Boolean).length;
         const finalScore = isCorrect ? score + 10 : score;
         
-        console.log(`🎮 Game Complete - Mode: ${mode}, Level: ${level}`);
+        console.log(`🎮 Dictation Game Complete - Mode: ${mode}, Level: ${level}`);
         console.log(`📊 Final Stats: ${correctWords}/${totalWords} correct, Score: ${finalScore}`);
+        console.log(`🎯 Game mode verification: ${mode} (should be 'fill-blanks')`);
         
         onGameComplete({
           score: finalScore,

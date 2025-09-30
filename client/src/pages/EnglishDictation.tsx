@@ -26,6 +26,11 @@ export default function EnglishDictation() {
     console.log(`🎮 Dictation Game Complete Handler - Mode: ${stats.mode}, Level: ${stats.level}`);
     console.log(`📊 Dictation Stats:`, stats);
     
+    // Verify mode is correctly passed
+    if (stats.mode === "fill-blanks") {
+      console.log(`✅ Fill-blanks mode detected and ready to save`);
+    }
+    
     setGameStats(stats);
     setGameState("results");
 
@@ -39,7 +44,7 @@ export default function EnglishDictation() {
       wordsCorrect: stats.correctWords,
     };
     
-    console.log(`💾 Saving dictation game data:`, gameData);
+    console.log(`💾 Saving dictation game data for mode '${gameData.gameMode}':`, gameData);
     console.log(`🔍 Data types:`, {
       gameMode: typeof gameData.gameMode,
       score: typeof gameData.score,

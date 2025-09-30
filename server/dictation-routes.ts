@@ -177,7 +177,7 @@ router.post("/game-history", async (req: any, res) => {
     }
 
     const userId = req.user.claims.sub;
-    console.log(`📝 Saving dictation game history for user ${userId}:`, req.body);
+    console.log(`📝 Saving dictation game history for user ${userId} - Mode: ${req.body.gameMode}:`, req.body);
     
     // Ensure accuracy is an integer (0-100)
     const gameData = {
@@ -186,16 +186,20 @@ router.post("/game-history", async (req: any, res) => {
       accuracy: Math.round(req.body.accuracy || 0), // Convert to integer
     };
     
+    if (gameData.gameMode === "fill-blanks") {
+      console.log(`🎯 Fill-blanks mode game being saved to database!`);
+    }
+    
     const validatedData = insertDictationGameHistorySchema.parse(gameData);
 
-    console.log(`✅ Validated data:`, validatedData);
+    console.log(`✅ Validated data for mode '${validatedData.gameMode}':`, validatedData);
 
     const result = await db
       .insert(dictationGameHistory)
       .values(validatedData)
       .returning();
 
-    console.log(`💾 Game history saved successfully:`, result[0]);
+    console.log(`💾 Game history saved successfully for mode '${result[0].gameMode}':`, result[0]);
     res.json(result[0]);
   } catch (error) {
     if (error instanceof z.ZodError) {

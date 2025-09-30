@@ -64,7 +64,7 @@ export function useDictation() {
   // Save game history mutation
   const saveGameHistoryMutation = useMutation({
     mutationFn: async (data: Omit<DictationGameHistory, "id" | "userId" | "playedAt">) => {
-      console.log(`🚀 Sending dictation game history:`, data);
+      console.log(`🚀 Sending dictation game history for mode '${data.gameMode}':`, data);
       
       // Ensure accuracy is an integer
       const gameData = {
@@ -72,9 +72,14 @@ export function useDictation() {
         accuracy: Math.round(data.accuracy || 0),
       };
       
-      console.log(`📝 Prepared data for save:`, gameData);
+      console.log(`📝 Prepared data for save (mode: ${gameData.gameMode}):`, gameData);
+      
+      if (gameData.gameMode === "fill-blanks") {
+        console.log(`🎯 Fill-blanks game being saved - this should appear in reports!`);
+      }
+      
       const result = await apiRequest("POST", "/api/dictation/game-history", gameData);
-      console.log(`✅ Dictation game history saved:`, result);
+      console.log(`✅ Dictation game history saved for mode '${gameData.gameMode}':`, result);
       return result;
     },
     onSuccess: (result) => {
