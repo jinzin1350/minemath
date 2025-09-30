@@ -132,7 +132,7 @@ export function ParentsReport() {
     enabled: reportType === 'dictation',
     retry: 3,
     staleTime: 30000,
-  });
+  }) as { data: DictationReport | undefined, isLoading: boolean, error: Error | null };
 
   // Debug dictation data
   useEffect(() => {
@@ -363,7 +363,7 @@ export function ParentsReport() {
     // Create placeholder data for modes with no activity
     const allModes = ['typing', 'multiple-choice', 'fill-blanks'];
     const enhancedModeStats = allModes.map(mode => {
-      const existingMode = modeStats.find(m => m.gameMode === mode);
+      const existingMode = modeStats.find((m: DictationModeStats) => m.gameMode === mode);
       return existingMode || {
         gameMode: mode,
         totalGames: 0,
@@ -540,7 +540,7 @@ export function ParentsReport() {
             <MinecraftBlock type="diamond" size={8} />
           </div>
           <div className="absolute top-2 right-2 opacity-30 animate-float-delay">
-            <MinecraftBlock type="emerald" size={8} />
+            <MinecraftBlock type="grass" size={8} />
           </div>
 
           <CardHeader className="relative z-10">
