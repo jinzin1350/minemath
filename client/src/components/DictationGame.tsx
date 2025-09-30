@@ -9,6 +9,43 @@ import type { DictationGameProps, QuestionState, DictationWord } from "@/types/d
 export function DictationGame({ mode, level, onGameComplete, onExit }: DictationGameProps) {
   const { speak, isPlaying, fetchWords } = useDictation();
   
+  // Slow speech function
+  const speakSlow = useCallback((text: string) => {
+    if (!window.speechSynthesis) return;
+    
+    window.speechSynthesis.cancel();
+    
+    const speakSlowWithVoice = () => {
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(voice => 
+        voice.lang === 'en-US' && (
+          voice.name.includes('Google') || 
+          voice.name.includes('Microsoft') ||
+          voice.localService
+        )
+      ) || voices.find(voice => voice.lang === 'en-US');
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+      
+      utterance.lang = "en-US";
+      utterance.rate = 0.4; // Very slow for pronunciation practice
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.addEventListener('voiceschanged', speakSlowWithVoice, { once: true });
+    } else {
+      speakSlowWithVoice();
+    }
+  }, []);
+  
   const [words, setWords] = useState<DictationWord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [questionState, setQuestionState] = useState<QuestionState | null>(null);
@@ -233,12 +270,25 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
                 disabled={isPlaying}
                 data-testid="button-play-audio"
                 className="w-16 h-16 rounded-full hover-elevate"
+                title="Play pronunciation"
               >
                 {isPlaying ? (
                   <Loader2 className="w-8 h-8 animate-spin" />
                 ) : (
                   <Volume2 className="w-8 h-8" />
                 )}
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => speakSlow(questionState.word.word)}
+                disabled={isPlaying}
+                data-testid="button-play-slow"
+                className="hover-elevate"
+                title="Play slowly"
+              >
+                🐌 Slow
               </Button>
             </div>
             

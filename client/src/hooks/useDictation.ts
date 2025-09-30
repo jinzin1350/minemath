@@ -72,7 +72,7 @@ export function useDictation() {
     },
   });
 
-  // Text-to-Speech functionality
+  // Text-to-Speech functionality with improved quality
   const speak = useCallback((text: string) => {
     if (!window.speechSynthesis) {
       console.error("Speech synthesis not supported");
@@ -82,17 +82,45 @@ export function useDictation() {
     // Cancel any ongoing speech
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-    utterance.rate = 0.9; // Slightly slower for clarity
-    utterance.pitch = 1;
-    utterance.volume = 1;
+    // Wait for voices to load
+    const speakWithVoice = () => {
+      const voices = window.speechSynthesis.getVoices();
+      
+      // Find the best English voice (prefer native, then Google, then any US English)
+      const preferredVoice = voices.find(voice => 
+        voice.lang === 'en-US' && (
+          voice.name.includes('Google') || 
+          voice.name.includes('Microsoft') ||
+          voice.name.includes('Alex') ||
+          voice.name.includes('Samantha') ||
+          voice.localService
+        )
+      ) || voices.find(voice => voice.lang === 'en-US') || voices[0];
 
-    setIsPlaying(true);
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => setIsPlaying(false);
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+      
+      utterance.lang = "en-US";
+      utterance.rate = 0.7; // Slower for better clarity
+      utterance.pitch = 1;
+      utterance.volume = 1;
 
-    window.speechSynthesis.speak(utterance);
+      setIsPlaying(true);
+      utterance.onend = () => setIsPlaying(false);
+      utterance.onerror = () => setIsPlaying(false);
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    // If voices aren't loaded yet, wait for them
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.addEventListener('voiceschanged', speakWithVoice, { once: true });
+    } else {
+      speakWithVoice();
+    }
   }, []);
 
   // Stop speech
