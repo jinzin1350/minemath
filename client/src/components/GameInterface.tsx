@@ -215,7 +215,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
     if (gameState === 'playing') {
       generateQuestion();
     }
-  }, [gameState, gameStats.level]); // Depend on gameState and level
+  }, [gameState, gameStats.level]); // Only depend on gameState and level changes
 
   // Auto-save progress when component unmounts (user leaves game)
   useEffect(() => {
@@ -297,7 +297,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
       
       return () => clearInterval(timer);
     }
-  }, [gameState, timeLeft, gameStats.hearts, onGameComplete, gameStats]);
+  }, [gameState, gameStats.hearts, onGameComplete]); // Remove timeLeft from dependencies
 
   // Enemy movement effect - consistent movement over 15 seconds
   useEffect(() => {
