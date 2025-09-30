@@ -23,7 +23,7 @@ import {
   type InsertRewardOpportunity,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, gte, lte, sql, count } from "drizzle-orm";
+import { eq, and, desc, gte, lte, sql, count, sum } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -101,6 +101,25 @@ export class DatabaseStorage implements IStorage {
       .from(dailyProgress)
       .where(and(eq(dailyProgress.userId, userId), eq(dailyProgress.date, date)));
     return progress;
+  }
+
+  async getMonthlyProgress(userId: string, month: string): Promise<DailyProgress[]> {
+    // Parse month (format: YYYY-MM) to get start and end dates
+    const [year, monthNum] = month.split('-');
+    const startDate = `${year}-${monthNum.padStart(2, '0')}-01`;
+    const endDate = new Date(parseInt(year), parseInt(monthNum), 0).toISOString().split('T')[0];
+
+    return await db
+      .select()
+      .from(dailyProgress)
+      .where(
+        and(
+          eq(dailyProgress.userId, userId),
+          gte(dailyProgress.date, startDate),
+          lte(dailyProgress.date, endDate)
+        )
+      )
+      .orderBy(desc(dailyProgress.date));
   }
 
   async upsertDailyProgress(progressData: InsertDailyProgress): Promise<DailyProgress> {
