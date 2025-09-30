@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,7 +24,8 @@ import {
   Trophy,
   Keyboard,
   MousePointer,
-  Volume2
+  Volume2,
+  Gamepad2
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
@@ -161,13 +161,13 @@ export function ParentsReport() {
     const totalIncorrect = totals.totalQuestions - totals.totalCorrect;
     const averageAccuracy = totals.totalQuestions > 0 ? (totals.totalCorrect / totals.totalQuestions) * 100 : 0;
     const bestLevel = Math.max(...monthlyProgress.map(p => p.level || 1));
-    
+
     // Calculate improvement trend based on first vs last week
     const firstWeek = monthlyProgress.slice(-7);
     const lastWeek = monthlyProgress.slice(0, 7);
     const firstWeekAvg = firstWeek.reduce((sum, day) => sum + (day.correctAnswers / Math.max(day.questionsAnswered, 1)), 0) / firstWeek.length;
     const lastWeekAvg = lastWeek.reduce((sum, day) => sum + (day.correctAnswers / Math.max(day.questionsAnswered, 1)), 0) / lastWeek.length;
-    
+
     let improvementTrend: 'improving' | 'stable' | 'declining' = 'stable';
     if (lastWeekAvg > firstWeekAvg + 0.1) improvementTrend = 'improving';
     else if (lastWeekAvg < firstWeekAvg - 0.1) improvementTrend = 'declining';
@@ -186,7 +186,7 @@ export function ParentsReport() {
   // Prepare chart data
   const chartData = useMemo(() => {
     if (!monthlyProgress) return [];
-    
+
     return monthlyProgress.map(day => {
       const accuracy = day.questionsAnswered > 0 ? (day.correctAnswers / day.questionsAnswered) * 100 : 0;
       return {
@@ -203,13 +203,13 @@ export function ParentsReport() {
   // Accuracy distribution data for pie chart
   const accuracyDistribution = useMemo(() => {
     if (!monthlyProgress) return [];
-    
+
     const ranges = { excellent: 0, good: 0, fair: 0, needsWork: 0 };
-    
+
     monthlyProgress.forEach(day => {
       if (day.questionsAnswered === 0) return;
       const accuracy = (day.correctAnswers / day.questionsAnswered) * 100;
-      
+
       if (accuracy >= 90) ranges.excellent++;
       else if (accuracy >= 75) ranges.good++;
       else if (accuracy >= 60) ranges.fair++;
@@ -307,239 +307,160 @@ export function ParentsReport() {
 
     const { monthlySummary, dailyHistory, modeStats } = dictationReport;
 
-    // Calculate improvement trend
-    const firstHalf = dailyHistory.slice(-Math.ceil(dailyHistory.length / 2));
-    const secondHalf = dailyHistory.slice(0, Math.floor(dailyHistory.length / 2));
-    const firstHalfAvg = firstHalf.reduce((sum, day) => sum + day.accuracy, 0) / Math.max(firstHalf.length, 1);
-    const secondHalfAvg = secondHalf.reduce((sum, day) => sum + day.accuracy, 0) / Math.max(secondHalf.length, 1);
-    
-    let improvementTrend: 'improving' | 'stable' | 'declining' = 'stable';
-    if (secondHalfAvg > firstHalfAvg + 5) improvementTrend = 'improving';
-    else if (secondHalfAvg < firstHalfAvg - 5) improvementTrend = 'declining';
+    const getModeIcon = (mode: string) => {
+      switch (mode) {
+        case 'typing':
+          return <Keyboard className="h-6 w-6 text-blue-600" />;
+        case 'multiple-choice':
+          return <MousePointer className="h-6 w-6 text-green-600" />;
+        case 'fill-blanks':
+          return <Zap className="h-6 w-6 text-purple-600" />;
+        default:
+          return <Volume2 className="h-6 w-6 text-gray-600" />;
+      }
+    };
+
+    const getModeName = (mode: string) => {
+      switch (mode) {
+        case 'typing':
+          return 'Typing Mode';
+        case 'multiple-choice':
+          return 'Multiple Choice';
+        case 'fill-blanks':
+          return 'Fill the Blank';
+        default:
+          return mode;
+      }
+    };
 
     return (
       <div className="space-y-6">
-        {/* Dictation Summary Statistics */}
+        {/* Overall Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="border-2 border-purple-600 bg-gradient-to-br from-purple-900/50 to-pink-900/50">
-            <CardContent className="p-4 text-center">
-              <Volume2 className="h-8 w-8 text-purple-400 mx-auto mb-2" />
-              <p className="text-2xl font-pixel text-purple-200">{monthlySummary.totalWords}</p>
-              <p className="text-sm text-purple-300 font-pixel">Total Words</p>
-            </CardContent>
+          <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100">
+            <div className="flex items-center gap-3">
+              <Volume2 className="h-8 w-8 text-blue-600" />
+              <div>
+                <p className="text-2xl font-bold text-blue-900">{monthlySummary.totalWords}</p>
+                <p className="text-sm text-blue-700">Total Words</p>
+              </div>
+            </div>
           </Card>
 
-          <Card className="border-2 border-green-600 bg-gradient-to-br from-green-900/50 to-emerald-900/50">
-            <CardContent className="p-4 text-center">
-              <CheckCircle className="h-8 w-8 text-green-400 mx-auto mb-2" />
-              <p className="text-2xl font-pixel text-green-200">{monthlySummary.accuracy}%</p>
-              <p className="text-sm text-green-300 font-pixel">Accuracy</p>
-            </CardContent>
+          <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100">
+            <div className="flex items-center gap-3">
+              <Target className="h-8 w-8 text-green-600" />
+              <div>
+                <p className="text-2xl font-bold text-green-900">{monthlySummary.accuracy}%</p>
+                <p className="text-sm text-green-700">Accuracy</p>
+              </div>
+            </div>
           </Card>
 
-          <Card className="border-2 border-blue-600 bg-gradient-to-br from-blue-900/50 to-indigo-900/50">
-            <CardContent className="p-4 text-center">
-              <Trophy className="h-8 w-8 text-blue-400 mx-auto mb-2" />
-              <p className="text-2xl font-pixel text-blue-200">{monthlySummary.totalScore}</p>
-              <p className="text-sm text-blue-300 font-pixel">Total Score</p>
-            </CardContent>
+          <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100">
+            <div className="flex items-center gap-3">
+              <Trophy className="h-8 w-8 text-purple-600" />
+              <div>
+                <p className="text-2xl font-bold text-purple-900">{monthlySummary.totalScore}</p>
+                <p className="text-sm text-purple-700">Total Score</p>
+              </div>
+            </div>
           </Card>
 
-          <Card className="border-2 border-orange-600 bg-gradient-to-br from-orange-900/50 to-red-900/50">
-            <CardContent className="p-4 text-center">
-              <Calendar className="h-8 w-8 text-orange-400 mx-auto mb-2" />
-              <p className="text-2xl font-pixel text-orange-200">{monthlySummary.activeDays}</p>
-              <p className="text-sm text-orange-300 font-pixel">Active Days</p>
-            </CardContent>
+          <Card className="p-4 bg-gradient-to-br from-orange-50 to-orange-100">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-8 w-8 text-orange-600" />
+              <div>
+                <p className="text-2xl font-bold text-orange-900">{monthlySummary.activeDays}</p>
+                <p className="text-sm text-orange-700">Active Days</p>
+              </div>
+            </div>
           </Card>
         </div>
 
-        {/* Game Mode Statistics */}
-        <Card className="border-4 border-cyan-600 bg-gradient-to-br from-cyan-900/30 to-blue-900/30">
-          <CardHeader>
-            <CardTitle className="font-pixel text-cyan-200 flex items-center gap-2">
-              <BarChart3 className="h-6 w-6" />
+        {/* Performance by Game Mode */}
+        {modeStats && modeStats.length > 0 && (
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Gamepad2 className="h-5 w-5" />
               Performance by Game Mode
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {modeStats.map((mode) => {
-                const modeIcons = {
-                  'typing': <Keyboard className="h-8 w-8" />,
-                  'multiple-choice': <MousePointer className="h-8 w-8" />,
-                  'fill-blanks': <Zap className="h-8 w-8" />
-                };
-                const modeNames = {
-                  'typing': 'Typing Mode',
-                  'multiple-choice': 'Multiple Choice',
-                  'fill-blanks': 'Fill the Blank'
-                };
-                
-                return (
-                  <Card key={mode.gameMode} className="border-2 border-slate-600 bg-slate-800/50">
-                    <CardContent className="p-4 text-center">
-                      <div className="text-blue-400 mb-2 flex justify-center">
-                        {modeIcons[mode.gameMode as keyof typeof modeIcons]}
-                      </div>
-                      <h3 className="font-pixel text-slate-200 mb-3">{modeNames[mode.gameMode as keyof typeof modeNames]}</h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-slate-300">Games:</span>
-                          <Badge variant="outline">{mode.totalGames}</Badge>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-300">Words:</span>
-                          <Badge variant="outline">{mode.totalWords}</Badge>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-300">Accuracy:</span>
-                          <Badge 
-                            variant={mode.accuracy >= 80 ? 'default' : mode.accuracy >= 60 ? 'secondary' : 'destructive'}
-                            className="font-pixel"
-                          >
-                            {mode.accuracy}%
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+            </h3>
+            <div className="grid gap-4">
+              {modeStats.map((mode, index) => (
+                <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center gap-3 mb-3">
+                    {getModeIcon(mode.gameMode)}
+                    <h4 className="font-semibold text-gray-900">{getModeName(mode.gameMode)}</h4>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+                    <div className="text-center">
+                      <p className="font-bold text-blue-600">{mode.totalGames}</p>
+                      <p className="text-gray-600">Games</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-purple-600">{mode.totalScore}</p>
+                      <p className="text-gray-600">Score</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-green-600">{mode.accuracy}%</p>
+                      <p className="text-gray-600">Accuracy</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-orange-600">{mode.totalWords}</p>
+                      <p className="text-gray-600">Words</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-teal-600">{mode.totalCorrect}</p>
+                      <p className="text-gray-600">Correct</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </CardContent>
-        </Card>
+          </Card>
+        )}
 
-        {/* Daily Progress Chart */}
-        <Card className="border-4 border-emerald-600 bg-gradient-to-br from-emerald-900/30 to-green-900/30">
-          <CardHeader>
-            <CardTitle className="font-pixel text-emerald-200 flex items-center gap-2">
-              <TrendingUp className="h-6 w-6" />
-              Daily Dictation Progress
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              {dailyHistory.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={dailyHistory.slice().reverse()}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis 
-                      dataKey="date" 
-                      className="text-xs"
-                      tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    />
-                    <YAxis className="text-xs" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'rgba(0, 0, 0, 0.9)', 
-                        border: '1px solid #10b981',
-                        borderRadius: '4px'
-                      }}
-                      formatter={(value, name) => [
-                        name === 'accuracy' ? `${value}%` : value,
-                        name === 'accuracy' ? 'Accuracy' : name === 'totalWords' ? 'Words Practiced' : 'Score'
-                      ]}
-                    />
-                    <Line type="monotone" dataKey="accuracy" stroke="#10b981" strokeWidth={3} />
-                    <Line type="monotone" dataKey="totalWords" stroke="#3b82f6" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-emerald-400 font-pixel">No daily data available yet</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Detailed Statistics */}
-        <Card className="border-4 border-stone-600 bg-gradient-to-br from-stone-900/50 to-slate-900/50">
-          <CardHeader>
-            <CardTitle className="font-pixel text-stone-200 flex items-center gap-2">
-              <Target className="h-6 w-6" />
-              Detailed Dictation Statistics
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Word Statistics */}
-              <div className="space-y-4">
-                <h3 className="font-pixel text-lg text-blue-300 border-b border-blue-600 pb-2">📝 Word Statistics</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-blue-200">Total Words:</span>
-                    <Badge variant="outline" className="border-blue-500">{monthlySummary.totalWords}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-green-200">Correct Words:</span>
-                    <Badge variant="default" className="bg-green-700">{monthlySummary.totalCorrect}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-red-200">Wrong Words:</span>
-                    <Badge variant="destructive">{monthlySummary.totalWords - monthlySummary.totalCorrect}</Badge>
-                  </div>
-                </div>
-              </div>
-
-              {/* Performance Indicators */}
-              <div className="space-y-4">
-                <h3 className="font-pixel text-lg text-purple-300 border-b border-purple-600 pb-2">🎯 Performance</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-purple-200">Best Level:</span>
-                    <Badge variant="outline" className="border-purple-500">Level {monthlySummary.bestLevel}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-yellow-200">Total Games:</span>
-                    <Badge variant="secondary">{monthlySummary.totalGames}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-orange-200">Progress Trend:</span>
-                    <Badge 
-                      variant={improvementTrend === 'improving' ? 'default' : 
-                              improvementTrend === 'stable' ? 'secondary' : 'destructive'}
-                    >
-                      {improvementTrend === 'improving' ? '📈 Improving' :
-                       improvementTrend === 'stable' ? '➡️ Stable' : '📉 Needs Attention'}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recommendations */}
-              <div className="space-y-4">
-                <h3 className="font-pixel text-lg text-green-300 border-b border-green-600 pb-2">💡 Recommendations</h3>
-                <div className="space-y-3">
-                  {monthlySummary.accuracy >= 85 ? (
-                    <div className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-400 mt-0.5" />
-                      <p className="text-sm text-green-200">Excellent spelling! Try harder levels.</p>
-                    </div>
-                  ) : monthlySummary.accuracy >= 70 ? (
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="h-5 w-5 text-yellow-400 mt-0.5" />
-                      <p className="text-sm text-yellow-200">Good progress! Practice more challenging words.</p>
-                    </div>
-                  ) : (
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="h-5 w-5 text-red-400 mt-0.5" />
-                      <p className="text-sm text-red-200">Focus on basic spelling patterns.</p>
-                    </div>
-                  )}
-                  
-                  {monthlySummary.activeDays < 15 && (
-                    <div className="flex items-start gap-2">
-                      <Clock className="h-5 w-5 text-blue-400 mt-0.5" />
-                      <p className="text-sm text-blue-200">More regular practice recommended.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Performance Chart */}
+        {dailyHistory.length > 0 && (
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Daily Performance
+            </h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={dailyHistory.slice().reverse()}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => new Date(value).getDate().toString()}
+                />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip 
+                  labelFormatter={(value) => new Date(value as string).toLocaleDateString()}
+                  formatter={(value: any, name: string) => [
+                    name === 'accuracy' ? `${value}%` : value,
+                    name === 'accuracy' ? 'Accuracy' : name === 'totalScore' ? 'Score' : 'Words'
+                  ]}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="accuracy" 
+                  stroke="#10b981" 
+                  strokeWidth={2}
+                  dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="totalScore" 
+                  stroke="#3b82f6" 
+                  strokeWidth={2}
+                  dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        )}
       </div>
     );
   };
@@ -586,7 +507,7 @@ export function ParentsReport() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex flex-col md:flex-row gap-2">
                 <input 
                   type="month" 
@@ -827,14 +748,14 @@ export function ParentsReport() {
                       <p className="text-sm text-red-200">Needs more practice.</p>
                     </div>
                   )}
-                  
+
                   {monthlyStats.daysPlayed < 15 && (
                     <div className="flex items-start gap-2">
                       <Clock className="h-5 w-5 text-blue-400 mt-0.5" />
                       <p className="text-sm text-blue-200">More regular practice is recommended.</p>
                     </div>
                   )}
-                  
+
                   {monthlyStats.improvementTrend === 'declining' && (
                     <div className="flex items-start gap-2">
                       <TrendingUp className="h-5 w-5 text-orange-400 mt-0.5" />
@@ -906,7 +827,7 @@ export function ParentsReport() {
                   ))}
                 </tbody>
               </table>
-              
+
               {/* Table Footer with Summary */}
               <div className="bg-gradient-to-r from-slate-800 to-gray-800 border-t-2 border-slate-600 p-4">
                 <div className="flex flex-wrap gap-4 justify-center text-sm font-pixel">
