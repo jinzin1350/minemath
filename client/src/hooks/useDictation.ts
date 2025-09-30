@@ -96,7 +96,6 @@ export function useDictation() {
         message: error.message,
         stack: error.stack
       });
-    },rror);
     },
   });
 
