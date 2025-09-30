@@ -166,30 +166,7 @@ export default function EnglishDictation() {
           </Card>
         </div>
 
-        {/* Level Descriptions */}
-        <Card className="p-6 bg-white/95">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Zap className="w-6 h-6 text-yellow-600" />
-            Level Descriptions
-          </h3>
-          <div className="grid md:grid-cols-5 gap-4">
-            {[
-              { level: 1, desc: "3-4 letter words" },
-              { level: 2, desc: "4-5 letter words" },
-              { level: 3, desc: "5-6 letter words" },
-              { level: 4, desc: "6-7 letter words" },
-              { level: 5, desc: "7+ letter words" },
-            ].map((item) => (
-              <div key={item.level} className="text-center">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4">
-                  <Trophy className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                  <div className="font-bold">Level {item.level}</div>
-                  <div className="text-sm text-muted-foreground">{item.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+        
       </div>
     </div>
   );

@@ -19,7 +19,9 @@ import {
   Download,
   Printer,
   Settings,
-  User
+  User,
+  Zap,
+  Trophy
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
@@ -49,6 +51,7 @@ export function ParentsReport() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
   const [showAgeSelector, setShowAgeSelector] = useState(false);
+  const [showLevelSelector, setShowLevelSelector] = useState(false);
   const queryClient = useQueryClient();
 
   // Get user info for current age
@@ -176,6 +179,56 @@ export function ParentsReport() {
     updateAgeMutation.mutate(age);
   };
 
+  // Level Selector Component
+  const LevelSelector = ({ onLevelSelected }: { onLevelSelected: (level: number) => void }) => {
+    const levels = [
+      { level: 1, desc: "3-4 letter words", color: "from-green-900 to-emerald-900", icon: "🌱" },
+      { level: 2, desc: "4-5 letter words", color: "from-blue-900 to-cyan-900", icon: "🌿" },
+      { level: 3, desc: "5-6 letter words", color: "from-purple-900 to-violet-900", icon: "🌳" },
+      { level: 4, desc: "6-7 letter words", color: "from-orange-900 to-red-900", icon: "🏔️" },
+      { level: 5, desc: "7+ letter words", color: "from-yellow-900 to-amber-900", icon: "💎" },
+    ];
+
+    return (
+      <Card className="border-4 border-amber-600 bg-gradient-to-r from-stone-900/90 to-slate-900/90 shadow-2xl backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="font-pixel text-3xl text-amber-200 text-center animate-pulse">
+            🎯 Choose Difficulty Level
+          </CardTitle>
+          <p className="text-center text-emerald-300 font-pixel">
+            Select the level that matches your child's ability
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {levels.map((item) => (
+              <Card
+                key={item.level}
+                className={`border-4 border-amber-600 bg-gradient-to-br ${item.color} cursor-pointer hover:scale-105 transform transition-all duration-300 hover:shadow-2xl group`}
+                onClick={() => onLevelSelected(item.level)}
+              >
+                <CardContent className="p-6 text-center">
+                  <div className="text-4xl mb-3 group-hover:animate-bounce">{item.icon}</div>
+                  <Trophy className="w-8 h-8 mx-auto mb-2 text-amber-400 group-hover:animate-spin" />
+                  <div className="font-pixel text-xl text-amber-200 mb-2">Level {item.level}</div>
+                  <div className="text-sm text-amber-300 font-pixel">{item.desc}</div>
+                  <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <Badge className="bg-amber-600 text-white font-pixel">Select</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="mt-6 text-center">
+            <p className="text-amber-300 font-pixel text-sm">
+              💡 Start with Level 1 if unsure, you can always change it later!
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
@@ -233,6 +286,14 @@ export function ParentsReport() {
                 >
                   <User className="h-4 w-4 mr-2" />
                   Age: {(userInfo as any)?.age || 'Not Set'}
+                </Button>
+                <Button 
+                  onClick={() => setShowLevelSelector(true)}
+                  variant="outline"
+                  className="font-pixel border-2 border-purple-600 text-purple-300 hover:bg-purple-600 hover:text-white"
+                >
+                  <Trophy className="h-4 w-4 mr-2" />
+                  Difficulty Level
                 </Button>
                 <Button 
                   onClick={generateReport}
@@ -544,6 +605,29 @@ export function ParentsReport() {
             />
             <Button
               onClick={() => setShowAgeSelector(false)}
+              variant="outline"
+              className="absolute top-4 right-4 font-pixel bg-red-600 hover:bg-red-700 text-white border-red-800"
+            >
+              ✕ Close
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Level Selector Modal */}
+      {showLevelSelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/80" onClick={() => setShowLevelSelector(false)} />
+          <div className="relative z-10 max-w-6xl w-full">
+            <LevelSelector 
+              onLevelSelected={(level) => {
+                console.log('Selected level:', level);
+                setShowLevelSelector(false);
+                // اینجا می‌تونید level رو ذخیره کنید یا به کامپوننت دیگه ارسال کنید
+              }}
+            />
+            <Button
+              onClick={() => setShowLevelSelector(false)}
               variant="outline"
               className="absolute top-4 right-4 font-pixel bg-red-600 hover:bg-red-700 text-white border-red-800"
             >
