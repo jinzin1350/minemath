@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -93,6 +93,7 @@ export function ParentsReport() {
   });
   const [showAgeSelector, setShowAgeSelector] = useState(false);
   const [showLevelSelector, setShowLevelSelector] = useState(false);
+  const [reportType, setReportType] = useState<'math' | 'dictation'>('math');
   const queryClient = useQueryClient();
 
   // Get user info for current age
@@ -119,16 +120,31 @@ export function ParentsReport() {
   });
 
   // Fetch monthly progress data (Math)
-  const { data: monthlyProgress, isLoading } = useQuery({
+  const { data: monthlyProgress, isLoading: mathLoading } = useQuery({
     queryKey: [`/api/progress/recent?month=${selectedMonth}`],
+    enabled: reportType === 'math',
     refetchInterval: 30000,
   }) as { data: MonthlyProgress[] | undefined, isLoading: boolean };
 
-  // Fetch dictation progress data
-  const { data: dictationReport, isLoading: dictationLoading } = useQuery({
+  // Fetch dictation progress report
+  const { data: dictationReport, isLoading: dictationLoading, error: dictationError } = useQuery({
     queryKey: [`/api/dictation/progress-report?month=${selectedMonth}`],
-    refetchInterval: 30000,
-  }) as { data: DictationReport | undefined, isLoading: boolean };
+    enabled: reportType === 'dictation',
+    retry: 3,
+    staleTime: 30000,
+  });
+
+  // Debug dictation data
+  useEffect(() => {
+    if (reportType === 'dictation') {
+      console.log('🔍 Dictation report state:', {
+        loading: dictationLoading,
+        error: dictationError,
+        data: dictationReport,
+        selectedMonth
+      });
+    }
+  }, [dictationReport, dictationLoading, dictationError, reportType, selectedMonth]);
 
   // Fetch dictation weekly data
   const { data: dictationWeekly } = useQuery({
@@ -291,6 +307,17 @@ export function ParentsReport() {
             <Volume2 className="h-12 w-12 mx-auto text-blue-400" />
           </div>
           <p className="font-pixel text-blue-200">Loading dictation report...</p>
+        </div>
+      );
+    }
+
+    if (dictationError) {
+      return (
+        <div className="text-center p-8">
+          <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4 animate-pulse" />
+          <p className="font-pixel text-red-400">Error loading dictation report.</p>
+          <p className="text-sm text-red-500 mt-2">Please try again later or contact support.</p>
+          <pre className="text-xs text-red-600 mt-4 text-left max-w-xl mx-auto">{dictationError.message}</pre>
         </div>
       );
     }
@@ -487,7 +514,7 @@ export function ParentsReport() {
     );
   };
 
-  if (isLoading) {
+  if (mathLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
         <div className="max-w-6xl mx-auto">
@@ -571,12 +598,14 @@ export function ParentsReport() {
             <TabsList className="grid w-full max-w-md grid-cols-2 bg-stone-800 border-2 border-amber-600">
               <TabsTrigger 
                 value="math" 
+                onClick={() => setReportType('math')}
                 className="font-pixel data-[state=active]:bg-amber-600 data-[state=active]:text-white"
               >
                 🧮 Math Report
               </TabsTrigger>
               <TabsTrigger 
                 value="dictation" 
+                onClick={() => setReportType('dictation')}
                 className="font-pixel data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               >
                 🎧 Dictation Report

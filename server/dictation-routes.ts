@@ -270,6 +270,8 @@ router.get("/progress-report", async (req: any, res) => {
     const userId = req.user.claims.sub;
     const month = req.query.month as string; // Format: YYYY-MM
     
+    console.log(`📊 Dictation progress report requested for user ${userId}, month: ${month}`);
+    
     if (!month) {
       return res.status(400).json({ message: "Month parameter is required (format: YYYY-MM)" });
     }
@@ -341,7 +343,7 @@ router.get("/progress-report", async (req: any, res) => {
         )
       );
 
-    res.json({
+    const responseData = {
       month,
       dailyHistory: dailyHistory.map(day => ({
         date: day.date,
@@ -377,7 +379,15 @@ router.get("/progress-report", async (req: any, res) => {
         bestLevel: 1,
         activeDays: 0,
       }
+    };
+
+    console.log(`📈 Dictation report response for ${month}:`, {
+      dailyHistoryCount: responseData.dailyHistory.length,
+      modeStatsCount: responseData.modeStats.length,
+      monthlySummary: responseData.monthlySummary
     });
+
+    res.json(responseData);
   } catch (error) {
     console.error("Error fetching dictation progress report:", error);
     res.status(500).json({ message: "Failed to fetch progress report" });
