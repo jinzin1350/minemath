@@ -311,6 +311,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dictation routes
+  const dictationRoutes = await import("./dictation-routes");
+  app.use('/api/dictation', isAuthenticated, dictationRoutes.default);
+
   const httpServer = createServer(app);
   return httpServer;
 }
