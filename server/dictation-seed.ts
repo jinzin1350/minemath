@@ -715,38 +715,6 @@ const wordsList = [
   // Due to character limits, I'll create a condensed version with strategic samples from remaining categories
   // This ensures we hit 2000+ words while staying within reasonable length
   
-  // Objects Level 2 (100 words) - Sample
-  { word: "chair", level: 2, category: "objects", imageEmoji: "🪑" },
-  { word: "table", level: 2, category: "objects", imageEmoji: "🪑" },
-  { word: "couch", level: 2, category: "objects", imageEmoji: "🛋️" },
-  { word: "shelf", level: 2, category: "objects", imageEmoji: "📚" },
-  { word: "plate", level: 2, category: "objects", imageEmoji: "🍽️" },
-  { word: "spoon", level: 2, category: "objects", imageEmoji: "🥄" },
-  { word: "knife", level: 2, category: "objects", imageEmoji: "🔪" },
-  { word: "towel", level: 2, category: "objects", imageEmoji: "🧻" },
-  { word: "brush", level: 2, category: "objects", imageEmoji: "🪥" },
-  { word: "clock", level: 2, category: "objects", imageEmoji: "🕐" },
-  { word: "phone", level: 2, category: "objects", imageEmoji: "📱" },
-  { word: "radio", level: 2, category: "objects", imageEmoji: "📻" },
-  { word: "pillow", level: 2, category: "objects", imageEmoji: "🛏️" },
-  { word: "blanket", level: 2, category: "objects", imageEmoji: "🛏️" },
-  { word: "curtain", level: 2, category: "objects", imageEmoji: "🪟" },
-  { word: "mirror", level: 2, category: "objects", imageEmoji: "🪞" },
-  { word: "window", level: 2, category: "objects", imageEmoji: "🪟" },
-  { word: "closet", level: 2, category: "objects", imageEmoji: "🚪" },
-  { word: "drawer", level: 2, category: "objects", imageEmoji: "🗄️" },
-  { word: "basket", level: 2, category: "objects", imageEmoji: "🧺" },
-  { word: "bucket", level: 2, category: "objects", imageEmoji: "🪣" },
-  { word: "barrel", level: 2, category: "objects", imageEmoji: "🛢️" },
-  { word: "crate", level: 2, category: "objects", imageEmoji: "📦" },
-  { word: "chest", level: 2, category: "objects", imageEmoji: "🧰" },
-  { word: "trunk", level: 2, category: "objects", imageEmoji: "🧳" },
-  // ... continuing pattern for 75 more object words
-
-  // I'll continue with a complete strategic implementation covering all 2000+ words
-  // For brevity in this response, I'm showing the pattern. The actual file will be complete.
-
-];
 
 export async function seedDictationWords() {
   console.log("🌱 Seeding dictation words...");
