@@ -8,13 +8,13 @@ import type { DictationGameProps, QuestionState, DictationWord } from "@/types/d
 
 export function DictationGame({ mode, level, onGameComplete, onExit }: DictationGameProps) {
   const { speak, isPlaying, fetchWords } = useDictation();
-  
+
   // Slow speech function
   const speakSlow = useCallback((text: string) => {
     if (!window.speechSynthesis) return;
-    
+
     window.speechSynthesis.cancel();
-    
+
     const speakSlowWithVoice = () => {
       const voices = window.speechSynthesis.getVoices();
       const preferredVoice = voices.find(voice => 
@@ -26,11 +26,11 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
       ) || voices.find(voice => voice.lang === 'en-US');
 
       const utterance = new SpeechSynthesisUtterance(text);
-      
+
       if (preferredVoice) {
         utterance.voice = preferredVoice;
       }
-      
+
       utterance.lang = "en-US";
       utterance.rate = 0.4; // Very slow for pronunciation practice
       utterance.pitch = 1;
@@ -45,7 +45,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
       speakSlowWithVoice();
     }
   }, []);
-  
+
   const [words, setWords] = useState<DictationWord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [questionState, setQuestionState] = useState<QuestionState | null>(null);
@@ -56,17 +56,33 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
   const [isLoading, setIsLoading] = useState(true);
   const [showFeedback, setShowFeedback] = useState(false);
 
+  // Save progress before exiting
+  const saveProgressOnExit = useCallback(() => {
+    const gameStats = {
+      score: score,
+      accuracy: Math.round((answers.filter(Boolean).length / (currentIndex || 1)) * 100), // Avoid division by zero
+      correctWords: answers.filter(Boolean).length,
+      totalWords: currentIndex,
+      level,
+      mode,
+      incomplete: true, // Mark as incomplete
+    };
+    onGameComplete(gameStats);
+    onExit();
+  }, [score, answers, currentIndex, level, mode, onGameComplete, onExit]);
+
+
   // Load words on mount
   useEffect(() => {
     let mounted = true;
-    
+
     const loadWords = async () => {
       try {
         setIsLoading(true);
         const fetchedWords = await fetchWords(level, 10);
-        
+
         if (!mounted) return; // Component unmounted, don't update state
-        
+
         if (fetchedWords && fetchedWords.length > 0) {
           setWords(fetchedWords);
           initializeQuestion(fetchedWords[0], fetchedWords);
@@ -84,9 +100,9 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
         }
       }
     };
-    
+
     loadWords();
-    
+
     return () => {
       mounted = false;
     };
@@ -101,7 +117,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
         .sort(() => Math.random() - 0.5)
         .slice(0, 3)
         .map(w => w.word);
-      
+
       // Ensure we have at least 3 wrong choices, if not repeat some
       while (wrongChoices.length < 3) {
         const randomWord = wordList[Math.floor(Math.random() * wordList.length)];
@@ -109,9 +125,9 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
           wrongChoices.push(randomWord.word);
         }
       }
-      
+
       const choices = [word.word, ...wrongChoices.slice(0, 3)].sort(() => Math.random() - 0.5);
-      
+
       setQuestionState({
         word,
         userAnswer: "",
@@ -123,16 +139,16 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
       const wordLetters = word.word.toLowerCase().split('');
       const missingIndex = Math.floor(Math.random() * wordLetters.length);
       const correctLetter = wordLetters[missingIndex];
-      
+
       // Create display word with underscore
       const displayWord = wordLetters.map((letter, index) => 
         index === missingIndex ? '_' : letter
       ).join('');
-      
+
       // Generate wrong letter choices
       const alphabet = 'abcdefghijklmnopqrstuvwxyz';
       const wrongLetters = [];
-      
+
       // Add some similar letters or random letters
       for (let i = 0; i < 3; i++) {
         let wrongLetter;
@@ -141,9 +157,9 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
         } while (wrongLetter === correctLetter || wrongLetters.includes(wrongLetter));
         wrongLetters.push(wrongLetter);
       }
-      
+
       const letterChoices = [correctLetter, ...wrongLetters].sort(() => Math.random() - 0.5);
-      
+
       setQuestionState({
         word,
         userAnswer: "",
@@ -159,7 +175,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
         isCorrect: null,
       });
     }
-    
+
     // Auto-play pronunciation
     setTimeout(() => speak(word.word), 500);
   };
@@ -167,9 +183,9 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
   // Handle answer submission
   const handleSubmit = useCallback(() => {
     if (!questionState || showFeedback) return;
-    
+
     let isCorrect = false;
-    
+
     if (mode === "fill-blanks") {
       // Check if selected letter is correct
       const correctLetter = questionState.word.word[questionState.missingLetterIndex!].toLowerCase();
@@ -179,23 +195,23 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
       // For typing and multiple-choice modes
       isCorrect = userInput.toLowerCase().trim() === questionState.word.word.toLowerCase();
     }
-    
+
     setQuestionState(prev => prev ? { ...prev, isCorrect, userAnswer: userInput } : null);
     setAnswers(prev => [...prev, isCorrect]);
     setShowFeedback(true);
-    
+
     if (isCorrect) {
       setScore(prev => prev + 10);
     } else {
       setLives(prev => prev - 1);
     }
-    
+
     console.log(`📊 Current game stats - Mode: ${mode}, Score: ${isCorrect ? score + 10 : score}, Question: ${currentIndex + 1}/${words.length}`);
-    
+
     // Move to next question after delay
     setTimeout(() => {
       const newLives = isCorrect ? lives : lives - 1;
-      
+
       if (currentIndex < words.length - 1 && (isCorrect || (!isCorrect && newLives > 0))) {
         setCurrentIndex(prev => prev + 1);
         setUserInput("");
@@ -206,15 +222,15 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
         const totalWords = currentIndex + 1;
         const correctWords = [...answers, isCorrect].filter(Boolean).length;
         const finalScore = isCorrect ? score + 10 : score;
-        
+
         console.log(`🎮 Dictation Game Complete - Mode: ${mode}, Level: ${level}`);
         console.log(`📊 Final Stats: ${correctWords}/${totalWords} correct, Score: ${finalScore}`);
         console.log(`🎯 Game mode verification: ${mode}`);
-        
+
         if (mode === "fill-blanks") {
           console.log(`🎯 IMPORTANT: Fill-blanks game completed! This should appear in reports.`);
         }
-        
+
         const gameStats = {
           score: finalScore,
           accuracy: Math.round((correctWords / totalWords) * 100),
@@ -223,7 +239,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
           level,
           mode,
         };
-        
+
         console.log(`📋 Sending game stats to parent:`, gameStats);
         onGameComplete(gameStats);
       }
@@ -263,7 +279,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
       <div className="min-h-screen bg-gradient-to-b from-sky-400 to-sky-600 flex items-center justify-center p-4">
         <Card className="p-8 bg-white/95 text-center">
           <p className="text-lg mb-4">No words available for Level {level}</p>
-          <Button onClick={onExit} variant="outline">
+          <Button onClick={saveProgressOnExit} variant="outline">
             Back to Menu
           </Button>
         </Card>
@@ -276,7 +292,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
       <div className="min-h-screen bg-gradient-to-b from-sky-400 to-sky-600 flex items-center justify-center p-4">
         <Card className="p-8 bg-white/95 text-center">
           <p className="text-lg mb-4">Error loading game</p>
-          <Button onClick={onExit} variant="outline">
+          <Button onClick={saveProgressOnExit} variant="outline">
             Back to Menu
           </Button>
         </Card>
@@ -292,14 +308,14 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
           <Button
             variant="outline"
             size="sm"
-            onClick={onExit}
+            onClick={saveProgressOnExit}
             data-testid="button-exit-game"
             className="bg-white/90 hover-elevate"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Exit
           </Button>
-          
+
           <div className="flex items-center gap-2">
             {Array.from({ length: 3 }).map((_, i) => (
               <Heart
@@ -311,7 +327,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
               />
             ))}
           </div>
-          
+
           <div className="bg-white/90 px-4 py-2 rounded-md font-bold" data-testid="text-score">
             Score: {score}
           </div>
@@ -339,7 +355,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
                   <Volume2 className="w-8 h-8" />
                 )}
               </Button>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -352,7 +368,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
                 🐌 Slow
               </Button>
             </div>
-            
+
             {/* Hint */}
             {questionState.word.category && (
               <div className="text-sm text-muted-foreground">
@@ -387,7 +403,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
                 </p>
                 <p className="text-sm text-muted-foreground">Choose the missing letter</p>
               </div>
-              
+
               {/* Letter choices */}
               <div className="grid grid-cols-4 gap-3">
                 {questionState.letterChoices?.map((letter, index) => (
@@ -444,7 +460,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
               Submit Answer
             </Button>
           )}
-          
+
           {(mode === "multiple-choice" || mode === "fill-blanks") && userInput && !showFeedback && (
             <Button
               onClick={handleSubmit}

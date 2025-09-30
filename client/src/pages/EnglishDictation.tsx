@@ -107,6 +107,7 @@ export default function EnglishDictation() {
   };
 
   const handleExitGame = () => {
+    console.log(`🚪 Exiting dictation game without saving additional progress`);
     setGameState("menu");
     setGameStats(null);
   };

@@ -92,6 +92,11 @@ export function useDictation() {
     },
     onError: (error) => {
       console.error(`❌ Failed to save dictation game history:`, error);
+      console.error(`🔍 Error details:`, {
+        message: error.message,
+        stack: error.stack
+      });
+    },rror);
     },
   });
 
