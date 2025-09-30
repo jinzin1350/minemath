@@ -1,0 +1,251 @@
+
+من یک اپلیکیشن آموزشی ریاضی با Minecraft دارم که با React و TypeScript ساخته شده. می‌خوام یک ماژول کامل English Dictation بهش اضافه کنم.
+
+## 🎯 چیزی که می‌خوام:
+
+### 1. صفحه جدید English Dictation
+- یک صفحه کامل با route `/english-dictation`
+- دو حالت بازی: Type Mode و Multiple Choice Mode
+- سیستم تلفظ واقعی با Web Speech API
+- UI مشابه صفحه اصلی با طراحی Minecraft-themed
+
+### 2. دیتابیس PostgreSQL (از PostgreSQL داخل Replit)
+⚠️ **مهم: از PostgreSQL داخل Replit استفاده کن، نه Supabase!**
+
+یک دیتابیس کامل برای:
+- ذخیره لیست کلمات انگلیسی (**حداقل 2000 کلمه**)
+- سطح‌بندی کلمات (سطح 1 تا 5)
+- دسته‌بندی‌های متنوع کلمات
+- ذخیره پیشرفت کاربران
+- ذخیره امتیازات و تاریخچه بازی‌ها
+- سیستم streak روزانه
+
+### 3. Schema دیتابیس مورد نیاز:
+
+⚠️ **CRITICAL: استفاده از نام‌های جدول منحصر به فرد برای جلوگیری از تداخل با جداول موجود**
+
+**جدول dictation_words:**
+```sql
+CREATE TABLE IF NOT EXISTS dictation_words (
+    id SERIAL PRIMARY KEY,
+    word VARCHAR(50) NOT NULL,
+    level INTEGER NOT NULL CHECK (level BETWEEN 1 AND 5),
+    category VARCHAR(50) NOT NULL,
+    image_emoji VARCHAR(10),
+    pronunciation VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_dictation_words_level ON dictation_words(level);
+CREATE INDEX IF NOT EXISTS idx_dictation_words_category ON dictation_words(category);
+جدول dictation_user_progress:
+
+sql
+CREATE TABLE IF NOT EXISTS dictation_user_progress (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(100) UNIQUE NOT NULL,
+    total_score INTEGER DEFAULT 0,
+    accuracy DECIMAL(5,2) DEFAULT 0.00,
+    current_streak INTEGER DEFAULT 0,
+    max_streak INTEGER DEFAULT 0,
+    total_words_practiced INTEGER DEFAULT 0,
+    correct_words INTEGER DEFAULT 0,
+    last_played TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_dictation_user_progress_user_id ON dictation_user_progress(user_id);
+جدول dictation_game_history:
+
+sql
+CREATE TABLE IF NOT EXISTS dictation_game_history (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    game_mode VARCHAR(20) NOT NULL CHECK (game_mode IN ('typing', 'multiple-choice')),
+    score INTEGER NOT NULL,
+    accuracy DECIMAL(5,2),
+    level_reached INTEGER,
+    words_correct INTEGER,
+    words_total INTEGER,
+    played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_dictation_game_history_user_id ON dictation_game_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_dictation_game_history_played_at ON dictation_game_history(played_at);
+4. ویژگی‌های مورد نظر:
+دو حالت بازی: تایپ کردن و انتخاب از چند گزینه
+سیستم سطح‌بندی با 5 سطح
+سیستم جان (3 جان)
+سیستم Streak
+نمایش پیشرفت روزانه با نمودار
+ذخیره خودکار پیشرفت در PostgreSQL
+دکمه بازگشت به صفحه اصلی
+سیستم امتیازدهی
+انیمیشن‌های جذاب
+Responsive برای موبایل
+5. لیست کلمات پیشنهادی (حداقل 2000 کلمه):
+⚠️ CRITICAL: تعداد کلمات باید خیلی زیاد باشه!
+
+سطح 1 (500 کلمه): کلمات 3-4 حرفی
+
+دسته‌بندی‌ها:
+حیوانات (80 کلمه): cat, dog, cow, pig, hen, bee, ant, fox, owl, bat, rat, elk, yak, emu, cod, eel, etc.
+غذا (80 کلمه): egg, ham, pie, tea, jam, bun, nut, fig, plum, pear, corn, rice, beef, fish, milk, etc.
+اشیاء روزمره (80 کلمه): pen, cup, key, map, bag, box, toy, hat, cap, belt, sock, shoe, door, book, lamp, etc.
+طبیعت (80 کلمه): sun, moon, star, tree, leaf, rose, lily, pond, lake, rain, snow, wind, sand, rock, hill, etc.
+اعداد و رنگ‌ها (60 کلمه): one, two, red, blue, pink, gold, grey, tan, etc.
+اجزای بدن (60 کلمه): arm, leg, eye, ear, toe, lip, jaw, rib, knee, hand, foot, neck, back, head, face, etc.
+فعالیت‌ها (60 کلمه): run, walk, jump, swim, read, sing, play, eat, sit, talk, look, hear, feel, etc.
+سطح 2 (600 کلمه): کلمات 5-6 حرفی
+
+دسته‌بندی‌ها:
+حیوانات (100 کلمه): tiger, lion, bear, zebra, horse, camel, sheep, goat, whale, shark, eagle, robin, snake, lizard, snail, etc.
+غذا (100 کلمه): apple, bread, cheese, pizza, pasta, salad, melon, lemon, grape, peach, mango, honey, sugar, flour, cream, etc.
+اشیاء خانگی (100 کلمه): chair, table, couch, shelf, plate, spoon, knife, towel, brush, clock, phone, radio, etc.
+مکان‌ها (80 کلمه): house, store, beach, park, farm, forest, mountain, river, ocean, desert, castle, garden, etc.
+پوشاک (70 کلمه): shirt, pants, dress, skirt, jacket, sweater, gloves, scarf, boots, sandals, shorts, etc.
+مدرسه (70 کلمه): class, desk, chalk, ruler, pencil, eraser, teacher, student, lesson, subject, quiz, grade, etc.
+احساسات (80 کلمه): happy, sad, angry, scared, brave, proud, sorry, tired, excited, nervous, calm, etc.
+سطح 3 (500 کلمه): کلمات 7-8 حرفی
+
+دسته‌بندی‌ها:
+حیوانات (80 کلمه): elephant, giraffe, dolphin, penguin, leopard, cheetah, raccoon, hamster, octopus, seahorse, ladybug, firefly, etc.
+غذا (80 کلمه): sandwich, cookies, popcorn, noodles, pancake, oatmeal, avocado, broccoli, carrot, tomato, potato, pumpkin, etc.
+تکنولوژی (80 کلمه): computer, keyboard, monitor, printer, scanner, internet, website, software, hardware, digital, upload, download, etc.
+ورزش (60 کلمه): baseball, football, basketball, swimming, cycling, running, jumping, climbing, skating, surfing, etc.
+موسیقی (60 کلمه): guitar, piano, trumpet, violin, drummer, singing, concert, harmony, rhythm, melody, musician, etc.
+علوم (70 کلمه): science, biology, physics, chemistry, medicine, magnet, gravity, energy, oxygen, planet, asteroid, etc.
+جغرافیا (70 کلمه): country, city, village, mountain, volcano, continent, equator, latitude, longitude, etc.
+سطح 4 (300 کلمه): کلمات 9-10 حرفی
+
+دسته‌بندی‌ها:
+حیوانات (50 کلمه): crocodile, alligator, butterfly, dragonfly, porcupine, orangutan, chameleon, platypus, armadillo, chipmunk, etc.
+غذا (50 کلمه): spaghetti, hamburger, chocolate, blueberry, raspberry, cranberry, asparagus, artichoke, cauliflower, etc.
+مشاغل (50 کلمه): scientist, engineer, architect, astronaut, librarian, firefighter, carpenter, electrician, plumber, mechanic, etc.
+طبیعت (40 کلمه): rainforest, waterfall, hurricane, tornado, avalanche, ecosystem, wilderness, landscape, vegetation, etc.
+فضا (40 کلمه): astronaut, spaceship, satellite, telescope, astronomy, constellation, meteorite, spacecraft, etc.
+احساسات پیچیده (40 کلمه): confident, surprised, frustrated, delighted, amazed, terrified, exhausted, jealous, grateful, etc.
+ریاضی (30 کلمه): addition, subtract, multiply, division, fraction, geometry, triangle, rectangle, diameter, perimeter, etc.
+سطح 5 (100 کلمه): کلمات 11+ حرفی
+
+دسته‌بندی‌ها:
+علوم پیشرفته (25 کلمه): photosynthesis, chromosome, electricity, thermometer, microscope, encyclopedia, atmosphere, environment, etc.
+احساسات و شخصیت (25 کلمه): understanding, intelligence, responsibility, determination, imagination, confidence, appreciation, disappointment, etc.
+تکنولوژی پیشرفته (25 کلمه): programming, technology, application, information, communication, mathematics, engineering, etc.
+طبیعت و محیط زیست (25 کلمه): conservation, biodiversity, deforestation, precipitation, temperature, earthquake, agriculture, etc.
+6. فایل‌ها و ساختار:
+client/src/
+├── pages/
+│   └── EnglishDictation.tsx (صفحه اصلی - فایل جدید)
+├── components/
+│   ├── dictation/
+│   │   ├── DictationGame.tsx (کامپوننت بازی - فایل جدید)
+│   │   └── DictationResults.tsx (کامپوننت نتایج - فایل جدید)
+├── hooks/
+│   └── useDictation.ts (Custom hook - فایل جدید)
+└── types/
+    └── dictation.ts (TypeScript types - فایل جدید)
+
+server/
+├── routes/
+│   └── dictation.ts (API routes جدید - فایل جدید)
+├── controllers/
+│   └── dictationController.ts (فایل جدید)
+└── db/
+    ├── dictation-schema.sql (فایل جدید)
+    └── seed-dictation-words.sql (فایل جدید - حاوی 2000+ کلمه)
+7. الزامات فنی:
+استفاده از TypeScript
+استفاده از React Router برای routing
+استفاده از Tailwind CSS برای استایل
+استفاده از PostgreSQL داخل Replit برای دیتابیس
+استفاده از Web Speech API برای تلفظ
+Error handling کامل
+Loading states
+استفاده از environment variables برای database connection
+استفاده از pg library برای اتصال به PostgreSQL
+پشتیبانی از pagination برای لود کردن کلمات (به دلیل تعداد زیاد)
+8. Integration با اپ فعلی:
+⚠️ CRITICAL REQUIREMENTS برای جلوگیری از آسیب به کد موجود:
+
+فایل‌های جدید فقط:
+هیچ فایل موجودی رو تغییر نده مگر برای اضافه کردن route و دکمه
+تمام کدهای جدید باید در فایل‌های جداگانه باشن
+تغییرات محدود در فایل‌های موجود:
+در App.tsx یا main.tsx: فقط اضافه کردن یک route جدید
+در Home.tsx یا LandingPage.tsx: فقط اضافه کردن یک دکمه
+در server/index.ts یا server.ts: فقط اضافه کردن import و use برای route جدید
+Database Safety:
+استفاده از نام‌های جدول با prefix "dictation_" برای جلوگیری از تداخل
+استفاده از CREATE TABLE IF NOT EXISTS
+استفاده از CREATE INDEX IF NOT EXISTS
+هیچ DROP TABLE یا ALTER TABLE برای جداول موجود
+API Routes:
+تمام route‌های جدید باید با /api/dictation شروع بشن
+مثال: /api/dictation/words, /api/dictation/progress
+استفاده از database connection موجود:
+از همان pool یا client که برای Math Adventure استفاده می‌شه، استفاده کن
+فقط query‌های جدید رو اضافه کن
+9. مثال Integration در App.tsx:
+typescript
+// فقط این خط رو اضافه کن:
+import EnglishDictation from './pages/EnglishDictation';
+
+// و این route رو:
+<Route path="/english-dictation" element={<EnglishDictation />} />
+10. مثال Integration در Home.tsx:
+typescript
+// فقط این دکمه رو اضافه کن در کنار دکمه‌های موجود:
+<button
+  onClick={() => navigate('/english-dictation')}
+  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-12 py-4 rounded-xl text-xl font-bold hover:scale-105 transform transition shadow-lg"
+>
+  📚 LEARN ENGLISH SPELLING
+</button>
+11. مثال Integration در server:
+typescript
+// در server/index.ts فقط اضافه کن:
+import dictationRoutes from './routes/dictation';
+app.use('/api/dictation', dictationRoutes);
+⚙️ مراحل پیاده‌سازی:
+بررسی دقیق ساختار موجود پروژه
+ساخت جداول جدید در PostgreSQL با نام‌های منحصر به فرد
+پر کردن دیتابیس با حداقل 2000 کلمه در دسته‌بندی‌های مختلف
+ساخت فایل‌های جدید (بدون تغییر فایل‌های موجود)
+اضافه کردن route به App.tsx
+اضافه کردن دکمه به صفحه اصلی
+اضافه کردن API routes به server با pagination support
+تست کامل بدون آسیب به عملکرد فعلی
+📝 نکات بسیار مهم:
+⚠️ تعداد کلمات باید حداقل 2000 تا باشه
+⚠️ هر دسته‌بندی باید کلمات زیادی داشته باشه
+⚠️ هیچ فایل موجودی رو حذف یا بازنویسی نکن
+⚠️ به هیچ وجه جداول موجود database رو تغییر نده
+⚠️ از نام‌های متغیر و function که تداخل ایجاد نکنن استفاده کن
+⚠️ قبل از هر تغییر، ساختار موجود رو بررسی کن
+⚠️ تمام کدها باید backward compatible باشن
+استفاده از pagination برای کلمات (هر بار 20-30 کلمه لود بشه)
+کد باید clean و readable باشه
+همه functionها باید comment داشته باشن
+باید responsive باشه
+باید error handling داشته باشه
+تست کامل قبل از commit
+✅ Checklist قبل از شروع:
+ بررسی دقیق ساختار فایل‌های موجود
+ بررسی جداول موجود در database
+ بررسی route‌های موجود
+ بررسی نام‌های متغیرها و function‌های موجود
+ تهیه لیست فایل‌های جدیدی که باید ساخته بشن
+ تهیه لیست تغییرات محدود در فایل‌های موجود
+ آماده‌سازی لیست 2000+ کلمه با دسته‌بندی کامل
+🎯 اولویت: تولید لیست کلمات
+لطفاً ابتدا یک فایل SQL کامل با حداقل 2000 کلمه در دسته‌بندی‌های مختلف آماده کن. کلمات باید:
+
+متنوع باشن
+مناسب سن 8-10 سال
+دارای emoji مناسب
+به درستی سطح‌بندی شده باشن
+در دسته‌های مختلف تقسیم بندی شده باشن
+لطفاً ابتدا ساختار موجود پروژه رو بررسی کن و بعد با دقت کامل تمام فایل‌های لازم رو بساز و به من گزارش بده که چه تغییراتی داده‌ای و کدام فایل‌ها رو ساختی.
+
