@@ -307,6 +307,9 @@ export const ParentsReport: React.FC = () => {
             <Volume2 className="h-12 w-12 mx-auto text-blue-400" />
           </div>
           <p className="font-pixel text-blue-200">Loading dictation report...</p>
+          <div className="mt-4 text-sm text-blue-300">
+            Please wait while we gather your English dictation statistics...
+          </div>
         </div>
       );
     }
@@ -315,24 +318,55 @@ export const ParentsReport: React.FC = () => {
       return (
         <div className="text-center p-8">
           <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4 animate-pulse" />
-          <p className="font-pixel text-red-400">Error loading dictation report.</p>
-          <p className="text-sm text-red-500 mt-2">Please try again later or contact support.</p>
-          <pre className="text-xs text-red-600 mt-4 text-left max-w-xl mx-auto">{dictationError.message}</pre>
+          <p className="font-pixel text-red-400">Error loading dictation report</p>
+          <p className="text-sm text-red-500 mt-2">
+            Unable to load your dictation statistics. This might be because:
+          </p>
+          <ul className="text-sm text-red-400 mt-2 text-left max-w-md mx-auto">
+            <li>• No dictation games have been played yet</li>
+            <li>• Database connection issue</li>
+            <li>• Server temporarily unavailable</li>
+          </ul>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-red-600 hover:bg-red-700"
+          >
+            Refresh Page
+          </Button>
         </div>
       );
     }
 
-    if (!dictationReport || dictationReport.monthlySummary.totalGames === 0) {
+    if (!dictationReport || !dictationReport.monthlySummary || dictationReport.monthlySummary.totalGames === 0) {
       return (
         <div className="text-center p-8">
           <Volume2 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <p className="font-pixel text-gray-400">No dictation data available for this month</p>
-          <p className="text-sm text-gray-500 mt-2">Start playing English Dictation to see reports here!</p>
+          <p className="font-pixel text-gray-400 text-xl mb-2">No Dictation Data Available</p>
+          <p className="text-sm text-gray-500 mt-2 mb-4">
+            No English dictation games found for {selectedMonth}
+          </p>
+          <div className="bg-blue-100 p-4 rounded-lg max-w-md mx-auto">
+            <h4 className="font-semibold text-blue-800 mb-2">How to get started:</h4>
+            <ol className="text-sm text-blue-700 text-left space-y-1">
+              <li>1. Go back to Home page</li>
+              <li>2. Click "English Dictation"</li>
+              <li>3. Play any game mode (Typing, Multiple Choice, or Fill Blanks)</li>
+              <li>4. Return here to see your statistics</li>
+            </ol>
+          </div>
         </div>
       );
     }
 
     const { monthlySummary, dailyHistory, modeStats } = dictationReport;
+
+    // Debug information
+    console.log('📋 Dictation Report Data:', {
+      monthlySummary,
+      dailyHistoryLength: dailyHistory?.length || 0,
+      modeStatsLength: modeStats?.length || 0,
+      selectedMonth
+    });
 
     const getModeIcon = (mode: string) => {
       switch (mode) {
@@ -420,54 +454,83 @@ export const ParentsReport: React.FC = () => {
         </div>
 
         {/* Performance by Game Mode */}
-        {modeStats && modeStats.length > 0 && (
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Gamepad2 className="h-5 w-5" />
-              Performance by Game Mode
-            </h3>
-            <div className="grid gap-4">
-              {enhancedModeStats.map((mode, index) => (
-                <div key={index} className={`border rounded-lg p-4 ${mode.totalGames > 0 ? 'bg-gray-50' : 'bg-gray-100 opacity-60'}`}>
-                  <div className="flex items-center gap-3 mb-3">
-                    {getModeIcon(mode.gameMode)}
-                    <h4 className="font-semibold text-gray-900">{getModeName(mode.gameMode)}</h4>
-                    {mode.totalGames === 0 && (
-                      <span className="text-xs bg-gray-300 text-gray-600 px-2 py-1 rounded">No activity yet</span>
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Gamepad2 className="h-5 w-5" />
+            Performance by Game Mode
+          </h3>
+          <div className="grid gap-4">
+            {enhancedModeStats.map((mode, index) => {
+              const hasActivity = mode.totalGames > 0;
+              return (
+                <div 
+                  key={index} 
+                  className={`border-2 rounded-lg p-4 transition-all duration-200 ${
+                    hasActivity 
+                      ? 'bg-gradient-to-r from-green-50 to-blue-50 border-green-300 hover:shadow-md' 
+                      : 'bg-gray-50 border-gray-300 opacity-75'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      {getModeIcon(mode.gameMode)}
+                      <h4 className="font-semibold text-gray-900">{getModeName(mode.gameMode)}</h4>
+                    </div>
+                    {hasActivity ? (
+                      <Badge className="bg-green-600 text-white">
+                        {mode.totalGames} game{mode.totalGames !== 1 ? 's' : ''}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-gray-500">
+                        No activity yet
+                      </Badge>
                     )}
                   </div>
+                  
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
-                    <div className="text-center">
-                      <p className="font-bold text-blue-600">{mode.totalGames}</p>
+                    <div className="text-center p-2 bg-white rounded border">
+                      <p className="font-bold text-blue-600 text-lg">{mode.totalGames}</p>
                       <p className="text-gray-600">Games</p>
                     </div>
-                    <div className="text-center">
-                      <p className="font-bold text-purple-600">{mode.totalScore}</p>
+                    <div className="text-center p-2 bg-white rounded border">
+                      <p className="font-bold text-purple-600 text-lg">{mode.totalScore}</p>
                       <p className="text-gray-600">Score</p>
                     </div>
-                    <div className="text-center">
-                      <p className="font-bold text-green-600">{mode.accuracy}%</p>
+                    <div className="text-center p-2 bg-white rounded border">
+                      <p className="font-bold text-green-600 text-lg">{mode.accuracy}%</p>
                       <p className="text-gray-600">Accuracy</p>
                     </div>
-                    <div className="text-center">
-                      <p className="font-bold text-orange-600">{mode.totalWords}</p>
+                    <div className="text-center p-2 bg-white rounded border">
+                      <p className="font-bold text-orange-600 text-lg">{mode.totalWords}</p>
                       <p className="text-gray-600">Words</p>
                     </div>
-                    <div className="text-center">
-                      <p className="font-bold text-teal-600">{mode.totalCorrect}</p>
+                    <div className="text-center p-2 bg-white rounded border">
+                      <p className="font-bold text-teal-600 text-lg">{mode.totalCorrect}</p>
                       <p className="text-gray-600">Correct</p>
                     </div>
                   </div>
-                  {mode.totalGames === 0 && (
-                    <div className="mt-3 text-center text-sm text-gray-500">
-                      Play this mode to see statistics
+                  
+                  {!hasActivity && (
+                    <div className="mt-3 text-center p-3 bg-gray-100 rounded">
+                      <p className="text-sm text-gray-600 mb-2">Play this mode to see statistics</p>
+                      <p className="text-xs text-gray-500">
+                        Go to English Dictation → Select {getModeName(mode.gameMode)}
+                      </p>
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
-          </Card>
-        )}
+              );
+            })}
+          </div>
+          
+          {/* Summary Note */}
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-700">
+              <strong>💡 Tip:</strong> Try different game modes to improve various English skills. 
+              Typing mode helps with spelling, Multiple Choice with recognition, and Fill Blanks with letter patterns.
+            </p>
+          </div>
+        </Card>
 
         {/* Performance Chart */}
         {dailyHistory.length > 0 && (
