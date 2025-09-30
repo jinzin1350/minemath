@@ -131,10 +131,9 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
       answer = num1 - num2;
       points = 15;
     } else {
-      // Multiplication: 20 points (smaller numbers for easier calculation)
-      const maxMultNum = Math.min(3 + gameStats.level, 10);
-      num1 = Math.floor(Math.random() * maxMultNum) + 1;
-      num2 = Math.floor(Math.random() * maxMultNum) + 1;
+      // Multiplication: 20 points (very simple numbers for beginners)
+      num1 = Math.floor(Math.random() * 3) + 1; // Only 1, 2, 3
+      num2 = Math.floor(Math.random() * 3) + 1; // Only 1, 2, 3
       answer = num1 * num2;
       points = 20;
     }
