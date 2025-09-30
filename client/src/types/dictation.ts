@@ -2,7 +2,7 @@ import type { DictationWord, DictationUserProgress, DictationGameHistory } from 
 
 export type { DictationWord, DictationUserProgress, DictationGameHistory };
 
-export type GameMode = "typing" | "multiple-choice";
+export type GameMode = "typing" | "multiple-choice" | "fill-blanks";
 
 export type GameState = "menu" | "playing" | "results";
 
@@ -27,4 +27,7 @@ export interface QuestionState {
   userAnswer: string;
   isCorrect: boolean | null;
   choices?: string[]; // For multiple choice mode
+  missingLetterIndex?: number; // For fill-blanks mode
+  letterChoices?: string[]; // For fill-blanks mode
+  displayWord?: string; // Word with missing letter for fill-blanks mode
 }

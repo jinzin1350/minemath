@@ -92,7 +92,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
     };
   }, [level]); // Remove fetchWords dependency to prevent excessive calls
 
-  // Initialize question with choices for multiple choice
+  // Initialize question with choices for multiple choice or fill-blanks
   const initializeQuestion = (word: DictationWord, wordList: DictationWord[]) => {
     if (mode === "multiple-choice") {
       // Generate wrong choices from the word list
@@ -118,6 +118,40 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
         isCorrect: null,
         choices,
       });
+    } else if (mode === "fill-blanks") {
+      // For fill-blanks mode: remove one letter and give 4 letter choices
+      const wordLetters = word.word.toLowerCase().split('');
+      const missingIndex = Math.floor(Math.random() * wordLetters.length);
+      const correctLetter = wordLetters[missingIndex];
+      
+      // Create display word with underscore
+      const displayWord = wordLetters.map((letter, index) => 
+        index === missingIndex ? '_' : letter
+      ).join('');
+      
+      // Generate wrong letter choices
+      const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+      const wrongLetters = [];
+      
+      // Add some similar letters or random letters
+      for (let i = 0; i < 3; i++) {
+        let wrongLetter;
+        do {
+          wrongLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
+        } while (wrongLetter === correctLetter || wrongLetters.includes(wrongLetter));
+        wrongLetters.push(wrongLetter);
+      }
+      
+      const letterChoices = [correctLetter, ...wrongLetters].sort(() => Math.random() - 0.5);
+      
+      setQuestionState({
+        word,
+        userAnswer: "",
+        isCorrect: null,
+        missingLetterIndex: missingIndex,
+        letterChoices,
+        displayWord,
+      });
     } else {
       setQuestionState({
         word,
@@ -134,7 +168,16 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
   const handleSubmit = useCallback(() => {
     if (!questionState || showFeedback) return;
     
-    const isCorrect = userInput.toLowerCase().trim() === questionState.word.word.toLowerCase();
+    let isCorrect = false;
+    
+    if (mode === "fill-blanks") {
+      // Check if selected letter is correct
+      const correctLetter = questionState.word.word[questionState.missingLetterIndex!].toLowerCase();
+      isCorrect = userInput.toLowerCase() === correctLetter;
+    } else {
+      // For typing and multiple-choice modes
+      isCorrect = userInput.toLowerCase().trim() === questionState.word.word.toLowerCase();
+    }
     
     setQuestionState(prev => prev ? { ...prev, isCorrect, userAnswer: userInput } : null);
     setAnswers(prev => [...prev, isCorrect]);
@@ -313,6 +356,36 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
                 autoFocus
               />
             </div>
+          ) : mode === "fill-blanks" ? (
+            <div className="mb-6">
+              {/* Display word with missing letter */}
+              <div className="text-center mb-6">
+                <p className="text-3xl font-mono mb-2">
+                  {questionState.displayWord?.split('').map((letter, index) => (
+                    <span key={index} className={letter === '_' ? 'text-red-500 bg-gray-200 px-2 py-1 mx-1 rounded' : ''}>
+                      {letter === '_' ? '___' : letter}
+                    </span>
+                  ))}
+                </p>
+                <p className="text-sm text-muted-foreground">Choose the missing letter</p>
+              </div>
+              
+              {/* Letter choices */}
+              <div className="grid grid-cols-4 gap-3">
+                {questionState.letterChoices?.map((letter, index) => (
+                  <Button
+                    key={index}
+                    variant={userInput === letter ? "default" : "outline"}
+                    onClick={() => handleChoiceSelect(letter)}
+                    disabled={showFeedback}
+                    data-testid={`button-letter-${index}`}
+                    className="py-4 text-xl font-mono hover-elevate"
+                  >
+                    {letter.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 mb-6">
               {questionState.choices?.map((choice, index) => (
@@ -354,7 +427,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
             </Button>
           )}
           
-          {mode === "multiple-choice" && userInput && !showFeedback && (
+          {(mode === "multiple-choice" || mode === "fill-blanks") && userInput && !showFeedback && (
             <Button
               onClick={handleSubmit}
               data-testid="button-submit"

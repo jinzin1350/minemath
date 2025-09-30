@@ -13,7 +13,7 @@ export default function EnglishDictation() {
   const [selectedMode, setSelectedMode] = useState<GameMode>("typing");
   const [selectedLevel, setSelectedLevel] = useState(1);
   const [gameStats, setGameStats] = useState<GameStats | null>(null);
-  
+
   const { progress, progressLoading, saveGameHistory, updateProgress } = useDictation();
 
   const handleStartGame = (mode: GameMode, level: number) => {
@@ -25,7 +25,7 @@ export default function EnglishDictation() {
   const handleGameComplete = (stats: GameStats) => {
     setGameStats(stats);
     setGameState("results");
-    
+
     // Save to database
     saveGameHistory({
       gameMode: stats.mode,
@@ -35,18 +35,18 @@ export default function EnglishDictation() {
       wordsTotal: stats.totalWords,
       wordsCorrect: stats.correctWords,
     });
-    
+
     // Update user progress
     if (progress) {
       const currentScore = progress.totalScore ?? 0;
       const currentWords = progress.totalWordsPracticed ?? 0;
       const currentCorrect = progress.correctWords ?? 0;
-      
+
       const newTotalScore = currentScore + stats.score;
       const newTotalWords = currentWords + stats.totalWords;
       const newCorrectWords = currentCorrect + stats.correctWords;
       const newAccuracy = Math.round((newCorrectWords / newTotalWords) * 100);
-      
+
       updateProgress({
         totalScore: newTotalScore,
         totalWordsPracticed: newTotalWords,
@@ -109,7 +109,7 @@ export default function EnglishDictation() {
               Back to Home
             </Button>
           </Link>
-          
+
           {!progressLoading && progress && (
             <div className="bg-white/90 px-4 py-2 rounded-md">
               <div className="text-sm text-muted-foreground">Your Progress</div>
@@ -134,55 +134,34 @@ export default function EnglishDictation() {
         </div>
 
         {/* Game Modes */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <Card className="p-6 bg-white/95 hover-elevate cursor-pointer">
-            <div className="flex items-start gap-4 mb-4">
-              <Keyboard className="w-12 h-12 text-blue-600" />
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
+          <Card className="p-6 hover-elevate cursor-pointer" onClick={() => handleStartGame("typing", selectedLevel)}>
+            <div className="flex items-center gap-4">
+              <Keyboard className="w-12 h-12 text-blue-500" />
               <div>
-                <h2 className="text-2xl font-bold mb-2">Type Mode</h2>
-                <p className="text-muted-foreground">
-                  Type the words you hear
-                </p>
+                <h3 className="text-xl font-bold">Typing Mode</h3>
+                <p className="text-muted-foreground">Type the word you hear</p>
               </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              {[1, 2, 3, 4, 5].map((level) => (
-                <Button
-                  key={level}
-                  onClick={() => handleStartGame("typing", level)}
-                  data-testid={`button-typing-level-${level}`}
-                  className="hover-elevate"
-                >
-                  Level {level}
-                </Button>
-              ))}
             </div>
           </Card>
 
-          <Card className="p-6 bg-white/95 hover-elevate cursor-pointer">
-            <div className="flex items-start gap-4 mb-4">
-              <MousePointer className="w-12 h-12 text-purple-600" />
+          <Card className="p-6 hover-elevate cursor-pointer" onClick={() => handleStartGame("multiple-choice", selectedLevel)}>
+            <div className="flex items-center gap-4">
+              <MousePointer className="w-12 h-12 text-green-500" />
               <div>
-                <h2 className="text-2xl font-bold mb-2">Multiple Choice</h2>
-                <p className="text-muted-foreground">
-                  Choose the correct word
-                </p>
+                <h3 className="text-xl font-bold">Multiple Choice</h3>
+                <p className="text-muted-foreground">Choose from 4 options</p>
               </div>
             </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              {[1, 2, 3, 4, 5].map((level) => (
-                <Button
-                  key={level}
-                  variant="secondary"
-                  onClick={() => handleStartGame("multiple-choice", level)}
-                  data-testid={`button-multiple-choice-level-${level}`}
-                  className="hover-elevate"
-                >
-                  Level {level}
-                </Button>
-              ))}
+          </Card>
+
+          <Card className="p-6 hover-elevate cursor-pointer" onClick={() => handleStartGame("fill-blanks", selectedLevel)}>
+            <div className="flex items-center gap-4">
+              <Zap className="w-12 h-12 text-purple-500" />
+              <div>
+                <h3 className="text-xl font-bold">Fill the Blank</h3>
+                <p className="text-muted-foreground">Choose the missing letter</p>
+              </div>
             </div>
           </Card>
         </div>
