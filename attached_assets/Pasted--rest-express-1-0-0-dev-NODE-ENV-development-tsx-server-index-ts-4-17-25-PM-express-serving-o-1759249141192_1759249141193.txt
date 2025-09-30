@@ -1,0 +1,109 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+4:17:25 PM [express] serving on port 5000
+Starting finalization scheduler...
+4:17:25 PM [express] Finalization scheduler started
+No overdue progress to finalize
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+ResponseBodyError: server responded with an error in the response body
+    at checkOAuthBodyError (/home/runner/workspace/node_modules/oauth4webapi/src/index.ts:2813:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async processGenericAccessTokenResponse (/home/runner/workspace/node_modules/oauth4webapi/src/index.ts:3547:3)
+    at async processAuthorizationCodeOAuth2Response (/home/runner/workspace/node_modules/oauth4webapi/src/index.ts:4113:18)
+    at async Module.authorizationCodeGrant (/home/runner/workspace/node_modules/openid-client/src/index.ts:3409:14)
+    at async Strategy.authorizationCodeGrant (/home/runner/workspace/node_modules/openid-client/src/passport.ts:579:22)
+ResponseBodyError: server responded with an error in the response body
+    at checkOAuthBodyError (/home/runner/workspace/node_modules/oauth4webapi/src/index.ts:2813:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async processGenericAccessTokenResponse (/home/runner/workspace/node_modules/oauth4webapi/src/index.ts:3547:3)
+    at async processAuthorizationCodeOAuth2Response (/home/runner/workspace/node_modules/oauth4webapi/src/index.ts:4113:18)
+    at async Module.authorizationCodeGrant (/home/runner/workspace/node_modules/openid-client/src/index.ts:3409:14)
+    at async Strategy.authorizationCodeGrant (/home/runner/workspace/node_modules/openid-client/src/passport.ts:579:22)
+Error fetching user: error: column "age" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getUser (/home/runner/workspace/server/storage.ts:79:20)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:21:20) {
+  length: 103,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '71',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3722',
+  routine: 'errorMissingColumn'
+}
+4:17:30 PM [express] GET /api/auth/user 500 in 74ms :: {"message":"Failed to fetch user"}
+Error fetching user: error: column "age" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getUser (/home/runner/workspace/server/storage.ts:79:20)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:21:20) {
+  length: 103,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '71',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3722',
+  routine: 'errorMissingColumn'
+}
+4:17:38 PM [express] GET /api/auth/user 500 in 146ms :: {"message":"Failed to fetch user"}
+4:17:39 PM [express] GET /api/login 302 in 58ms
+file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345
+o?t(o):n(u)},"cb"),s=new r(function(o,u){n=o,t=u}).catch(o=>{throw Error.captureStackTrace(
+                                                                         ^
+
+error: column "age" of relation "users" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.upsertUser (/home/runner/workspace/server/storage.ts:84:20)
+    at async upsertUser (/home/runner/workspace/server/replitAuth.ts:60:3)
+    at async Strategy.verify (/home/runner/workspace/server/replitAuth.ts:83:5) {
+  length: 121,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '85',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_target.c',
+  line: '1066',
+  routine: 'checkInsertTargets'
+}
+
+Node.js v20.19.3
