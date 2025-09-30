@@ -484,7 +484,7 @@ export function ParentsReport() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-500 rounded"></div>
-                    <span className="text-red-300">Needs Practice (<70%)</span>
+                    <span className="text-red-300">Needs Practice (&lt;70%)</span>
                   </div>
                 </div>
               </div>
