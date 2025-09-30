@@ -246,4 +246,174 @@ router.get("/stats", async (req, res) => {
   }
 });
 
+// GET /api/dictation/progress-report - Get detailed progress report for a specific month
+router.get("/progress-report", async (req: any, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = req.user.claims.sub;
+    const month = req.query.month as string; // Format: YYYY-MM
+    
+    if (!month) {
+      return res.status(400).json({ message: "Month parameter is required (format: YYYY-MM)" });
+    }
+
+    // Parse month
+    const [year, monthNum] = month.split('-').map(Number);
+    const startDate = new Date(year, monthNum - 1, 1);
+    const endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
+
+    // Get daily game history for the month
+    const dailyHistory = await db
+      .select({
+        date: sql<string>`DATE(${dictationGameHistory.playedAt})`,
+        totalGames: count(),
+        totalScore: sql<number>`SUM(${dictationGameHistory.score})`,
+        totalWords: sql<number>`SUM(${dictationGameHistory.wordsTotal})`,
+        totalCorrect: sql<number>`SUM(${dictationGameHistory.wordsCorrect})`,
+        avgAccuracy: sql<number>`AVG(${dictationGameHistory.accuracy})`,
+        bestLevel: sql<number>`MAX(${dictationGameHistory.levelReached})`,
+      })
+      .from(dictationGameHistory)
+      .where(
+        and(
+          eq(dictationGameHistory.userId, userId),
+          sql`${dictationGameHistory.playedAt} >= ${startDate}`,
+          sql`${dictationGameHistory.playedAt} <= ${endDate}`
+        )
+      )
+      .groupBy(sql`DATE(${dictationGameHistory.playedAt})`)
+      .orderBy(sql`DATE(${dictationGameHistory.playedAt}) DESC`);
+
+    // Get stats by game mode
+    const modeStats = await db
+      .select({
+        gameMode: dictationGameHistory.gameMode,
+        totalGames: count(),
+        totalScore: sql<number>`SUM(${dictationGameHistory.score})`,
+        totalWords: sql<number>`SUM(${dictationGameHistory.wordsTotal})`,
+        totalCorrect: sql<number>`SUM(${dictationGameHistory.wordsCorrect})`,
+        avgAccuracy: sql<number>`AVG(${dictationGameHistory.accuracy})`,
+      })
+      .from(dictationGameHistory)
+      .where(
+        and(
+          eq(dictationGameHistory.userId, userId),
+          sql`${dictationGameHistory.playedAt} >= ${startDate}`,
+          sql`${dictationGameHistory.playedAt} <= ${endDate}`
+        )
+      )
+      .groupBy(dictationGameHistory.gameMode);
+
+    // Get overall monthly summary
+    const monthlySummary = await db
+      .select({
+        totalGames: count(),
+        totalScore: sql<number>`SUM(${dictationGameHistory.score})`,
+        totalWords: sql<number>`SUM(${dictationGameHistory.wordsTotal})`,
+        totalCorrect: sql<number>`SUM(${dictationGameHistory.wordsCorrect})`,
+        avgAccuracy: sql<number>`AVG(${dictationGameHistory.accuracy})`,
+        bestLevel: sql<number>`MAX(${dictationGameHistory.levelReached})`,
+        uniqueDays: sql<number>`COUNT(DISTINCT DATE(${dictationGameHistory.playedAt}))`,
+      })
+      .from(dictationGameHistory)
+      .where(
+        and(
+          eq(dictationGameHistory.userId, userId),
+          sql`${dictationGameHistory.playedAt} >= ${startDate}`,
+          sql`${dictationGameHistory.playedAt} <= ${endDate}`
+        )
+      );
+
+    res.json({
+      month,
+      dailyHistory: dailyHistory.map(day => ({
+        date: day.date,
+        totalGames: day.totalGames,
+        totalScore: day.totalScore || 0,
+        totalWords: day.totalWords || 0,
+        totalCorrect: day.totalCorrect || 0,
+        accuracy: Math.round(day.avgAccuracy || 0),
+        bestLevel: day.bestLevel || 1,
+      })),
+      modeStats: modeStats.map(mode => ({
+        gameMode: mode.gameMode,
+        totalGames: mode.totalGames,
+        totalScore: mode.totalScore || 0,
+        totalWords: mode.totalWords || 0,
+        totalCorrect: mode.totalCorrect || 0,
+        accuracy: Math.round(mode.avgAccuracy || 0),
+      })),
+      monthlySummary: monthlySummary[0] ? {
+        totalGames: monthlySummary[0].totalGames,
+        totalScore: monthlySummary[0].totalScore || 0,
+        totalWords: monthlySummary[0].totalWords || 0,
+        totalCorrect: monthlySummary[0].totalCorrect || 0,
+        accuracy: Math.round(monthlySummary[0].avgAccuracy || 0),
+        bestLevel: monthlySummary[0].bestLevel || 1,
+        activeDays: monthlySummary[0].uniqueDays || 0,
+      } : {
+        totalGames: 0,
+        totalScore: 0,
+        totalWords: 0,
+        totalCorrect: 0,
+        accuracy: 0,
+        bestLevel: 1,
+        activeDays: 0,
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching dictation progress report:", error);
+    res.status(500).json({ message: "Failed to fetch progress report" });
+  }
+});
+
+// GET /api/dictation/weekly-report - Get 7-day summary
+router.get("/weekly-report", async (req: any, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = req.user.claims.sub;
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7);
+
+    const weeklyData = await db
+      .select({
+        date: sql<string>`DATE(${dictationGameHistory.playedAt})`,
+        totalGames: count(),
+        totalScore: sql<number>`SUM(${dictationGameHistory.score})`,
+        totalWords: sql<number>`SUM(${dictationGameHistory.wordsTotal})`,
+        totalCorrect: sql<number>`SUM(${dictationGameHistory.wordsCorrect})`,
+        avgAccuracy: sql<number>`AVG(${dictationGameHistory.accuracy})`,
+      })
+      .from(dictationGameHistory)
+      .where(
+        and(
+          eq(dictationGameHistory.userId, userId),
+          sql`${dictationGameHistory.playedAt} >= ${startDate}`,
+          sql`${dictationGameHistory.playedAt} <= ${endDate}`
+        )
+      )
+      .groupBy(sql`DATE(${dictationGameHistory.playedAt})`)
+      .orderBy(sql`DATE(${dictationGameHistory.playedAt}) DESC`);
+
+    res.json(weeklyData.map(day => ({
+      date: day.date,
+      totalGames: day.totalGames,
+      totalScore: day.totalScore || 0,
+      totalWords: day.totalWords || 0,
+      totalCorrect: day.totalCorrect || 0,
+      accuracy: Math.round(day.avgAccuracy || 0),
+    })));
+  } catch (error) {
+    console.error("Error fetching weekly report:", error);
+    res.status(500).json({ message: "Failed to fetch weekly report" });
+  }
+});
+
 export default router;
