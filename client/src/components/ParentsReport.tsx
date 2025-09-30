@@ -106,7 +106,7 @@ export function ParentsReport() {
     return monthlyProgress.map(day => {
       const accuracy = day.questionsAnswered > 0 ? (day.correctAnswers / day.questionsAnswered) * 100 : 0;
       return {
-        date: new Date(day.date).toLocaleDateString('fa-IR', { month: 'short', day: 'numeric' }),
+        date: new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         points: day.pointsEarned,
         accuracy: Math.round(accuracy),
         correct: day.correctAnswers,
@@ -133,10 +133,10 @@ export function ParentsReport() {
     });
 
     return [
-      { name: 'عالی (90%+)', value: ranges.excellent, color: '#22c55e' },
-      { name: 'خوب (75-89%)', value: ranges.good, color: '#3b82f6' },
-      { name: 'متوسط (60-74%)', value: ranges.fair, color: '#f59e0b' },
-      { name: 'نیاز به تمرین (<60%)', value: ranges.needsWork, color: '#ef4444' }
+      { name: 'Excellent (90%+)', value: ranges.excellent, color: '#22c55e' },
+      { name: 'Good (75-89%)', value: ranges.good, color: '#3b82f6' },
+      { name: 'Fair (60-74%)', value: ranges.fair, color: '#f59e0b' },
+      { name: 'Needs Practice (<60%)', value: ranges.needsWork, color: '#ef4444' }
     ];
   }, [monthlyProgress]);
 
@@ -153,7 +153,7 @@ export function ParentsReport() {
               <div className="animate-bounce mb-4">
                 <FileText className="h-12 w-12 mx-auto text-amber-200" />
               </div>
-              <p className="font-pixel text-amber-200">در حال بارگذاری گزارش...</p>
+              <p className="font-pixel text-amber-200">Loading report...</p>
             </CardContent>
           </Card>
         </div>
@@ -179,10 +179,10 @@ export function ParentsReport() {
                 <FileText className="h-10 w-10 text-amber-200" />
                 <div>
                   <CardTitle className="font-pixel text-2xl md:text-3xl text-amber-200 animate-pulse">
-                    📊 گزارش ماهانه والدین
+                    📊 Parents Monthly Report
                   </CardTitle>
                   <p className="text-emerald-300 font-pixel text-sm">
-                    آمار تفصیلی پیشرفت فرزند شما در ریاضیات
+                    Detailed statistics of your child's math progress
                   </p>
                 </div>
               </div>
@@ -199,7 +199,7 @@ export function ParentsReport() {
                   className="font-pixel bg-green-700 hover:bg-green-800 border-2 border-green-900"
                 >
                   <Printer className="h-4 w-4 mr-2" />
-                  چاپ گزارش
+                  Print Report
                 </Button>
               </div>
             </div>
@@ -212,7 +212,7 @@ export function ParentsReport() {
             <CardContent className="p-4 text-center">
               <Award className="h-8 w-8 text-blue-400 mx-auto mb-2" />
               <p className="text-2xl font-pixel text-blue-200">{monthlyStats.totalPoints}</p>
-              <p className="text-sm text-blue-300 font-pixel">کل امتیاز</p>
+              <p className="text-sm text-blue-300 font-pixel">Total Points</p>
             </CardContent>
           </Card>
 
@@ -220,7 +220,7 @@ export function ParentsReport() {
             <CardContent className="p-4 text-center">
               <Target className="h-8 w-8 text-green-400 mx-auto mb-2" />
               <p className="text-2xl font-pixel text-green-200">{Math.round(monthlyStats.averageAccuracy)}%</p>
-              <p className="text-sm text-green-300 font-pixel">میانگین دقت</p>
+              <p className="text-sm text-green-300 font-pixel">Average Accuracy</p>
             </CardContent>
           </Card>
 
@@ -228,7 +228,7 @@ export function ParentsReport() {
             <CardContent className="p-4 text-center">
               <BarChart3 className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
               <p className="text-2xl font-pixel text-yellow-200">{monthlyStats.totalQuestions}</p>
-              <p className="text-sm text-yellow-300 font-pixel">کل سوالات</p>
+              <p className="text-sm text-yellow-300 font-pixel">Total Questions</p>
             </CardContent>
           </Card>
 
@@ -236,7 +236,7 @@ export function ParentsReport() {
             <CardContent className="p-4 text-center">
               <Calendar className="h-8 w-8 text-purple-400 mx-auto mb-2" />
               <p className="text-2xl font-pixel text-purple-200">{monthlyStats.daysPlayed}</p>
-              <p className="text-sm text-purple-300 font-pixel">روزهای بازی</p>
+              <p className="text-sm text-purple-300 font-pixel">Days Played</p>
             </CardContent>
           </Card>
         </div>
@@ -248,7 +248,7 @@ export function ParentsReport() {
             <CardHeader>
               <CardTitle className="font-pixel text-cyan-200 flex items-center gap-2">
                 <TrendingUp className="h-6 w-6" />
-                روند پیشرفت روزانه
+                Daily Progress Trend
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -271,7 +271,7 @@ export function ParentsReport() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-full">
-                    <p className="text-cyan-400 font-pixel">هنوز داده‌ای برای نمایش وجود ندارد</p>
+                    <p className="text-cyan-400 font-pixel">No data available for display yet</p>
                   </div>
                 )}
               </div>
@@ -283,7 +283,7 @@ export function ParentsReport() {
             <CardHeader>
               <CardTitle className="font-pixel text-emerald-200 flex items-center gap-2">
                 <Target className="h-6 w-6" />
-                توزیع دقت پاسخ‌ها
+                Answer Accuracy Distribution
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -309,7 +309,7 @@ export function ParentsReport() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-full">
-                    <p className="text-emerald-400 font-pixel">هنوز داده‌ای برای نمایش وجود ندارد</p>
+                    <p className="text-emerald-400 font-pixel">No data available for display yet</p>
                   </div>
                 )}
               </div>
@@ -322,25 +322,25 @@ export function ParentsReport() {
           <CardHeader>
             <CardTitle className="font-pixel text-stone-200 flex items-center gap-2">
               <BarChart3 className="h-6 w-6" />
-              آمار تفصیلی
+              Detailed Statistics
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Accuracy Stats */}
               <div className="space-y-4">
-                <h3 className="font-pixel text-lg text-green-300 border-b border-green-600 pb-2">📊 آمار دقت</h3>
+                <h3 className="font-pixel text-lg text-green-300 border-b border-green-600 pb-2">📊 Accuracy Stats</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-green-200">پاسخ‌های صحیح:</span>
+                    <span className="text-green-200">Correct Answers:</span>
                     <Badge variant="default" className="bg-green-700">{monthlyStats.totalCorrect}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-red-200">پاسخ‌های غلط:</span>
+                    <span className="text-red-200">Wrong Answers:</span>
                     <Badge variant="destructive">{monthlyStats.totalIncorrect}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-blue-200">میانگین دقت:</span>
+                    <span className="text-blue-200">Average Accuracy:</span>
                     <Badge variant="secondary">{Math.round(monthlyStats.averageAccuracy)}%</Badge>
                   </div>
                 </div>
@@ -348,24 +348,24 @@ export function ParentsReport() {
 
               {/* Performance Indicators */}
               <div className="space-y-4">
-                <h3 className="font-pixel text-lg text-yellow-300 border-b border-yellow-600 pb-2">🎯 شاخص‌های عملکرد</h3>
+                <h3 className="font-pixel text-lg text-yellow-300 border-b border-yellow-600 pb-2">🎯 Performance Indicators</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-yellow-200">بالاترین سطح:</span>
+                    <span className="text-yellow-200">Highest Level:</span>
                     <Badge variant="outline" className="border-yellow-500">{monthlyStats.bestLevel}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-blue-200">روزهای فعال:</span>
+                    <span className="text-blue-200">Active Days:</span>
                     <Badge variant="secondary">{monthlyStats.daysPlayed}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-purple-200">روند پیشرفت:</span>
+                    <span className="text-purple-200">Progress Trend:</span>
                     <Badge 
                       variant={monthlyStats.improvementTrend === 'improving' ? 'default' : 
                               monthlyStats.improvementTrend === 'stable' ? 'secondary' : 'destructive'}
                     >
-                      {monthlyStats.improvementTrend === 'improving' ? '📈 در حال بهبود' :
-                       monthlyStats.improvementTrend === 'stable' ? '➡️ ثابت' : '📉 نیاز به توجه'}
+                      {monthlyStats.improvementTrend === 'improving' ? '📈 Improving' :
+                       monthlyStats.improvementTrend === 'stable' ? '➡️ Stable' : '📉 Needs Attention'}
                     </Badge>
                   </div>
                 </div>
@@ -373,36 +373,36 @@ export function ParentsReport() {
 
               {/* Recommendations */}
               <div className="space-y-4">
-                <h3 className="font-pixel text-lg text-purple-300 border-b border-purple-600 pb-2">💡 توصیه‌ها</h3>
+                <h3 className="font-pixel text-lg text-purple-300 border-b border-purple-600 pb-2">💡 Recommendations</h3>
                 <div className="space-y-3">
                   {monthlyStats.averageAccuracy >= 85 ? (
                     <div className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-400 mt-0.5" />
-                      <p className="text-sm text-green-200">عملکرد عالی! ادامه دهید.</p>
+                      <p className="text-sm text-green-200">Excellent performance! Keep it up.</p>
                     </div>
                   ) : monthlyStats.averageAccuracy >= 70 ? (
                     <div className="flex items-start gap-2">
                       <AlertCircle className="h-5 w-5 text-yellow-400 mt-0.5" />
-                      <p className="text-sm text-yellow-200">عملکرد خوب، اما قابل بهبود.</p>
+                      <p className="text-sm text-yellow-200">Good performance, but can be improved.</p>
                     </div>
                   ) : (
                     <div className="flex items-start gap-2">
                       <AlertCircle className="h-5 w-5 text-red-400 mt-0.5" />
-                      <p className="text-sm text-red-200">نیاز به تمرین بیشتر دارد.</p>
+                      <p className="text-sm text-red-200">Needs more practice.</p>
                     </div>
                   )}
                   
                   {monthlyStats.daysPlayed < 15 && (
                     <div className="flex items-start gap-2">
                       <Clock className="h-5 w-5 text-blue-400 mt-0.5" />
-                      <p className="text-sm text-blue-200">تمرین منظم‌تر توصیه می‌شود.</p>
+                      <p className="text-sm text-blue-200">More regular practice is recommended.</p>
                     </div>
                   )}
                   
                   {monthlyStats.improvementTrend === 'declining' && (
                     <div className="flex items-start gap-2">
                       <TrendingUp className="h-5 w-5 text-orange-400 mt-0.5" />
-                      <p className="text-sm text-orange-200">نیاز به بررسی روش‌های یادگیری.</p>
+                      <p className="text-sm text-orange-200">Consider reviewing learning methods.</p>
                     </div>
                   )}
                 </div>
@@ -416,7 +416,7 @@ export function ParentsReport() {
           <CardHeader>
             <CardTitle className="font-pixel text-amber-200 flex items-center gap-2">
               <Calendar className="h-6 w-6" />
-              جدول عملکرد روزانه
+              Daily Performance Table
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -424,13 +424,13 @@ export function ParentsReport() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-amber-600">
-                    <th className="text-right p-3 font-pixel text-amber-200">تاریخ</th>
-                    <th className="text-right p-3 font-pixel text-amber-200">امتیاز</th>
-                    <th className="text-right p-3 font-pixel text-amber-200">سوالات</th>
-                    <th className="text-right p-3 font-pixel text-amber-200">صحیح</th>
-                    <th className="text-right p-3 font-pixel text-amber-200">غلط</th>
-                    <th className="text-right p-3 font-pixel text-amber-200">دقت</th>
-                    <th className="text-right p-3 font-pixel text-amber-200">سطح</th>
+                    <th className="text-left p-3 font-pixel text-amber-200">Date</th>
+                    <th className="text-left p-3 font-pixel text-amber-200">Points</th>
+                    <th className="text-left p-3 font-pixel text-amber-200">Questions</th>
+                    <th className="text-left p-3 font-pixel text-amber-200">Correct</th>
+                    <th className="text-left p-3 font-pixel text-amber-200">Wrong</th>
+                    <th className="text-left p-3 font-pixel text-amber-200">Accuracy</th>
+                    <th className="text-left p-3 font-pixel text-amber-200">Level</th>
                   </tr>
                 </thead>
                 <tbody>
