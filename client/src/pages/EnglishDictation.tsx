@@ -23,23 +23,32 @@ export default function EnglishDictation() {
   };
 
   const handleGameComplete = (stats: GameStats) => {
-    console.log(`🎮 Game Complete Handler - Mode: ${stats.mode}, Level: ${stats.level}`);
-    console.log(`📊 Stats:`, stats);
+    console.log(`🎮 Dictation Game Complete Handler - Mode: ${stats.mode}, Level: ${stats.level}`);
+    console.log(`📊 Dictation Stats:`, stats);
     
     setGameStats(stats);
     setGameState("results");
 
-    // Save to database with logging
+    // Save to database with detailed logging
     const gameData = {
       gameMode: stats.mode,
       score: stats.score,
-      accuracy: stats.accuracy,
+      accuracy: Math.round(stats.accuracy), // Ensure integer
       levelReached: stats.level,
       wordsTotal: stats.totalWords,
       wordsCorrect: stats.correctWords,
     };
     
-    console.log(`💾 Saving game data:`, gameData);
+    console.log(`💾 Saving dictation game data:`, gameData);
+    console.log(`🔍 Data types:`, {
+      gameMode: typeof gameData.gameMode,
+      score: typeof gameData.score,
+      accuracy: typeof gameData.accuracy,
+      levelReached: typeof gameData.levelReached,
+      wordsTotal: typeof gameData.wordsTotal,
+      wordsCorrect: typeof gameData.wordsCorrect,
+    });
+    
     saveGameHistory(gameData);
 
     // Update user progress
@@ -53,12 +62,24 @@ export default function EnglishDictation() {
       const newCorrectWords = currentCorrect + stats.correctWords;
       const newAccuracy = Math.round((newCorrectWords / newTotalWords) * 100);
 
+      console.log(`📈 Updating dictation progress:`, {
+        oldScore: currentScore,
+        newScore: newTotalScore,
+        oldWords: currentWords,
+        newWords: newTotalWords,
+        oldCorrect: currentCorrect,
+        newCorrect: newCorrectWords,
+        newAccuracy,
+      });
+
       updateProgress({
         totalScore: newTotalScore,
         totalWordsPracticed: newTotalWords,
         correctWords: newCorrectWords,
         accuracy: newAccuracy,
       });
+    } else {
+      console.warn(`⚠️ No progress data found, cannot update`);
     }
   };
 

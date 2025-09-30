@@ -179,10 +179,14 @@ router.post("/game-history", async (req: any, res) => {
     const userId = req.user.claims.sub;
     console.log(`📝 Saving dictation game history for user ${userId}:`, req.body);
     
-    const validatedData = insertDictationGameHistorySchema.parse({
+    // Ensure accuracy is an integer (0-100)
+    const gameData = {
       ...req.body,
       userId,
-    });
+      accuracy: Math.round(req.body.accuracy || 0), // Convert to integer
+    };
+    
+    const validatedData = insertDictationGameHistorySchema.parse(gameData);
 
     console.log(`✅ Validated data:`, validatedData);
 

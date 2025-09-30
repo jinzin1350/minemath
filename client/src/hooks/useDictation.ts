@@ -64,20 +64,29 @@ export function useDictation() {
   // Save game history mutation
   const saveGameHistoryMutation = useMutation({
     mutationFn: async (data: Omit<DictationGameHistory, "id" | "userId" | "playedAt">) => {
-      console.log(`🚀 Sending game history:`, data);
-      const result = await apiRequest("POST", "/api/dictation/game-history", data);
-      console.log(`✅ Game history saved:`, result);
+      console.log(`🚀 Sending dictation game history:`, data);
+      
+      // Ensure accuracy is an integer
+      const gameData = {
+        ...data,
+        accuracy: Math.round(data.accuracy || 0),
+      };
+      
+      console.log(`📝 Prepared data for save:`, gameData);
+      const result = await apiRequest("POST", "/api/dictation/game-history", gameData);
+      console.log(`✅ Dictation game history saved:`, result);
       return result;
     },
-    onSuccess: () => {
-      console.log(`🔄 Invalidating queries after game history save`);
+    onSuccess: (result) => {
+      console.log(`🔄 Invalidating queries after dictation game save`);
+      console.log(`💾 Saved game result:`, result);
       queryClient.invalidateQueries({ queryKey: ["/api/dictation/game-history"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dictation/progress"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dictation/progress-report"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dictation/weekly-report"] });
     },
     onError: (error) => {
-      console.error(`❌ Failed to save game history:`, error);
+      console.error(`❌ Failed to save dictation game history:`, error);
     },
   });
 
