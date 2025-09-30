@@ -16,19 +16,40 @@ export function useDictation() {
     queryKey: ["/api/dictation/game-history"],
   });
 
-  // Fetch words for game
-  const fetchWords = async (level: number, limit: number = 10, category?: string) => {
-    const params = new URLSearchParams({
-      level: level.toString(),
-      limit: limit.toString(),
-    });
-    if (category) {
-      params.append("category", category);
+  // Fetch words for game with caching
+  const fetchWords = useCallback(async (level: number, limit: number = 10, category?: string) => {
+    try {
+      const params = new URLSearchParams({
+        level: level.toString(),
+        limit: limit.toString(),
+      });
+      if (category) {
+        params.append("category", category);
+      }
+      
+      const response = await fetch(`/api/dictation/words?${params}`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch words: ${response.status} ${response.statusText}`);
+      }
+      
+      const words = await response.json();
+      
+      if (!Array.isArray(words) || words.length === 0) {
+        throw new Error(`No words available for level ${level}`);
+      }
+      
+      return words as DictationWord[];
+    } catch (error) {
+      console.error("Error fetching words:", error);
+      throw error;
     }
-    const response = await fetch(`/api/dictation/words?${params}`);
-    if (!response.ok) throw new Error("Failed to fetch words");
-    return response.json() as Promise<DictationWord[]>;
-  };
+  }, []);
 
   // Update progress mutation
   const updateProgressMutation = useMutation({

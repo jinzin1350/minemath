@@ -21,21 +21,39 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
 
   // Load words on mount
   useEffect(() => {
+    let mounted = true;
+    
     const loadWords = async () => {
       try {
+        setIsLoading(true);
         const fetchedWords = await fetchWords(level, 10);
-        setWords(fetchedWords);
-        if (fetchedWords.length > 0) {
+        
+        if (!mounted) return; // Component unmounted, don't update state
+        
+        if (fetchedWords && fetchedWords.length > 0) {
+          setWords(fetchedWords);
           initializeQuestion(fetchedWords[0], fetchedWords);
+        } else {
+          console.error("No words found for level", level);
         }
-        setIsLoading(false);
       } catch (error) {
         console.error("Failed to load words:", error);
-        setIsLoading(false);
+        if (mounted) {
+          // Could show error message to user here
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
+    
     loadWords();
-  }, [level, fetchWords]);
+    
+    return () => {
+      mounted = false;
+    };
+  }, [level]); // Remove fetchWords dependency to prevent excessive calls
 
   // Initialize question with choices for multiple choice
   const initializeQuestion = (word: DictationWord, wordList: DictationWord[]) => {
@@ -133,16 +151,37 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      <div className="min-h-screen bg-gradient-to-b from-sky-400 to-sky-600 flex items-center justify-center p-4">
+        <Card className="p-8 bg-white/95 text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-lg">Loading words for Level {level}...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (words.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-sky-400 to-sky-600 flex items-center justify-center p-4">
+        <Card className="p-8 bg-white/95 text-center">
+          <p className="text-lg mb-4">No words available for Level {level}</p>
+          <Button onClick={onExit} variant="outline">
+            Back to Menu
+          </Button>
+        </Card>
       </div>
     );
   }
 
   if (!questionState) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-lg">No words available</p>
+      <div className="min-h-screen bg-gradient-to-b from-sky-400 to-sky-600 flex items-center justify-center p-4">
+        <Card className="p-8 bg-white/95 text-center">
+          <p className="text-lg mb-4">Error loading game</p>
+          <Button onClick={onExit} variant="outline">
+            Back to Menu
+          </Button>
+        </Card>
       </div>
     );
   }

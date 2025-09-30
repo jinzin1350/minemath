@@ -13,6 +13,16 @@ router.get("/words", async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 10;
     const category = req.query.category as string;
 
+    // Validate level
+    if (level < 1 || level > 5) {
+      return res.status(400).json({ message: "Level must be between 1 and 5" });
+    }
+
+    // Validate limit
+    if (limit < 1 || limit > 50) {
+      return res.status(400).json({ message: "Limit must be between 1 and 50" });
+    }
+
     // Build query
     let allWords;
     if (category) {
@@ -30,14 +40,22 @@ router.get("/words", async (req, res) => {
         .where(eq(dictationWords.level, level));
     }
     
+    if (allWords.length === 0) {
+      console.warn(`No words found for level ${level}${category ? ` and category ${category}` : ''}`);
+      return res.status(404).json({ 
+        message: `No words available for level ${level}${category ? ` in category ${category}` : ''}` 
+      });
+    }
+    
     // Shuffle and limit
     const shuffled = allWords.sort(() => Math.random() - 0.5);
-    const selectedWords = shuffled.slice(0, limit);
+    const selectedWords = shuffled.slice(0, Math.min(limit, allWords.length));
 
+    console.log(`Returning ${selectedWords.length} words for level ${level}${category ? ` (category: ${category})` : ''}`);
     res.json(selectedWords);
   } catch (error) {
     console.error("Error fetching words:", error);
-    res.status(500).json({ message: "Failed to fetch words" });
+    res.status(500).json({ message: "Failed to fetch words", error: error.message });
   }
 });
 
