@@ -32,6 +32,7 @@ export interface IStorage {
   // User operations - required for Replit Auth
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUserAge(userId: string, age: number): Promise<User>;
 
   // Game progress operations
   getDailyProgress(userId: string, date: string): Promise<DailyProgress | undefined>;
@@ -80,18 +81,38 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
+    const result = await db
       .insert(users)
       .values(userData)
       .onConflictDoUpdate({
         target: users.id,
         set: {
-          ...userData,
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          age: userData.age, // Added age field
           updatedAt: new Date(),
         },
       })
       .returning();
-    return user;
+    return result[0];
+  }
+
+  async updateUserAge(userId: string, age: number): Promise<User> {
+    const result = await db.update(users)
+      .set({
+        age,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (result.length === 0) {
+      throw new Error('User not found');
+    }
+
+    return result[0];
   }
 
   // Game progress operations

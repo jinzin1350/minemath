@@ -9,6 +9,7 @@ import { RewardSelector } from './RewardSelector';
 import { InventoryDisplay } from './InventoryDisplay';
 import { DashboardInventoryBoard } from './DashboardInventoryBoard';
 import { ScoreStatusBar } from './ScoreStatusBar';
+import { AgeSelector } from './AgeSelector';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Calendar, Trophy, Target, TrendingUp, Diamond, Zap, Heart } from 'lucide-react';
 
@@ -75,16 +76,46 @@ const mockData: DashboardData = {
 export function Dashboard({ data = mockData, onStartGame, mockMode = false }: DashboardProps) {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d'>('7d');
   const [achievements, setAchievements] = useState<DashboardData['achievements']>([]);
+  const [showAgeSelector, setShowAgeSelector] = useState(false);
 
   // Fetch real data when not in mock mode
-  const { data: userInfo } = useQuery<{
+  const { data: userInfo, refetch: refetchUser } = useQuery<{
     firstName?: string;
     lastName?: string;
     profileImageUrl?: string;
+    age?: number;
   }>({
     queryKey: ['/api/auth/user'],
     enabled: !mockMode
   });
+
+  // Check if user needs to select age
+  useEffect(() => {
+    if (!mockMode && userInfo && !userInfo.age) {
+      setShowAgeSelector(true);
+    }
+  }, [userInfo, mockMode]);
+
+  const handleAgeSelected = async (age: number) => {
+    try {
+      const response = await fetch('/api/auth/user/age', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ age }),
+      });
+
+      if (response.ok) {
+        setShowAgeSelector(false);
+        refetchUser(); // Refresh user data
+      } else {
+        console.error('Failed to update age');
+      }
+    } catch (error) {
+      console.error('Error updating age:', error);
+    }
+  };
 
   const { data: recentProgress, isLoading: progressLoading, refetch: refetchProgress } = useQuery<Array<{
     date: string;
@@ -145,6 +176,11 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
     recentProgress: recentProgress || [],
     totalStats: calculateTotalStats(recentProgress || [])
   };
+
+  // Show age selector if needed
+  if (showAgeSelector) {
+    return <AgeSelector onAgeSelected={handleAgeSelected} />;
+  }
 
   const displayName = dashboardData.user.firstName || 'Player';
   const accuracy = dashboardData.totalStats.totalQuestions > 0 
@@ -220,6 +256,17 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
                       }}
                     />
                   </div>
+                  {!mockMode && userInfo?.age && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAgeSelector(true)}
+                      className="font-pixel border-2 hover:scale-105 transition-all duration-200 text-xs"
+                      title={`Current age: ${userInfo.age}`}
+                    >
+                      ⚙️ {userInfo.age}y
+                    </Button>
+                  )}
                 </div>
                 <Button 
                   onClick={onStartGame}

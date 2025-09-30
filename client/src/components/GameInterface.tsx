@@ -111,34 +111,109 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
     { name: 'Dragon', speed: 2.0, sound: '🐲 ROAAAAR!', defeatSound: '🔥 DEFEATED!' }
   ];
 
-  const generateQuestion = () => {
-    const maxNum = Math.min(5 + gameStats.level * 2, 15);
-    const operations = ['+', '-', '*'] as const;
-    const operation = operations[Math.floor(Math.random() * operations.length)];
+  const generateQuestion = async () => {
+    // Get user age for difficulty adjustment
+    let userAge = 10; // Default age
+    try {
+      if (!mockMode) {
+        const response = await fetch('/api/auth/user');
+        if (response.ok) {
+          const userData = await response.json();
+          userAge = userData.age || 10;
+        }
+      }
+    } catch (error) {
+      console.log('Could not fetch user age, using default');
+    }
+
+    // Canadian education system difficulty levels
+    const getDifficultySettings = (age: number, level: number) => {
+      const baseLevel = Math.min(level, 5); // Cap at level 5
+      
+      if (age >= 8 && age <= 9) {
+        // Grade 3: Basic addition and subtraction
+        return {
+          additionMax: Math.min(10 + baseLevel * 2, 20),
+          subtractionMax: Math.min(10 + baseLevel * 2, 20),
+          multiplicationMax: 3, // Very basic: 1x1 to 3x3
+          allowDivision: false,
+          operations: ['+', '-'] as const
+        };
+      } else if (age >= 10 && age <= 11) {
+        // Grade 4-5: Introduction to multiplication, larger addition/subtraction
+        return {
+          additionMax: Math.min(25 + baseLevel * 5, 50),
+          subtractionMax: Math.min(25 + baseLevel * 5, 50),
+          multiplicationMax: Math.min(5 + baseLevel, 10),
+          allowDivision: baseLevel >= 2,
+          operations: ['+', '-', '*'] as const
+        };
+      } else if (age >= 12 && age <= 13) {
+        // Grade 6-7: More complex operations
+        return {
+          additionMax: Math.min(50 + baseLevel * 10, 100),
+          subtractionMax: Math.min(50 + baseLevel * 10, 100),
+          multiplicationMax: Math.min(10 + baseLevel * 2, 15),
+          allowDivision: true,
+          operations: ['+', '-', '*', '/'] as const
+        };
+      } else if (age >= 14 && age <= 15) {
+        // Grade 8-9: Advanced operations
+        return {
+          additionMax: Math.min(75 + baseLevel * 15, 150),
+          subtractionMax: Math.min(75 + baseLevel * 15, 150),
+          multiplicationMax: Math.min(15 + baseLevel * 3, 25),
+          allowDivision: true,
+          operations: ['+', '-', '*', '/'] as const
+        };
+      } else {
+        // Grade 10+ or adults: Most challenging
+        return {
+          additionMax: Math.min(100 + baseLevel * 20, 200),
+          subtractionMax: Math.min(100 + baseLevel * 20, 200),
+          multiplicationMax: Math.min(20 + baseLevel * 5, 50),
+          allowDivision: true,
+          operations: ['+', '-', '*', '/'] as const
+        };
+      }
+    };
+
+    const settings = getDifficultySettings(userAge, gameStats.level);
+    const availableOperations = settings.allowDivision && gameStats.level >= 2 
+      ? settings.operations 
+      : settings.operations.filter(op => op !== '/');
+    
+    const operation = availableOperations[Math.floor(Math.random() * availableOperations.length)];
     
     let num1: number, num2: number, answer: number, points: number;
     
     if (operation === '+') {
-      // Addition: 10 points
-      num1 = Math.floor(Math.random() * maxNum) + 1;
-      num2 = Math.floor(Math.random() * maxNum) + 1;
+      // Addition
+      num1 = Math.floor(Math.random() * settings.additionMax) + 1;
+      num2 = Math.floor(Math.random() * settings.additionMax) + 1;
       answer = num1 + num2;
       points = 10;
     } else if (operation === '-') {
-      // Subtraction: 15 points (make sure result is positive)
-      num1 = Math.floor(Math.random() * maxNum) + 5; // Start from 5 to ensure positive result
-      num2 = Math.floor(Math.random() * (num1 - 1)) + 1; // num2 is always less than num1
+      // Subtraction (ensure positive result)
+      num1 = Math.floor(Math.random() * settings.subtractionMax) + 10;
+      num2 = Math.floor(Math.random() * (num1 - 1)) + 1;
       answer = num1 - num2;
       points = 15;
-    } else {
-      // Multiplication: 20 points (very simple numbers for beginners)
-      num1 = Math.floor(Math.random() * 3) + 1; // Only 1, 2, 3
-      num2 = Math.floor(Math.random() * 3) + 1; // Only 1, 2, 3
+    } else if (operation === '*') {
+      // Multiplication
+      num1 = Math.floor(Math.random() * settings.multiplicationMax) + 1;
+      num2 = Math.floor(Math.random() * settings.multiplicationMax) + 1;
       answer = num1 * num2;
       points = 20;
+    } else {
+      // Division (ensure whole number result)
+      num2 = Math.floor(Math.random() * 9) + 2; // divisor 2-10
+      answer = Math.floor(Math.random() * 15) + 1; // quotient 1-15
+      num1 = num2 * answer; // dividend
+      points = 25;
     }
     
-    setCurrentQuestion({ num1, num2, operation, answer, points });
+    setCurrentQuestion({ num1, num2, operation: operation as '+' | '-' | '*', answer, points });
 
     // Reset timer to 15 seconds
     setTimeLeft(15);

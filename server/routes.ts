@@ -26,6 +26,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/auth/user/age', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { age } = req.body;
+      
+      if (!age || age < 8 || age > 25) {
+        return res.status(400).json({ message: "Age must be between 8 and 25" });
+      }
+      
+      const user = await storage.updateUserAge(userId, age);
+      res.json(user);
+    } catch (error: any) {
+      console.error("Error updating user age:", error);
+      res.status(500).json({ message: "Failed to update user age" });
+    }
+  });
+
   // Game progress routes
   app.get('/api/progress/recent', isAuthenticated, async (req: any, res) => {
     try {
