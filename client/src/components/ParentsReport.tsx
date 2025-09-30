@@ -412,47 +412,82 @@ export function ParentsReport() {
         </Card>
 
         {/* Daily Performance Table */}
-        <Card className="border-4 border-amber-600 bg-gradient-to-br from-amber-900/30 to-orange-900/30">
-          <CardHeader>
-            <CardTitle className="font-pixel text-amber-200 flex items-center gap-2">
-              <Calendar className="h-6 w-6" />
+        <Card className="border-4 border-slate-600 bg-gradient-to-br from-slate-900/90 to-gray-900/90 shadow-2xl">
+          <CardHeader className="bg-gradient-to-r from-slate-800 to-gray-800 border-b border-slate-600">
+            <CardTitle className="font-pixel text-slate-200 flex items-center gap-2">
+              <Calendar className="h-6 w-6 text-blue-400" />
               Daily Performance Table
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-amber-600">
-                    <th className="text-left p-3 font-pixel text-amber-200">Date</th>
-                    <th className="text-left p-3 font-pixel text-amber-200">Points</th>
-                    <th className="text-left p-3 font-pixel text-amber-200">Questions</th>
-                    <th className="text-left p-3 font-pixel text-amber-200">Correct</th>
-                    <th className="text-left p-3 font-pixel text-amber-200">Wrong</th>
-                    <th className="text-left p-3 font-pixel text-amber-200">Accuracy</th>
-                    <th className="text-left p-3 font-pixel text-amber-200">Level</th>
+                  <tr className="bg-gradient-to-r from-slate-800 to-gray-800 border-b-2 border-slate-600">
+                    <th className="text-left p-4 font-pixel text-slate-100 border-r border-slate-700">Date</th>
+                    <th className="text-left p-4 font-pixel text-blue-300 border-r border-slate-700">Points</th>
+                    <th className="text-left p-4 font-pixel text-purple-300 border-r border-slate-700">Questions</th>
+                    <th className="text-left p-4 font-pixel text-green-300 border-r border-slate-700">Correct</th>
+                    <th className="text-left p-4 font-pixel text-red-300 border-r border-slate-700">Wrong</th>
+                    <th className="text-left p-4 font-pixel text-yellow-300 border-r border-slate-700">Accuracy</th>
+                    <th className="text-left p-4 font-pixel text-orange-300">Level</th>
                   </tr>
                 </thead>
                 <tbody>
                   {chartData.slice(0, 10).map((day, index) => (
-                    <tr key={index} className="border-b border-amber-800/30 hover:bg-amber-900/20">
-                      <td className="p-3 text-amber-100">{day.date}</td>
-                      <td className="p-3 text-blue-300 font-pixel">{day.points}</td>
-                      <td className="p-3 text-purple-300">{day.correct + day.incorrect}</td>
-                      <td className="p-3 text-green-300">{day.correct}</td>
-                      <td className="p-3 text-red-300">{day.incorrect}</td>
-                      <td className="p-3">
+                    <tr 
+                      key={index} 
+                      className={`border-b border-slate-700 hover:bg-slate-800/50 transition-colors duration-200 ${
+                        index % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-800/30'
+                      }`}
+                    >
+                      <td className="p-4 text-slate-200 font-medium border-r border-slate-700/50">{day.date}</td>
+                      <td className="p-4 text-blue-400 font-pixel font-bold border-r border-slate-700/50">{day.points}</td>
+                      <td className="p-4 text-purple-400 font-medium border-r border-slate-700/50">{day.correct + day.incorrect}</td>
+                      <td className="p-4 text-green-400 font-bold border-r border-slate-700/50">{day.correct}</td>
+                      <td className="p-4 text-red-400 font-bold border-r border-slate-700/50">{day.incorrect}</td>
+                      <td className="p-4 border-r border-slate-700/50">
                         <Badge 
                           variant={day.accuracy >= 85 ? 'default' : day.accuracy >= 70 ? 'secondary' : 'destructive'}
+                          className={`font-pixel font-bold ${
+                            day.accuracy >= 85 ? 'bg-green-600 text-white border-green-500' :
+                            day.accuracy >= 70 ? 'bg-yellow-600 text-white border-yellow-500' :
+                            'bg-red-600 text-white border-red-500'
+                          }`}
                         >
                           {day.accuracy}%
                         </Badge>
                       </td>
-                      <td className="p-3 text-yellow-300">{day.level}</td>
+                      <td className="p-4">
+                        <Badge 
+                          variant="outline" 
+                          className="font-pixel text-orange-300 border-orange-500 bg-orange-900/30"
+                        >
+                          Level {day.level}
+                        </Badge>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              
+              {/* Table Footer with Summary */}
+              <div className="bg-gradient-to-r from-slate-800 to-gray-800 border-t-2 border-slate-600 p-4">
+                <div className="flex flex-wrap gap-4 justify-center text-sm font-pixel">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-500 rounded"></div>
+                    <span className="text-green-300">Excellent (85%+)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+                    <span className="text-yellow-300">Good (70-84%)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-500 rounded"></div>
+                    <span className="text-red-300">Needs Practice (<70%)</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
