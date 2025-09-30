@@ -329,9 +329,23 @@ export function ParentsReport() {
         case 'fill-blanks':
           return 'Fill the Blank';
         default:
-          return mode;
+          return mode.charAt(0).toUpperCase() + mode.slice(1);
       }
     };
+
+    // Create placeholder data for modes with no activity
+    const allModes = ['typing', 'multiple-choice', 'fill-blanks'];
+    const enhancedModeStats = allModes.map(mode => {
+      const existingMode = modeStats.find(m => m.gameMode === mode);
+      return existingMode || {
+        gameMode: mode,
+        totalGames: 0,
+        totalScore: 0,
+        totalWords: 0,
+        totalCorrect: 0,
+        accuracy: 0,
+      };
+    });
 
     return (
       <div className="space-y-6">
@@ -386,11 +400,14 @@ export function ParentsReport() {
               Performance by Game Mode
             </h3>
             <div className="grid gap-4">
-              {modeStats.map((mode, index) => (
-                <div key={index} className="border rounded-lg p-4 bg-gray-50">
+              {enhancedModeStats.map((mode, index) => (
+                <div key={index} className={`border rounded-lg p-4 ${mode.totalGames > 0 ? 'bg-gray-50' : 'bg-gray-100 opacity-60'}`}>
                   <div className="flex items-center gap-3 mb-3">
                     {getModeIcon(mode.gameMode)}
                     <h4 className="font-semibold text-gray-900">{getModeName(mode.gameMode)}</h4>
+                    {mode.totalGames === 0 && (
+                      <span className="text-xs bg-gray-300 text-gray-600 px-2 py-1 rounded">No activity yet</span>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
                     <div className="text-center">
@@ -414,6 +431,11 @@ export function ParentsReport() {
                       <p className="text-gray-600">Correct</p>
                     </div>
                   </div>
+                  {mode.totalGames === 0 && (
+                    <div className="mt-3 text-center text-sm text-gray-500">
+                      Play this mode to see statistics
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
