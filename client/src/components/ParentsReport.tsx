@@ -119,6 +119,23 @@ export const ParentsReport: React.FC = () => {
     },
   });
 
+  // Mutation for updating name
+  const updateNameMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const response = await fetch('/api/auth/user/name', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name }),
+      });
+      if (!response.ok) throw new Error('Failed to update name');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+    },
+  });
+
   // Fetch monthly progress data (Math)
   const { data: monthlyProgress, isLoading: mathLoading } = useQuery({
     queryKey: [`/api/progress/recent?month=${selectedMonth}`],
@@ -617,10 +634,10 @@ export const ParentsReport: React.FC = () => {
                 <FileText className="h-10 w-10 text-amber-200" />
                 <div>
                   <CardTitle className="font-pixel text-2xl md:text-3xl text-amber-200 animate-pulse">
-                    📊 Parents Monthly Report
+                    📊 {(userInfo as any)?.name ? `${(userInfo as any)?.name}'s` : 'Monthly'} Progress Report
                   </CardTitle>
                   <p className="text-emerald-300 font-pixel text-sm">
-                    Detailed statistics of your child's math progress
+                    Detailed statistics of {(userInfo as any)?.name ? `${(userInfo as any)?.name}'s` : 'your child\'s'} learning progress
                   </p>
                 </div>
               </div>
@@ -632,6 +649,31 @@ export const ParentsReport: React.FC = () => {
                   onChange={(e) => setSelectedMonth(e.target.value)}
                   className="font-pixel px-3 py-2 border-2 border-amber-600 rounded bg-stone-800 text-amber-200"
                 />
+                
+                {/* Name Input */}
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="text"
+                    placeholder="Enter child's name"
+                    defaultValue={(userInfo as any)?.name || ''}
+                    onBlur={(e) => {
+                      const newName = e.target.value.trim();
+                      if (newName && newName !== (userInfo as any)?.name) {
+                        updateNameMutation.mutate(newName);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const newName = (e.target as HTMLInputElement).value.trim();
+                        if (newName && newName !== (userInfo as any)?.name) {
+                          updateNameMutation.mutate(newName);
+                        }
+                      }
+                    }}
+                    className="font-pixel px-3 py-2 border-2 border-green-600 rounded bg-stone-800 text-green-200 placeholder-green-400 min-w-[180px]"
+                  />
+                </div>
+
                 <Button 
                   onClick={() => setShowAgeSelector(true)}
                   variant="outline"

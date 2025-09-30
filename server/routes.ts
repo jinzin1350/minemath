@@ -30,11 +30,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const { age } = req.body;
-      
+
       if (!age || age < 8 || age > 25) {
         return res.status(400).json({ message: "Age must be between 8 and 25" });
       }
-      
+
       const user = await storage.updateUserAge(userId, age);
       res.json(user);
     } catch (error: any) {
@@ -49,7 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const days = parseInt(req.query.days as string) || 7;
       const month = req.query.month as string;
-      
+
       let progress;
       if (month) {
         // Get monthly data for parents report
@@ -57,7 +57,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         progress = await storage.getRecentProgress(userId, days);
       }
-      
+
       res.json(progress);
     } catch (error) {
       console.error("Error fetching progress:", error);
@@ -105,17 +105,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/progress/daily', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
+
       // Validate request body with Zod schema
       const validatedData = updateDailyProgressSchema.parse(req.body);
       const today = new Date().toISOString().split('T')[0];
-      
+
       const progress = await storage.upsertDailyProgress({
         userId,
         date: today,
         ...validatedData
       });
-      
+
       res.json(progress);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -133,12 +133,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/progress/temporary', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
+
       // Validate request body with Zod schema (includes optional timezone)
       const validatedData = updateTemporaryProgressSchema.parse(req.body);
-      
+
       const progress = await storage.upsertTemporaryProgress(userId, validatedData);
-      
+
       res.json({
         ...progress,
         status: progress.isFinal ? 'final' : 'temporary',
@@ -161,7 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const date = req.query.date as string || await storage.getLatestFinalizedDate();
       const limit = parseInt(req.query.limit as string) || 10;
-      
+
       if (!date) {
         return res.json({ 
           leaderboard: [], 
@@ -169,9 +169,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "No finalized scores available yet" 
         });
       }
-      
+
       const leaderboard = await storage.getLeaderboard(date, limit);
-      
+
       res.json({
         leaderboard,
         date,
@@ -188,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { finalizationService } = await import('./finalization');
       const stats = await finalizationService.getFinalizationStats();
-      
+
       res.json({
         ...stats,
         timestamp: new Date().toISOString(),
@@ -203,11 +203,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/game-session', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
+
       // Validate request body with Zod schema
       const validatedData = createGameSessionSchema.parse(req.body);
       const sessionData = { ...validatedData, userId };
-      
+
       const session = await storage.createGameSession(sessionData);
       res.json(session);
     } catch (error) {
@@ -297,7 +297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       const totalPoints = await storage.getUserTotalPoints(userId);
       const recentProgress = await storage.getRecentProgress(userId, 7);
-      
+
       res.json({
         userId,
         userExists: !!user,
