@@ -19,6 +19,9 @@ interface GameStats {
 interface Question {
   num1: number;
   num2: number;
+  operation: '+' | '-' | '*';
+  answer: number;
+  points: number;
 }
 
 interface Enemy {
@@ -110,9 +113,33 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
 
   const generateQuestion = () => {
     const maxNum = Math.min(5 + gameStats.level * 2, 15);
-    const num1 = Math.floor(Math.random() * maxNum) + 1;
-    const num2 = Math.floor(Math.random() * maxNum) + 1;
-    setCurrentQuestion({ num1, num2 });
+    const operations = ['+', '-', '*'] as const;
+    const operation = operations[Math.floor(Math.random() * operations.length)];
+    
+    let num1: number, num2: number, answer: number, points: number;
+    
+    if (operation === '+') {
+      // Addition: 10 points
+      num1 = Math.floor(Math.random() * maxNum) + 1;
+      num2 = Math.floor(Math.random() * maxNum) + 1;
+      answer = num1 + num2;
+      points = 10;
+    } else if (operation === '-') {
+      // Subtraction: 15 points (make sure result is positive)
+      num1 = Math.floor(Math.random() * maxNum) + 5; // Start from 5 to ensure positive result
+      num2 = Math.floor(Math.random() * (num1 - 1)) + 1; // num2 is always less than num1
+      answer = num1 - num2;
+      points = 15;
+    } else {
+      // Multiplication: 20 points (smaller numbers for easier calculation)
+      const maxMultNum = Math.min(3 + gameStats.level, 10);
+      num1 = Math.floor(Math.random() * maxMultNum) + 1;
+      num2 = Math.floor(Math.random() * maxMultNum) + 1;
+      answer = num1 * num2;
+      points = 20;
+    }
+    
+    setCurrentQuestion({ num1, num2, operation, answer, points });
 
     // Reset timer to 15 seconds
     setTimeLeft(15);
@@ -127,11 +154,10 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
   };
 
   const handleSubmit = () => {
-    const correct = currentQuestion.num1 + currentQuestion.num2;
-    const answer = parseInt(userAnswer);
+    const userAnswerNumber = parseInt(userAnswer);
 
-    if (answer === correct) {
-      const earnedPoints = 10;
+    if (userAnswerNumber === currentQuestion.answer) {
+      const earnedPoints = currentQuestion.points;
       setPointsEarned(earnedPoints);
       setShowPointsAnimation(true);
       setPlayerDefending(true);
@@ -151,10 +177,16 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
         checkForAchievements(newStats.score);
       }
 
+      // Different celebration messages based on operation
+      let celebrationEmoji = '';
+      if (currentQuestion.operation === '+') celebrationEmoji = '➕';
+      else if (currentQuestion.operation === '-') celebrationEmoji = '➖'; 
+      else if (currentQuestion.operation === '*') celebrationEmoji = '✖️';
+
       if (currentEnemy) {
-        setFeedback(`${currentEnemy.defeatSound} +${earnedPoints} POINTS! 🌟`);
+        setFeedback(`${currentEnemy.defeatSound} ${celebrationEmoji} +${earnedPoints} POINTS! 🌟`);
       } else {
-        setFeedback(`✨ Perfect! +${earnedPoints} POINTS! 🌟`);
+        setFeedback(`✨ Perfect! ${celebrationEmoji} +${earnedPoints} POINTS! 🌟`);
       }
 
       setShowCelebration(true);
@@ -184,7 +216,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
         }
       }, 2000);
     } else {
-      setFeedback(`❌ Wrong answer! Correct answer: ${correct} (No points earned)`);
+      setFeedback(`❌ Wrong answer! Correct answer: ${currentQuestion.answer} (No points earned)`);
       
       // Wrong answer gives enemy advantage - reduces time by 3 seconds
       setTimeLeft(prev => Math.max(1, prev - 3));
@@ -569,8 +601,19 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
           <div className="text-center space-y-3 md:space-y-4">
             <div className="space-y-3 md:space-y-3">
               <h2 className="text-xl md:text-2xl font-pixel text-foreground bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent border-2 border-blue-400 bg-black bg-opacity-40 px-3 md:px-4 py-2 md:py-3 rounded-lg shadow-lg">
-                ⚡ {currentQuestion.num1} + {currentQuestion.num2} = ? ⚡
+                ⚡ {currentQuestion.num1} {currentQuestion.operation} {currentQuestion.num2} = ? ⚡
               </h2>
+              
+              {/* Show point value for current question */}
+              <div className={`text-center font-pixel text-sm px-3 py-1 rounded-lg border-2 inline-block ${
+                currentQuestion.operation === '+' ? 'bg-green-900/70 border-green-400 text-green-100' :
+                currentQuestion.operation === '-' ? 'bg-blue-900/70 border-blue-400 text-blue-100' :
+                'bg-purple-900/70 border-purple-400 text-purple-100'
+              }`}>
+                {currentQuestion.operation === '+' && '➕ Addition: 10 points'}
+                {currentQuestion.operation === '-' && '➖ Subtraction: 15 points'}
+                {currentQuestion.operation === '*' && '✖️ Multiplication: 20 points'}
+              </div>
               
               {/* Timer Display - Better mobile visibility */}
               <div className={`text-center font-pixel text-base md:text-lg px-3 md:px-4 py-2 md:py-2 rounded-lg border-2 shadow-md transition-all duration-300 ${
