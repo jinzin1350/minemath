@@ -593,19 +593,17 @@ export const ParentsReport: React.FC = () => {
         </Card>
 
         {/* Main Content with Tabs */}
-        <Tabs defaultValue="math" className="w-full">
+        <Tabs value={reportType} onValueChange={(value) => setReportType(value as 'math' | 'dictation')} className="w-full">
           <div className="flex justify-center mb-6">
             <TabsList className="grid w-full max-w-md grid-cols-2 bg-stone-800 border-2 border-amber-600">
               <TabsTrigger 
                 value="math" 
-                onClick={() => setReportType('math')}
                 className="font-pixel data-[state=active]:bg-amber-600 data-[state=active]:text-white"
               >
                 🧮 Math Report
               </TabsTrigger>
               <TabsTrigger 
                 value="dictation" 
-                onClick={() => setReportType('dictation')}
                 className="font-pixel data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               >
                 🎧 Dictation Report
