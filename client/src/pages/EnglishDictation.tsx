@@ -68,7 +68,31 @@ export default function EnglishDictation() {
 
   const handleExitGame = () => {
     setGameState("menu");
+    setGameStats(null);
   };
+
+  // Test function to add sample data for debugging
+  const addTestData = () => {
+    console.log("🧪 Adding test dictation data...");
+    saveGameHistory({
+      gameMode: "typing",
+      score: 85,
+      accuracy: 85,
+      levelReached: 2,
+      wordsTotal: 10,
+      wordsCorrect: 8,
+    });
+
+    if (progress) {
+      updateProgress({
+        totalScore: (progress.totalScore || 0) + 85,
+        totalWordsPracticed: (progress.totalWordsPracticed || 0) + 10,
+        correctWords: (progress.correctWords || 0) + 8,
+        accuracy: 85,
+      });
+    }
+  };
+
 
   // Render game states
   if (gameState === "playing") {
@@ -98,17 +122,24 @@ export default function EnglishDictation() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <Link href="/">
-            <Button
-              variant="outline"
-              size="sm"
-              className="bg-white/90 hover-elevate"
-              data-testid="button-back-home"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
+          <div className="flex gap-4">
+              <Button 
+                asChild
+                className="font-pixel bg-red-600 hover:bg-red-700 border-2 border-red-800"
+              >
+                <Link href="/">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Home
+                </Link>
+              </Button>
+
+              <Button 
+                onClick={addTestData}
+                className="font-pixel bg-purple-600 hover:bg-purple-700 border-2 border-purple-800"
+              >
+                🧪 Add Test Data
+              </Button>
+            </div>
 
           {!progressLoading && progress && (
             <div className="bg-white/90 px-4 py-2 rounded-md">
@@ -166,7 +197,7 @@ export default function EnglishDictation() {
           </Card>
         </div>
 
-        
+
       </div>
     </div>
   );

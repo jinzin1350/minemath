@@ -26,24 +26,24 @@ export function useDictation() {
       if (category) {
         params.append("category", category);
       }
-      
+
       const response = await fetch(`/api/dictation/words?${params}`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch words: ${response.status} ${response.statusText}`);
       }
-      
+
       const words = await response.json();
-      
+
       if (!Array.isArray(words) || words.length === 0) {
         throw new Error(`No words available for level ${level}`);
       }
-      
+
       return words as DictationWord[];
     } catch (error) {
       console.error("Error fetching words:", error);
@@ -85,7 +85,7 @@ export function useDictation() {
     // Wait for voices to load
     const speakWithVoice = () => {
       const voices = window.speechSynthesis.getVoices();
-      
+
       // Find the best English voice (prefer native, then Google, then any US English)
       const preferredVoice = voices.find(voice => 
         voice.lang === 'en-US' && (
@@ -98,11 +98,11 @@ export function useDictation() {
       ) || voices.find(voice => voice.lang === 'en-US') || voices[0];
 
       const utterance = new SpeechSynthesisUtterance(text);
-      
+
       if (preferredVoice) {
         utterance.voice = preferredVoice;
       }
-      
+
       utterance.lang = "en-US";
       utterance.rate = 0.7; // Slower for better clarity
       utterance.pitch = 1;
