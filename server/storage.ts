@@ -1,12 +1,12 @@
-import { 
-  users, 
-  dailyProgress, 
+import {
+  users,
+  dailyProgress,
   gameSessions,
   achievements,
   availableRewards,
   userInventory,
   rewardOpportunities,
-  type User, 
+  type User,
   type UpsertUser,
   type DailyProgress,
   type InsertDailyProgress,
@@ -23,7 +23,7 @@ import {
   type InsertRewardOpportunity,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, sum, sql } from "drizzle-orm";
+import { eq, and, desc, gte, lte, sql, count } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -32,12 +32,12 @@ export interface IStorage {
   // User operations - required for Replit Auth
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  
+
   // Game progress operations
   getDailyProgress(userId: string, date: string): Promise<DailyProgress | undefined>;
   upsertDailyProgress(progress: InsertDailyProgress): Promise<DailyProgress>;
   getRecentProgress(userId: string, days: number): Promise<DailyProgress[]>;
-  
+
   // NEW: Temporary/Final scoring system
   upsertTemporaryProgress(userId: string, progressData: InsertTemporaryProgress): Promise<DailyProgress>;
   finalizeDueForUser(userId: string): Promise<void>;
@@ -49,18 +49,18 @@ export interface IStorage {
     rank: number;
   }>>;
   getLatestFinalizedDate(): Promise<string | null>;
-  
+
   // Game session operations
   createGameSession(session: InsertGameSession): Promise<GameSession>;
   getUserGameSessions(userId: string, limit?: number): Promise<GameSession[]>;
-  
+
   // Achievement operations
   getUserAchievements(userId: string): Promise<Achievement[]>;
   createAchievement(achievement: InsertAchievement): Promise<Achievement>;
   markAchievementAsSeen(achievementId: string, userId: string): Promise<void>;
   getUserTotalPoints(userId: string): Promise<number>;
   checkAndAwardPointAchievements(userId: string): Promise<Achievement[]>;
-  
+
   // Reward system operations
   getAvailableRewards(): Promise<AvailableReward[]>;
   createAvailableReward(reward: InsertAvailableReward): Promise<AvailableReward>;
@@ -125,10 +125,10 @@ export class DatabaseStorage implements IStorage {
   async getRecentProgress(userId: string, days: number): Promise<DailyProgress[]> {
     // Lazy finalization: Check for due finalizations before fetching
     await this.finalizeDueForUser(userId);
-    
+
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
-    
+
     return await db
       .select()
       .from(dailyProgress)
@@ -144,13 +144,13 @@ export class DatabaseStorage implements IStorage {
   // NEW: Temporary/Final Scoring System Methods
   async upsertTemporaryProgress(userId: string, progressData: InsertTemporaryProgress): Promise<DailyProgress> {
     const timeZone = progressData.timeZone || 'UTC';
-    
+
     // Calculate today's date in user's timezone (not UTC)
     const today = this.getTodayInTimezone(timeZone);
-    
+
     // Calculate finalizeAt: start of next day in user's timezone
     const finalizeAt = this.calculateNextMidnight(timeZone);
-    
+
     // First, check if there's already a finalized record for today
     const existingProgress = await db
       .select()
@@ -167,7 +167,7 @@ export class DatabaseStorage implements IStorage {
     if (existingProgress.length > 0 && existingProgress[0].isFinal) {
       return existingProgress[0];
     }
-    
+
     // Prepare data for upsert
     const dataToInsert = {
       userId,
@@ -205,7 +205,7 @@ export class DatabaseStorage implements IStorage {
 
   async finalizeDueForUser(userId: string): Promise<void> {
     const now = new Date();
-    
+
     await db
       .update(dailyProgress)
       .set({
@@ -224,7 +224,7 @@ export class DatabaseStorage implements IStorage {
 
   async finalizeDueAll(): Promise<void> {
     const now = new Date();
-    
+
     await db
       .update(dailyProgress)
       .set({
@@ -279,7 +279,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(dailyProgress.isFinal, true))
       .orderBy(desc(dailyProgress.date))
       .limit(1);
-    
+
     return result?.date || null;
   }
 
@@ -290,16 +290,16 @@ export class DatabaseStorage implements IStorage {
         console.warn(`Invalid timezone: ${timeZone}, falling back to UTC`);
         return new Date().toISOString().split('T')[0];
       }
-      
+
       const now = new Date();
       // Use Intl.DateTimeFormat for reliable timezone conversion
-      const formatter = new Intl.DateTimeFormat('en-CA', { 
-        timeZone, 
-        year: 'numeric', 
-        month: '2-digit', 
-        day: '2-digit' 
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
       });
-      
+
       return formatter.format(now); // Returns YYYY-MM-DD format directly
     } catch (error) {
       console.error('Error calculating today in timezone:', timeZone, error);
@@ -318,43 +318,43 @@ export class DatabaseStorage implements IStorage {
         tomorrow.setUTCHours(0, 0, 0, 0);
         return tomorrow;
       }
-      
+
       // Simple and reliable approach:
       // 1. Get current time in target timezone
-      // 2. Add 1 day 
+      // 2. Add 1 day
       // 3. Set to start of day (midnight)
-      
+
       const now = new Date();
-      
+
       // Get tomorrow's date in the user's timezone
       const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const tomorrowStr = new Intl.DateTimeFormat('en-CA', { 
-        timeZone, 
-        year: 'numeric', 
-        month: '2-digit', 
-        day: '2-digit' 
+      const tomorrowStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
       }).format(tomorrow);
-      
+
       // Create the exact moment of midnight tomorrow in the user's timezone
       // and convert it to UTC using a more reliable method
       const parts = tomorrowStr.split('-');
       const year = parseInt(parts[0]);
       const month = parseInt(parts[1]) - 1; // Month is 0-indexed
       const day = parseInt(parts[2]);
-      
+
       // Create a date object at midnight in UTC first
       const utcMidnight = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
-      
+
       // Now adjust for the timezone offset
       // Get the offset between UTC and target timezone at this specific time
       const offsetInMinutes = this.getTimezoneOffset(timeZone, utcMidnight);
-      
-      // Adjust the UTC time by the offset to get the correct UTC time 
+
+      // Adjust the UTC time by the offset to get the correct UTC time
       // that corresponds to midnight in the target timezone
       const adjustedMidnight = new Date(utcMidnight.getTime() - (offsetInMinutes * 60 * 1000));
-      
+
       console.log(`calculateNextMidnight: timezone=${timeZone}, tomorrow=${tomorrowStr}, utcResult=${adjustedMidnight.toISOString()}`);
-      
+
       return adjustedMidnight;
     } catch (error) {
       console.error('Error calculating next midnight for timezone:', timeZone, error);
@@ -377,7 +377,7 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
-  
+
   /**
    * Gets the timezone offset in minutes for a given timezone at a specific date
    */
@@ -440,7 +440,7 @@ export class DatabaseStorage implements IStorage {
         second: '2-digit',
         hour12: false
       });
-      
+
       const targetFormatter = new Intl.DateTimeFormat('en-US', {
         timeZone,
         year: 'numeric',
@@ -451,39 +451,39 @@ export class DatabaseStorage implements IStorage {
         second: '2-digit',
         hour12: false
       });
-      
+
       // Parse the formatted dates to get the actual time difference
       const utcParts = utcFormatter.formatToParts(date);
       const targetParts = targetFormatter.formatToParts(date);
-      
+
       const utcTime = this.parseFormattedDate(utcParts);
       const targetTime = this.parseFormattedDate(targetParts);
-      
+
       return utcTime - targetTime;
     } catch (error) {
       console.error('Error calculating timezone offset:', error);
       return 0; // Default to no offset (UTC)
     }
   }
-  
+
   /**
    * Helper to parse Intl.DateTimeFormat parts into a timestamp
    */
   private parseFormattedDate(parts: Intl.DateTimeFormatPart[]): number {
-    const values: {[key: string]: string} = {};
+    const values: { [key: string]: string } = {};
     parts.forEach(part => {
       if (part.type !== 'literal') {
         values[part.type] = part.value;
       }
     });
-    
+
     const year = parseInt(values.year);
     const month = parseInt(values.month) - 1; // JavaScript months are 0-based
     const day = parseInt(values.day);
     const hour = parseInt(values.hour || '0');
     const minute = parseInt(values.minute || '0');
     const second = parseInt(values.second || '0');
-    
+
     return new Date(year, month, day, hour, minute, second).getTime();
   }
 
@@ -534,7 +534,7 @@ export class DatabaseStorage implements IStorage {
       .select({ total: sum(dailyProgress.pointsEarned) })
       .from(dailyProgress)
       .where(eq(dailyProgress.userId, userId));
-    
+
     return result[0]?.total ? Number(result[0].total) : 0;
   }
 
@@ -542,7 +542,7 @@ export class DatabaseStorage implements IStorage {
     // Calculate total points from actual database records
     const totalPoints = await this.getUserTotalPoints(userId);
     const newAchievements: Achievement[] = [];
-    
+
     // Define Minecraft-style achievements every 500 points
     const pointMilestones = [
       { points: 500, name: "Novice Miner", icon: "iron", desc: "Earned your first 500 points!" },
@@ -671,10 +671,10 @@ export class DatabaseStorage implements IStorage {
 
     // Create opportunities every 500 points
     const completedMilestones = Math.floor(totalPoints / 500);
-    
+
     for (let milestone = 1; milestone <= completedMilestones; milestone++) {
       const pointsMilestone = milestone * 500;
-      
+
       // Check if opportunity already exists
       const [existing] = await db
         .select()

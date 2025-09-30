@@ -3,14 +3,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { Dashboard } from '@/components/Dashboard';
 import { GameInterface } from '@/components/GameInterface';
 import { Leaderboard } from '@/components/Leaderboard';
+import { ParentsReport } from '@/components/ParentsReport';
 import { Button } from '@/components/ui/button';
-import { LogOut, BarChart3, Gamepad2, Trophy } from 'lucide-react';
+import { LogOut, BarChart3, Gamepad2, Trophy, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 
 export default function Home() {
   const { user } = useAuth();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'game' | 'leaderboard'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'game' | 'leaderboard' | 'report'>('dashboard');
   const { toast } = useToast();
 
   const handleLogout = () => {
@@ -134,6 +135,17 @@ export default function Home() {
                 <span className="hidden sm:inline">LEADERBOARD</span>
                 <span className="sm:hidden">RANK</span>
               </Button>
+              <Button
+                variant={currentView === 'report' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCurrentView('report')}
+                className="font-pixel text-xs flex-1 md:flex-none"
+                data-testid="button-report"
+              >
+                <FileText className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                <span className="hidden sm:inline">REPORT</span>
+                <span className="sm:hidden">RPRT</span>
+              </Button>
             </div>
           </div>
           
@@ -166,6 +178,10 @@ export default function Home() {
       
       {currentView === 'leaderboard' && (
         <Leaderboard />
+      )}
+      
+      {currentView === 'report' && (
+        <ParentsReport />
       )}
     </div>
   );

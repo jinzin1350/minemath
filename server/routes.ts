@@ -31,7 +31,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const days = parseInt(req.query.days as string) || 7;
-      const progress = await storage.getRecentProgress(userId, days);
+      const month = req.query.month as string;
+      
+      let progress;
+      if (month) {
+        // Get monthly data for parents report
+        progress = await storage.getMonthlyProgress(userId, month);
+      } else {
+        progress = await storage.getRecentProgress(userId, days);
+      }
+      
       res.json(progress);
     } catch (error) {
       console.error("Error fetching progress:", error);
