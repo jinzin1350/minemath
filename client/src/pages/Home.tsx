@@ -137,17 +137,18 @@ export default function Home() {
                   <span className="sm:hidden">ENG</span>
                 </Button>
               </Link>
-              <Button
-                variant={currentView === 'leaderboard' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setCurrentView('leaderboard')}
-                className="font-pixel text-xs flex-1 md:flex-none"
-                data-testid="button-leaderboard"
-              >
-                <Trophy className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                <span className="hidden sm:inline">LEADERBOARD</span>
-                <span className="sm:hidden">RANK</span>
-              </Button>
+              <Link href="/rank">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="font-pixel text-xs flex-1 md:flex-none"
+                  data-testid="button-leaderboard"
+                >
+                  <Trophy className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                  <span className="hidden sm:inline">LEADERBOARD</span>
+                  <span className="sm:hidden">RANK</span>
+                </Button>
+              </Link>
               <Button
                 variant={currentView === 'report' ? 'default' : 'ghost'}
                 size="sm"

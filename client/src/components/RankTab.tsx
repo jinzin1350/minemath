@@ -32,7 +32,13 @@ export function RankTab() {
   const { data: leaderboardData, isLoading, refetch } = useQuery({
     queryKey: ['/api/leaderboard/global'],
     refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache the data
   }) as { data: GlobalLeaderboardData | undefined, isLoading: boolean, refetch: () => void };
+
+  // Debug logging
+  console.log('🏆 RankTab - Leaderboard data:', leaderboardData);
+  console.log('🏆 RankTab - Is loading:', isLoading);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
