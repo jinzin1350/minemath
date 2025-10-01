@@ -228,6 +228,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual finalization endpoint for testing
+  app.post('/api/admin/force-finalize', isAuthenticated, async (req: any, res) => {
+    try {
+      console.log('🔧 Manual finalization requested');
+      
+      // Force finalize all overdue records
+      await storage.finalizeDueAll();
+      
+      // Get updated stats
+      const latestFinalizedDate = await storage.getLatestFinalizedDate();
+      const leaderboard = latestFinalizedDate 
+        ? await storage.getLeaderboard(latestFinalizedDate, 10)
+        : [];
+
+      console.log(`🔧 Manual finalization completed. Latest date: ${latestFinalizedDate}, Leaderboard entries: ${leaderboard.length}`);
+
+      res.json({
+        message: 'Finalization completed',
+        latestFinalizedDate,
+        leaderboardEntries: leaderboard.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error("Error in manual finalization:", error);
+      res.status(500).json({ message: "Failed to force finalization", error: error.message });
+    }
+  });
+
   app.post('/api/game-session', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -336,6 +364,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error checking debug status:", error);
       res.status(500).json({ message: "Failed to check status", error: error.message });
+    }
+  });
+
+  // Debug endpoint for leaderboard
+  app.get('/api/debug/leaderboard', isAuthenticated, async (req: any, res) => {
+    try {
+      const { db } = await import('./db');
+      const { dailyProgress } = await import('@shared/schema');
+      const { eq, and, desc } = await import('drizzle-orm');
+
+      // Get all progress records (finalized and non-finalized)
+      const allProgress = await db
+        .select()
+        .from(dailyProgress)
+        .orderBy(desc(dailyProgress.date))
+        .limit(20);
+
+      // Get latest finalized date
+      const latestFinalizedDate = await storage.getLatestFinalizedDate();
+
+      // Force finalize overdue records for debugging
+      await storage.finalizeDueAll();
+
+      // Get leaderboard after finalization
+      const leaderboard = latestFinalizedDate 
+        ? await storage.getLeaderboard(latestFinalizedDate, 10)
+        : [];
+
+      res.json({
+        allProgressCount: allProgress.length,
+        finalizedCount: allProgress.filter(p => p.isFinal).length,
+        pendingCount: allProgress.filter(p => !p.isFinal).length,
+        latestFinalizedDate,
+        leaderboardCount: leaderboard.length,
+        allProgress: allProgress.slice(0, 5), // Show first 5 for debugging
+        leaderboard: leaderboard.slice(0, 5),
+        currentTime: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error("Error in leaderboard debug:", error);
+      res.status(500).json({ message: "Failed to debug leaderboard", error: error.message });
     }
   });
 

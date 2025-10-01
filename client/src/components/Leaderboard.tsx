@@ -94,6 +94,34 @@ export function Leaderboard() {
   }
 
   if (!leaderboardData?.leaderboard?.length) {
+    const handleForceFinalize = async () => {
+      try {
+        console.log('🔧 Requesting manual finalization...');
+        const response = await fetch('/api/admin/force-finalize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        console.log('🔧 Finalization result:', result);
+        
+        // Refresh leaderboard after finalization
+        setTimeout(() => refetch(), 1000);
+      } catch (error) {
+        console.error('Error forcing finalization:', error);
+      }
+    };
+
+    const handleDebugInfo = async () => {
+      try {
+        const response = await fetch('/api/debug/leaderboard');
+        const debug = await response.json();
+        console.log('🔍 Leaderboard debug info:', debug);
+        alert(`Debug Info:\n- Total Progress Records: ${debug.allProgressCount}\n- Finalized: ${debug.finalizedCount}\n- Pending: ${debug.pendingCount}\n- Latest Finalized Date: ${debug.latestFinalizedDate || 'None'}\n- Leaderboard Entries: ${debug.leaderboardCount}\n\nCheck console for more details.`);
+      } catch (error) {
+        console.error('Error fetching debug info:', error);
+      }
+    };
+
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
         <div className="max-w-4xl mx-auto">
@@ -111,18 +139,36 @@ export function Leaderboard() {
               <p className="font-pixel text-amber-200 mb-2" data-testid="text-no-scores">
                 {leaderboardData?.message || "No finalized scores available yet"}
               </p>
-              <p className="text-emerald-300 text-sm">
+              <p className="text-emerald-300 text-sm mb-4">
                 Scores are finalized at midnight in your timezone!
               </p>
-              <Button 
-                onClick={() => refetch()} 
-                variant="outline" 
-                className="mt-4 font-pixel"
-                data-testid="button-refresh"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                REFRESH
-              </Button>
+              <div className="flex flex-col gap-3 items-center">
+                <Button 
+                  onClick={() => refetch()} 
+                  variant="outline" 
+                  className="font-pixel"
+                  data-testid="button-refresh"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  REFRESH
+                </Button>
+                <Button 
+                  onClick={handleForceFinalize} 
+                  variant="secondary" 
+                  size="sm"
+                  className="font-pixel text-xs"
+                >
+                  🔧 FORCE FINALIZE
+                </Button>
+                <Button 
+                  onClick={handleDebugInfo} 
+                  variant="ghost" 
+                  size="sm"
+                  className="font-pixel text-xs"
+                >
+                  🔍 DEBUG INFO
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

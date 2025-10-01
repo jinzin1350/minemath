@@ -209,6 +209,9 @@ export class DatabaseStorage implements IStorage {
     // Calculate finalizeAt: start of next day in user's timezone
     const finalizeAt = this.calculateNextMidnight(timeZone);
 
+    console.log(`📊 upsertTemporaryProgress: userId=${userId}, today=${today}, timeZone=${timeZone}, finalizeAt=${finalizeAt.toISOString()}`);
+    console.log(`📊 Progress data:`, progressData);
+
     // First, check if there's already a finalized record for today
     const existingProgress = await db
       .select()
@@ -223,6 +226,7 @@ export class DatabaseStorage implements IStorage {
 
     // If progress is already finalized, return it without modification
     if (existingProgress.length > 0 && existingProgress[0].isFinal) {
+      console.log(`📊 Progress already finalized for ${today}, returning existing record`);
       return existingProgress[0];
     }
 
@@ -239,6 +243,8 @@ export class DatabaseStorage implements IStorage {
       userTimeZone: timeZone,
       lastUpdateAt: new Date(),
     };
+
+    console.log(`📊 Inserting/updating progress:`, dataToInsert);
 
     const [progress] = await db
       .insert(dailyProgress)
@@ -258,6 +264,8 @@ export class DatabaseStorage implements IStorage {
         where: eq(dailyProgress.isFinal, false), // Only update if not final
       })
       .returning();
+
+    console.log(`📊 Progress saved successfully:`, progress);
     return progress;
   }
 
