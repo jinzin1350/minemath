@@ -187,8 +187,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // NEW: Leaderboard endpoint (only finalized scores)
   app.get('/api/leaderboard', isAuthenticated, async (req: any, res) => {
     try {
-      const date = req.query.date as string || await storage.getLatestFinalizedDate();
+      // Auto-finalize overdue records first
+      await storage.finalizeDueAll();
+      
+      const requestedDate = req.query.date as string;
       const limit = parseInt(req.query.limit as string) || 10;
+
+      let date = requestedDate;
+      if (!date) {
+        date = await storage.getLatestFinalizedDate();
+        
+        // If no finalized date exists, try to get recent dates that should be finalized
+        if (!date) {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          date = yesterday.toISOString().split('T')[0];
+        }
+      }
 
       if (!date) {
         return res.json({ 
@@ -233,8 +248,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('🔧 Manual finalization requested');
       
-      // Force finalize all overdue records
+      // First, force finalize all overdue records
       await storage.finalizeDueAll();
+      
+      // Then, force finalize any past dates that weren't finalized due to timezone issues
+      await storage.forceFinalizePastDates();
       
       // Get updated stats
       const latestFinalizedDate = await storage.getLatestFinalizedDate();

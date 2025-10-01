@@ -290,8 +290,9 @@ export class DatabaseStorage implements IStorage {
 
   async finalizeDueAll(): Promise<void> {
     const now = new Date();
+    console.log(`🔄 Finalizing all overdue records (current time: ${now.toISOString()})`);
 
-    await db
+    const result = await db
       .update(dailyProgress)
       .set({
         isFinal: true,
@@ -303,7 +304,38 @@ export class DatabaseStorage implements IStorage {
           eq(dailyProgress.isFinal, false),
           sql`${dailyProgress.finalizeAt} <= ${now}`
         )
-      );
+      )
+      .returning({ date: dailyProgress.date, userId: dailyProgress.userId });
+
+    console.log(`🔄 Finalized ${result.length} records:`, result);
+  }
+
+  /**
+   * Force finalize records that should have been finalized but weren't due to timezone issues
+   */
+  async forceFinalizePastDates(): Promise<void> {
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    console.log(`🔧 Force finalizing all records older than ${yesterdayStr}`);
+
+    const result = await db
+      .update(dailyProgress)
+      .set({
+        isFinal: true,
+        finalizedAt: now,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(dailyProgress.isFinal, false),
+          sql`${dailyProgress.date} < ${yesterdayStr}`
+        )
+      )
+      .returning({ date: dailyProgress.date, userId: dailyProgress.userId });
+
+    console.log(`🔧 Force finalized ${result.length} past records:`, result);
   }
 
   async getLeaderboard(date: string, limit: number = 10): Promise<Array<{
@@ -393,50 +425,63 @@ export class DatabaseStorage implements IStorage {
         return tomorrow;
       }
 
-      // Simple and reliable approach:
-      // 1. Get current time in target timezone
-      // 2. Add 1 day
-      // 3. Set to start of day (midnight)
-
       const now = new Date();
-
-      // Get tomorrow's date in the user's timezone
-      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const tomorrowStr = new Intl.DateTimeFormat('en-CA', {
+      
+      // Get current date in user's timezone
+      const todayInTz = new Intl.DateTimeFormat('en-CA', {
         timeZone,
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
-      }).format(tomorrow);
+      }).format(now);
 
-      // Create the exact moment of midnight tomorrow in the user's timezone
-      // and convert it to UTC using a more reliable method
-      const parts = tomorrowStr.split('-');
-      const year = parseInt(parts[0]);
-      const month = parseInt(parts[1]) - 1; // Month is 0-indexed
-      const day = parseInt(parts[2]);
+      // Parse today's date and add 1 day
+      const [year, month, day] = todayInTz.split('-').map(n => parseInt(n));
+      const tomorrowLocal = new Date(year, month - 1, day + 1); // month is 0-indexed
+      
+      // Format as YYYY-MM-DD
+      const tomorrowStr = tomorrowLocal.toISOString().split('T')[0];
 
-      // Create a date object at midnight in UTC first
-      const utcMidnight = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+      // Create midnight in user's timezone using a more direct approach
+      // We'll create the time assuming it's in the user's timezone, then adjust
+      const tempDate = new Date(`${tomorrowStr}T00:00:00`);
+      
+      // Get the timezone offset for tomorrow at midnight
+      const offsetMs = this.getTimezoneOffsetForDate(timeZone, tempDate);
+      
+      // Adjust to get the correct UTC time
+      const midnightUTC = new Date(tempDate.getTime() - offsetMs);
 
-      // Now adjust for the timezone offset
-      // Get the offset between UTC and target timezone at this specific time
-      const offsetInMinutes = this.getTimezoneOffset(timeZone, utcMidnight);
+      console.log(`calculateNextMidnight: timezone=${timeZone}, todayInTz=${todayInTz}, tomorrowLocal=${tomorrowStr}, utcResult=${midnightUTC.toISOString()}`);
 
-      // Adjust the UTC time by the offset to get the correct UTC time
-      // that corresponds to midnight in the target timezone
-      const adjustedMidnight = new Date(utcMidnight.getTime() - (offsetInMinutes * 60 * 1000));
-
-      console.log(`calculateNextMidnight: timezone=${timeZone}, tomorrow=${tomorrowStr}, utcResult=${adjustedMidnight.toISOString()}`);
-
-      return adjustedMidnight;
+      return midnightUTC;
     } catch (error) {
       console.error('Error calculating next midnight for timezone:', timeZone, error);
-      // Fallback to UTC midnight
+      // Fallback to UTC midnight tomorrow
       const tomorrow = new Date();
       tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
       tomorrow.setUTCHours(0, 0, 0, 0);
       return tomorrow;
+    }
+  }
+
+  /**
+   * Get timezone offset in milliseconds for a specific date/timezone
+   */
+  private getTimezoneOffsetForDate(timeZone: string, date: Date): number {
+    try {
+      // Create two dates representing the same moment in time:
+      // one in UTC and one in the target timezone
+      const utcTime = new Date(date.getTime());
+      
+      // Format the UTC time as if it were in the target timezone
+      const timeInTz = new Date(date.toLocaleString('en-US', { timeZone }));
+      
+      // The difference is the offset
+      return date.getTime() - timeInTz.getTime();
+    } catch (error) {
+      console.error('Error getting timezone offset:', error);
+      return 0;
     }
   }
 
