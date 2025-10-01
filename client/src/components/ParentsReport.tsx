@@ -1111,8 +1111,7 @@ export const ParentsReport: React.FC = () => {
                   <div className="space-y-4">
                     {/* Current User's Position */}
                     {(() => {
-                      const { data: currentUser } = useQuery({ queryKey: ['/api/auth/user'] });
-                      const userEntry = globalLeaderboard.leaderboard.find(entry => entry.userId === (currentUser as any)?.id);
+                      const userEntry = globalLeaderboard.leaderboard.find(entry => entry.userId === (userInfo as any)?.id);
                       
                       if (userEntry) {
                         return (
@@ -1179,10 +1178,7 @@ export const ParentsReport: React.FC = () => {
                             </thead>
                             <tbody>
                               {globalLeaderboard.leaderboard.slice(0, 10).map((student, index) => {
-                                const isCurrentUser = (() => {
-                                  const { data: currentUser } = useQuery({ queryKey: ['/api/auth/user'] });
-                                  return student.userId === (currentUser as any)?.id;
-                                })();
+                                const isCurrentUser = student.userId === (userInfo as any)?.id;
                                 
                                 return (
                                   <tr
