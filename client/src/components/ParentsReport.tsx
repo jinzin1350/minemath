@@ -143,10 +143,10 @@ export const ParentsReport: React.FC = () => {
     refetchInterval: 30000,
   }) as { data: MonthlyProgress[] | undefined, isLoading: boolean };
 
-  // Fetch dictation progress report
+  // Fetch dictation progress report - Always enabled to show combined scores
   const { data: dictationReport, isLoading: dictationLoading, error: dictationError } = useQuery({
     queryKey: [`/api/dictation/progress-report?month=${selectedMonth}`],
-    enabled: reportType === 'dictation',
+    enabled: true, // Always enabled to show combined scores
     retry: 3,
     staleTime: 30000,
   }) as { data: DictationReport | undefined, isLoading: boolean, error: Error | null };
