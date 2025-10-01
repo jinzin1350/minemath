@@ -93,7 +93,7 @@ export const ParentsReport: React.FC = () => {
   });
   const [showAgeSelector, setShowAgeSelector] = useState(false);
   const [showLevelSelector, setShowLevelSelector] = useState(false);
-  const [reportType, setReportType] = useState<'math' | 'dictation'>('math');
+  const [reportType, setReportType] = useState<'math' | 'dictation' | 'leaderboard'>('math');
   const queryClient = useQueryClient();
 
   // Get user info for current age
@@ -168,6 +168,19 @@ export const ParentsReport: React.FC = () => {
     queryKey: ['/api/dictation/weekly-report'],
     refetchInterval: 30000,
   }) as { data: DictationDailyHistory[] | undefined, isLoading: boolean };
+
+  // Fetch global leaderboard for comparison
+  const { data: globalLeaderboard, isLoading: leaderboardLoading } = useQuery({
+    queryKey: ['/api/leaderboard/global'],
+    refetchInterval: 60000, // Refresh every minute
+  }) as { data: { leaderboard: Array<{
+    userId: string;
+    userName: string;
+    mathScore: number;
+    dictationScore: number;
+    totalScore: number;
+    rank: number;
+  }>; total: number; timestamp: string } | undefined, isLoading: boolean };
 
   // Calculate comprehensive statistics
   const monthlyStats = useMemo((): MonthlyStats => {
@@ -703,9 +716,9 @@ export const ParentsReport: React.FC = () => {
         </Card>
 
         {/* Main Content with Tabs */}
-        <Tabs value={reportType} onValueChange={(value) => setReportType(value as 'math' | 'dictation')} className="w-full">
+        <Tabs value={reportType} onValueChange={(value) => setReportType(value as 'math' | 'dictation' | 'leaderboard')} className="w-full">
           <div className="flex justify-center mb-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2 bg-stone-800 border-2 border-amber-600">
+            <TabsList className="grid w-full max-w-3xl grid-cols-3 bg-stone-800 border-2 border-amber-600">
               <TabsTrigger
                 value="math"
                 className="font-pixel data-[state=active]:bg-amber-600 data-[state=active]:text-white"
@@ -717,6 +730,12 @@ export const ParentsReport: React.FC = () => {
                 className="font-pixel data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               >
                 🎧 Dictation Report
+              </TabsTrigger>
+              <TabsTrigger
+                value="leaderboard"
+                className="font-pixel data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+              >
+                🏆 Global Rankings
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1066,6 +1085,208 @@ export const ParentsReport: React.FC = () => {
 
           <TabsContent value="dictation" className="space-y-6">
             <DictationReportSection />
+          </TabsContent>
+
+          <TabsContent value="leaderboard" className="space-y-6">
+            {/* Global Leaderboard Section */}
+            <Card className="border-4 border-purple-600 bg-gradient-to-br from-purple-900/30 to-pink-900/30 shadow-2xl">
+              <CardHeader>
+                <CardTitle className="font-pixel text-purple-200 text-center flex items-center justify-center gap-2">
+                  <Trophy className="h-8 w-8 text-yellow-400" />
+                  🏆 Global Student Rankings
+                </CardTitle>
+                <p className="text-center text-purple-300 font-pixel text-sm">
+                  See how {(userInfo as any)?.name || 'your child'} compares to other students
+                </p>
+              </CardHeader>
+              <CardContent>
+                {leaderboardLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-bounce mb-4">
+                      <Trophy className="h-12 w-12 mx-auto text-purple-400" />
+                    </div>
+                    <p className="font-pixel text-purple-200">Loading global rankings...</p>
+                  </div>
+                ) : globalLeaderboard && globalLeaderboard.leaderboard.length > 0 ? (
+                  <div className="space-y-4">
+                    {/* Current User's Position */}
+                    {(() => {
+                      const { data: userInfo: currentUser } = useQuery({ queryKey: ['/api/auth/user'] });
+                      const userEntry = globalLeaderboard.leaderboard.find(entry => entry.userId === (currentUser as any)?.id);
+                      
+                      if (userEntry) {
+                        return (
+                          <Card className="border-4 border-yellow-500 bg-gradient-to-r from-yellow-900/50 to-amber-900/50 shadow-xl">
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  <div className="text-center">
+                                    <div className="text-4xl font-pixel text-yellow-200">#{userEntry.rank}</div>
+                                    <div className="text-sm text-yellow-300 font-pixel">Your Rank</div>
+                                  </div>
+                                  <div>
+                                    <div className="font-pixel text-xl text-yellow-200">{userEntry.userName}</div>
+                                    <div className="text-sm text-yellow-300">
+                                      Math: {userEntry.mathScore} + English: {userEntry.dictationScore}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-3xl font-pixel text-yellow-200">{userEntry.totalScore}</div>
+                                  <div className="text-sm text-yellow-300 font-pixel">Total Score</div>
+                                </div>
+                              </div>
+                              {userEntry.rank === 1 && (
+                                <div className="mt-3 text-center">
+                                  <p className="font-pixel text-yellow-400 animate-pulse">
+                                    👑 CHAMPION! TOP STUDENT! 👑
+                                  </p>
+                                </div>
+                              )}
+                              {userEntry.rank <= 3 && userEntry.rank > 1 && (
+                                <div className="mt-3 text-center">
+                                  <p className="font-pixel text-amber-400">
+                                    🥉 Excellent! Top 3 student!
+                                  </p>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    {/* Top 10 Leaderboard */}
+                    <Card className="border-2 border-purple-400">
+                      <CardHeader>
+                        <CardTitle className="font-pixel text-purple-200 text-lg flex items-center gap-2">
+                          <BarChart3 className="h-5 w-5" />
+                          Top 10 Students
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-gradient-to-r from-purple-800 to-pink-800 border-b-2 border-purple-600">
+                                <th className="text-left p-4 font-pixel text-purple-100">Rank</th>
+                                <th className="text-left p-4 font-pixel text-purple-100">Student Name</th>
+                                <th className="text-left p-4 font-pixel text-blue-300">Math Score</th>
+                                <th className="text-left p-4 font-pixel text-green-300">English Score</th>
+                                <th className="text-left p-4 font-pixel text-yellow-300">Total Score</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {globalLeaderboard.leaderboard.slice(0, 10).map((student, index) => {
+                                const isCurrentUser = (() => {
+                                  const { data: userInfo: currentUser } = useQuery({ queryKey: ['/api/auth/user'] });
+                                  return student.userId === (currentUser as any)?.id;
+                                })();
+                                
+                                return (
+                                  <tr
+                                    key={student.userId}
+                                    className={`border-b border-purple-700 transition-colors duration-200 ${
+                                      isCurrentUser 
+                                        ? 'bg-yellow-900/50 border-yellow-500' 
+                                        : index % 2 === 0 
+                                          ? 'bg-purple-900/30' 
+                                          : 'bg-purple-800/30'
+                                    } hover:bg-purple-700/50`}
+                                  >
+                                    <td className="p-4">
+                                      <div className="flex items-center gap-2">
+                                        {student.rank === 1 && <span className="text-2xl">👑</span>}
+                                        {student.rank === 2 && <span className="text-2xl">🥈</span>}
+                                        {student.rank === 3 && <span className="text-2xl">🥉</span>}
+                                        <span className={`font-pixel font-bold ${
+                                          student.rank <= 3 ? 'text-yellow-300' : 'text-purple-200'
+                                        }`}>
+                                          #{student.rank}
+                                        </span>
+                                      </div>
+                                    </td>
+                                    <td className={`p-4 font-medium ${
+                                      isCurrentUser ? 'text-yellow-200 font-pixel' : 'text-purple-200'
+                                    }`}>
+                                      {student.userName}
+                                      {isCurrentUser && (
+                                        <Badge className="ml-2 bg-yellow-600 text-white font-pixel text-xs">
+                                          YOU
+                                        </Badge>
+                                      )}
+                                    </td>
+                                    <td className="p-4 text-blue-400 font-pixel font-bold">
+                                      {student.mathScore.toLocaleString()}
+                                    </td>
+                                    <td className="p-4 text-green-400 font-pixel font-bold">
+                                      {student.dictationScore.toLocaleString()}
+                                    </td>
+                                    <td className="p-4">
+                                      <Badge
+                                        className={`font-pixel font-bold ${
+                                          student.rank === 1 ? 'bg-yellow-600 text-white border-yellow-500' :
+                                          student.rank <= 3 ? 'bg-orange-600 text-white border-orange-500' :
+                                          'bg-purple-600 text-white border-purple-500'
+                                        }`}
+                                      >
+                                        {student.totalScore.toLocaleString()}
+                                      </Badge>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Summary Statistics */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card className="border-2 border-blue-500 bg-gradient-to-br from-blue-900/50 to-indigo-900/50">
+                        <CardContent className="p-4 text-center">
+                          <User className="h-8 w-8 text-blue-400 mx-auto mb-2" />
+                          <p className="text-2xl font-pixel text-blue-200">{globalLeaderboard.total}</p>
+                          <p className="text-sm text-blue-300 font-pixel">Total Students</p>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border-2 border-green-500 bg-gradient-to-br from-green-900/50 to-emerald-900/50">
+                        <CardContent className="p-4 text-center">
+                          <TrendingUp className="h-8 w-8 text-green-400 mx-auto mb-2" />
+                          <p className="text-2xl font-pixel text-green-200">
+                            {Math.round(globalLeaderboard.leaderboard.reduce((sum, s) => sum + s.totalScore, 0) / globalLeaderboard.leaderboard.length).toLocaleString()}
+                          </p>
+                          <p className="text-sm text-green-300 font-pixel">Average Score</p>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border-2 border-yellow-500 bg-gradient-to-br from-yellow-900/50 to-amber-900/50">
+                        <CardContent className="p-4 text-center">
+                          <Trophy className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
+                          <p className="text-2xl font-pixel text-yellow-200">
+                            {globalLeaderboard.leaderboard[0]?.totalScore.toLocaleString() || 0}
+                          </p>
+                          <p className="text-sm text-yellow-300 font-pixel">Highest Score</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className="text-center text-xs text-purple-400 font-pixel">
+                      Last updated: {new Date(globalLeaderboard.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                    <p className="font-pixel text-gray-400 text-xl mb-2">No Rankings Available</p>
+                    <p className="text-sm text-gray-500">No students have scores to display yet.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

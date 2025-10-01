@@ -385,6 +385,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Global leaderboard for parents report
+  app.get('/api/leaderboard/global', isAuthenticated, async (req: any, res) => {
+    try {
+      const { db } = await import('./db');
+      const { dailyProgress, users, dictationGameHistory } = await import('@shared/schema');
+      const { eq, desc, sum, sql } = await import('drizzle-orm');
+
+      // Get all users with their total math scores
+      const mathScores = await db
+        .select({
+          userId: dailyProgress.userId,
+          totalMathScore: sum(dailyProgress.pointsEarned),
+        })
+        .from(dailyProgress)
+        .groupBy(dailyProgress.userId);
+
+      // Get all users with their total dictation scores
+      const dictationScores = await db
+        .select({
+          userId: dictationGameHistory.userId,
+          totalDictationScore: sum(dictationGameHistory.score),
+        })
+        .from(dictationGameHistory)
+        .groupBy(dictationGameHistory.userId);
+
+      // Get user information
+      const usersList = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        })
+        .from(users);
+
+      // Combine all scores
+      const globalLeaderboard = usersList.map(user => {
+        const mathScore = mathScores.find(m => m.userId === user.id)?.totalMathScore || 0;
+        const dictationScore = dictationScores.find(d => d.userId === user.id)?.totalDictationScore || 0;
+        
+        const firstName = user.firstName?.trim() || 'Player';
+        const lastName = user.lastName?.trim() || '';
+        const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+
+        return {
+          userId: user.id,
+          userName: fullName,
+          mathScore: Number(mathScore),
+          dictationScore: Number(dictationScore),
+          totalScore: Number(mathScore) + Number(dictationScore),
+        };
+      })
+      .filter(user => user.totalScore > 0) // Only show users with scores
+      .sort((a, b) => b.totalScore - a.totalScore) // Sort by total score descending
+      .map((user, index) => ({
+        ...user,
+        rank: index + 1,
+      }));
+
+      res.json({
+        leaderboard: globalLeaderboard,
+        total: globalLeaderboard.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error("Error fetching global leaderboard:", error);
+      res.status(500).json({ message: "Failed to fetch global leaderboard", error: error.message });
+    }
+  });
+
   // Debug endpoint for leaderboard
   app.get('/api/debug/leaderboard', isAuthenticated, async (req: any, res) => {
     try {
