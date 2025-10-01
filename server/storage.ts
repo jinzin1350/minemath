@@ -307,8 +307,9 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select({
         userId: dailyProgress.userId,
-        userName: sql<string>`COALESCE(${users.firstName}, 'Player')`,
         pointsEarned: dailyProgress.pointsEarned,
+        firstName: users.firstName,
+        lastName: users.lastName,
       })
       .from(dailyProgress)
       .leftJoin(users, eq(dailyProgress.userId, users.id))
@@ -322,12 +323,19 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
 
     // Add rank numbers and handle nulls
-    return results.map((result, index) => ({
-      userId: result.userId,
-      userName: result.userName || 'Player',
-      pointsEarned: result.pointsEarned || 0,
-      rank: index + 1,
-    }));
+    return results.map((result, index) => {
+      // Combine firstName and lastName, fallback to sensible defaults
+      const firstName = result.firstName?.trim() || 'Player';
+      const lastName = result.lastName?.trim() || '';
+      const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+
+      return {
+        userId: result.userId,
+        userName: fullName,
+        pointsEarned: result.pointsEarned || 0,
+        rank: index + 1,
+      };
+    });
   }
 
   async getLatestFinalizedDate(): Promise<string | null> {

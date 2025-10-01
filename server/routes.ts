@@ -46,13 +46,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/auth/user/name', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { firstName, lastName } = req.body;
+      const { firstName, lastName, name } = req.body;
 
-      if (!firstName || firstName.trim().length === 0) {
+      // Support both individual firstName/lastName and combined name
+      let finalFirstName = firstName?.trim();
+      let finalLastName = lastName?.trim() || '';
+
+      // If name is provided instead, split it
+      if (name && !finalFirstName) {
+        const nameParts = name.trim().split(' ');
+        finalFirstName = nameParts[0];
+        finalLastName = nameParts.slice(1).join(' ');
+      }
+
+      if (!finalFirstName || finalFirstName.length === 0) {
         return res.status(400).json({ message: "First name is required" });
       }
 
-      const user = await storage.updateUserName(userId, firstName.trim(), lastName?.trim() || '');
+      const user = await storage.updateUserName(userId, finalFirstName, finalLastName);
       res.json(user);
     } catch (error: any) {
       console.error("Error updating user name:", error);
