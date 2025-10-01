@@ -11,6 +11,7 @@ interface LeaderboardEntry {
   userName: string;
   pointsEarned: number;
   rank: number;
+  isCurrentUser?: boolean;
 }
 
 interface LeaderboardData {
@@ -22,6 +23,11 @@ interface LeaderboardData {
 
 export function Leaderboard() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  // Fetch current user info
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/user'],
+  });
 
   // Fetch leaderboard data
   const { data: leaderboardData, isLoading, refetch } = useQuery({
@@ -164,16 +170,84 @@ export function Leaderboard() {
           </CardHeader>
         </Card>
 
+        {/* User's Rank Summary */}
+        {currentUser && leaderboardData && (
+          <Card className="border-4 border-blue-600 bg-gradient-to-r from-blue-900/90 to-indigo-900/90 shadow-2xl">
+            <CardHeader>
+              <CardTitle className="font-pixel text-xl text-blue-200 text-center">
+                🎯 Your Ranking Today
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              {(() => {
+                const userEntry = leaderboardData.leaderboard.find(entry => entry.userId === currentUser.id);
+                if (userEntry) {
+                  const pointsToNext = userEntry.rank > 1 
+                    ? leaderboardData.leaderboard[userEntry.rank - 2].pointsEarned - userEntry.pointsEarned
+                    : 0;
+                  
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center gap-4">
+                        <div className="text-center">
+                          <p className="text-3xl font-pixel text-blue-200">#{userEntry.rank}</p>
+                          <p className="text-sm text-blue-300">Your Rank</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-3xl font-pixel text-yellow-200">{userEntry.pointsEarned}</p>
+                          <p className="text-sm text-yellow-300">Your Points</p>
+                        </div>
+                        {userEntry.rank > 1 && (
+                          <div className="text-center">
+                            <p className="text-2xl font-pixel text-red-200">+{pointsToNext}</p>
+                            <p className="text-sm text-red-300">Points to Rank Up</p>
+                          </div>
+                        )}
+                      </div>
+                      {userEntry.rank === 1 && (
+                        <p className="font-pixel text-yellow-400 animate-pulse">
+                          👑 YOU ARE THE CHAMPION! 👑
+                        </p>
+                      )}
+                      {userEntry.rank <= 3 && userEntry.rank > 1 && (
+                        <p className="font-pixel text-amber-400">
+                          🏆 You're on the podium! Amazing work!
+                        </p>
+                      )}
+                      {userEntry.rank > 3 && (
+                        <p className="font-pixel text-blue-300">
+                          💪 Keep playing to climb higher!
+                        </p>
+                      )}
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div className="space-y-2">
+                      <p className="font-pixel text-gray-400">🎮 Not ranked yet today</p>
+                      <p className="text-sm text-gray-500">Play some games to get on the leaderboard!</p>
+                    </div>
+                  );
+                }
+              })()}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Leaderboard */}
         <Card className="border-4 border-amber-600 bg-gradient-to-b from-stone-900/90 to-slate-900/90 shadow-2xl">
           <CardContent className="p-0">
             <div className="space-y-2 p-4">
-              {leaderboardData.leaderboard.map((entry, index) => (
+              {leaderboardData.leaderboard.map((entry, index) => {
+                const isCurrentUser = currentUser && entry.userId === currentUser.id;
+                return (
                 <div
                   key={`${entry.userId}-${entry.rank}`}
                   className={`
-                    flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200
-                    ${entry.rank === 1 
+                    flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 relative
+                    ${isCurrentUser
+                      ? 'bg-gradient-to-r from-blue-900/70 to-cyan-900/70 border-blue-400 shadow-lg shadow-blue-400/30 ring-2 ring-blue-300 animate-pulse-slow'
+                      : entry.rank === 1 
                       ? 'bg-gradient-to-r from-yellow-900/50 to-amber-900/50 border-yellow-500 shadow-lg shadow-yellow-500/20' 
                       : entry.rank === 2
                       ? 'bg-gradient-to-r from-slate-800/50 to-gray-800/50 border-gray-400 shadow-md shadow-gray-400/20'
@@ -184,6 +258,11 @@ export function Leaderboard() {
                   `}
                   data-testid={`leaderboard-entry-${entry.rank}`}
                 >
+                  {isCurrentUser && (
+                    <div className="absolute -top-2 -right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-pixel animate-bounce">
+                      YOU
+                    </div>
+                  )}
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
                       {getRankIcon(entry.rank)}
@@ -206,14 +285,16 @@ export function Leaderboard() {
                       <div>
                         <p className={`
                           font-pixel font-medium
-                          ${entry.rank === 1 
+                          ${isCurrentUser
+                            ? 'text-blue-200 text-lg'
+                            : entry.rank === 1 
                             ? 'text-yellow-200 text-lg' 
                             : entry.rank <= 3 
                             ? 'text-amber-200' 
                             : 'text-stone-200'
                           }
                         `} data-testid={`text-username-${entry.rank}`}>
-                          {entry.userName}
+                          {isCurrentUser ? `${entry.userName} (You)` : entry.userName}
                         </p>
                         {entry.rank === 1 && (
                           <p className="text-xs text-yellow-400 font-pixel animate-pulse">
@@ -227,7 +308,9 @@ export function Leaderboard() {
                   <div className="text-right">
                     <p className={`
                       font-pixel font-bold text-lg
-                      ${entry.rank === 1 
+                      ${isCurrentUser
+                        ? 'text-blue-200'
+                        : entry.rank === 1 
                         ? 'text-yellow-200' 
                         : entry.rank <= 3 
                         ? 'text-amber-200' 
@@ -239,9 +322,15 @@ export function Leaderboard() {
                     <p className="text-xs text-muted-foreground">
                       Final Score
                     </p>
+                    {entry.rank > 1 && leaderboardData.leaderboard[0] && (
+                      <p className="text-xs text-red-400 font-pixel">
+                        -{(leaderboardData.leaderboard[0].pointsEarned - entry.pointsEarned).toLocaleString()} from #1
+                      </p>
+                    )}
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
 
             {/* Footer */}

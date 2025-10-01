@@ -33,6 +33,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserAge(userId: string, age: number): Promise<User>;
+  updateUserName(userId: string, firstName: string, lastName: string): Promise<User>;
 
   // Game progress operations
   getDailyProgress(userId: string, date: string): Promise<DailyProgress | undefined>;
@@ -103,6 +104,23 @@ export class DatabaseStorage implements IStorage {
     const result = await db.update(users)
       .set({
         age,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (result.length === 0) {
+      throw new Error('User not found');
+    }
+
+    return result[0];
+  }
+
+  async updateUserName(userId: string, firstName: string, lastName: string): Promise<User> {
+    const result = await db.update(users)
+      .set({
+        firstName,
+        lastName,
         updatedAt: new Date()
       })
       .where(eq(users.id, userId))

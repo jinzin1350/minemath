@@ -43,6 +43,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/auth/user/name', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { firstName, lastName } = req.body;
+
+      if (!firstName || firstName.trim().length === 0) {
+        return res.status(400).json({ message: "First name is required" });
+      }
+
+      const user = await storage.updateUserName(userId, firstName.trim(), lastName?.trim() || '');
+      res.json(user);
+    } catch (error: any) {
+      console.error("Error updating user name:", error);
+      res.status(500).json({ message: "Failed to update user name" });
+    }
+  });
+
   // Game progress routes
   app.get('/api/progress/recent', isAuthenticated, async (req: any, res) => {
     try {
