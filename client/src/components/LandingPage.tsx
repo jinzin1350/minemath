@@ -23,7 +23,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
       <div className="relative">
         {/* Dark overlay for text readability */}
         <div className="absolute inset-0 bg-black/30"></div>
-        
+
         <div className="relative z-10 px-4 py-16">
           <div className="max-w-4xl mx-auto text-center">
             <div className="flex justify-center items-center gap-8 mb-8">
@@ -31,18 +31,18 @@ export function LandingPage({ onLogin }: LandingPageProps) {
               <div className="text-6xl animate-pulse">⚔️</div>
               <MinecraftZombie scale={2} />
             </div>
-            
+
             <h1 className="text-4xl md:text-6xl font-pixel text-white mb-6 leading-tight">
               MINECRAFT
               <br />
               MATH ADVENTURE
             </h1>
-            
+
             <p className="text-xl md:text-2xl text-gray-200 mb-8 max-w-2xl mx-auto">
               Learn math the fun way! Solve addition problems to defeat enemies, 
               level up, and track your daily progress.
             </p>
-            
+
             <div className="space-y-6">
               <Button
                 onClick={handleLogin}
@@ -54,7 +54,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                   PLAY NOW - FREE
                 </div>
               </Button>
-              
+
               <div className="bg-black/20 rounded-lg p-4 border border-green-400/30">
                 <div className="flex items-center gap-2 mb-2">
                   <Target className="h-5 w-5 text-green-400" />
@@ -88,7 +88,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
           <h2 className="text-3xl font-pixel text-white text-center mb-12">
             GAME FEATURES
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="border-2 border-card-border bg-card/90 backdrop-blur-sm hover-elevate">
               <CardHeader className="text-center">
@@ -150,7 +150,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
           <h2 className="text-3xl font-pixel text-white text-center mb-12">
             HOW IT WORKS
           </h2>
-          
+
           <Card className="border-2 border-card-border bg-card/90 backdrop-blur-sm">
             <CardContent className="p-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
@@ -163,7 +163,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                     Answer math questions like "5 + 3 = ?" to power up Steve
                   </p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="mb-4 text-4xl animate-ping">⚡</div>
                   <h3 className="font-pixel text-lg text-card-foreground mb-2">2. CAST SPELLS</h3>
@@ -171,7 +171,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                     Correct answers unleash magic attacks on approaching enemies
                   </p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="mb-4">
                     <MinecraftZombie isAttacking={true} scale={1.5} />
@@ -193,7 +193,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
           <h2 className="text-3xl font-pixel text-white text-center mb-12">
             TRACK YOUR PROGRESS
           </h2>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="bg-card/90 backdrop-blur-sm border-2 border-card-border rounded-lg p-4 hover-elevate">
@@ -204,7 +204,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                 <p className="text-sm text-muted-foreground">Points Earned</p>
               </div>
             </div>
-            
+
             <div className="text-center">
               <div className="bg-card/90 backdrop-blur-sm border-2 border-card-border rounded-lg p-4 hover-elevate">
                 <div className="flex justify-center mb-2">
@@ -214,7 +214,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                 <p className="text-sm text-muted-foreground">Accuracy</p>
               </div>
             </div>
-            
+
             <div className="text-center">
               <div className="bg-card/90 backdrop-blur-sm border-2 border-card-border rounded-lg p-4 hover-elevate">
                 <div className="flex justify-center mb-2">
@@ -224,7 +224,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                 <p className="text-sm text-muted-foreground">Day Streak</p>
               </div>
             </div>
-            
+
             <div className="text-center">
               <div className="bg-card/90 backdrop-blur-sm border-2 border-card-border rounded-lg p-4 hover-elevate">
                 <div className="flex justify-center mb-2">
@@ -244,11 +244,11 @@ export function LandingPage({ onLogin }: LandingPageProps) {
           <h2 className="text-3xl font-pixel text-white mb-6">
             READY TO START PLAYING?
           </h2>
-          
+
           <p className="text-lg text-gray-200 mb-8">
             Join thousands of students making math fun and easy!
           </p>
-          
+
           <div className="space-y-4">
             <Button
               onClick={handleLogin}
@@ -260,7 +260,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                 START PLAYING NOW
               </div>
             </Button>
-            
+
             <p className="text-sm text-orange-200">
               Free forever • No credit card needed • Play instantly
             </p>
