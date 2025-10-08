@@ -212,7 +212,7 @@ export class DatabaseStorage implements IStorage {
     console.log(`📊 upsertTemporaryProgress: userId=${userId}, today=${today}, timeZone=${timeZone}, finalizeAt=${finalizeAt.toISOString()}`);
     console.log(`📊 Progress data:`, progressData);
 
-    // First, check if there's already a finalized record for today
+    // First, check if there's already a record for today
     const existingProgress = await db
       .select()
       .from(dailyProgress)
@@ -223,6 +223,31 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .limit(1);
+
+    // Check if it should be finalized (past midnight)
+    const now = new Date();
+    const shouldBeFinal = existingProgress.length > 0 && existingProgress[0].finalizeAt && existingProgress[0].finalizeAt < now;
+
+    // If it should be final but isn't marked yet, finalize it first
+    if (shouldBeFinal && !existingProgress[0].isFinal) {
+      console.log(`📊 Auto-finalizing overdue progress for ${today}`);
+      await this.finalizeDueForUser(userId);
+      // Re-fetch to get updated record
+      const [updated] = await db
+        .select()
+        .from(dailyProgress)
+        .where(
+          and(
+            eq(dailyProgress.userId, userId),
+            eq(dailyProgress.date, today)
+          )
+        )
+        .limit(1);
+      if (updated && updated.isFinal) {
+        console.log(`📊 Progress finalized for ${today}, cannot update anymore`);
+        return updated;
+      }
+    }
 
     // If progress is already finalized, return it without modification
     if (existingProgress.length > 0 && existingProgress[0].isFinal) {
