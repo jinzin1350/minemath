@@ -14,6 +14,7 @@ interface GameStats {
   hearts: number;
   diamonds: number;
   magicPower: number;
+  itemsEarned?: Array<{ name: string; rarity: string; iconName: string }>;
 }
 
 interface Question {
@@ -65,7 +66,8 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
     score: 0,
     hearts: 3,
     diamonds: 0,
-    magicPower: 0
+    magicPower: 0,
+    itemsEarned: []
   });
 
   // Keep latest gameStats in ref for cleanup
@@ -238,11 +240,24 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
       setShowMagicBlast(true);
       setEnemyMoving(false);
 
+      // Award random item based on performance
+      const itemPool = [
+        { name: 'Diamond Sword', rarity: 'Epic', iconName: 'sword' },
+        { name: 'Golden Shield', rarity: 'Rare', iconName: 'shield' },
+        { name: 'Health Potion', rarity: 'Common', iconName: 'potion' },
+        { name: 'Gold Coin', rarity: 'Common', iconName: 'coin' },
+        { name: 'Magic Gem', rarity: 'Legendary', iconName: 'gem' },
+        { name: 'Iron Armor', rarity: 'Rare', iconName: 'armor' },
+      ];
+      
+      const randomItem = itemPool[Math.floor(Math.random() * itemPool.length)];
+      
       const newStats = {
         ...gameStats,
         score: gameStats.score + earnedPoints,
         diamonds: gameStats.diamonds + 1,
-        magicPower: gameStats.magicPower + gameStats.level
+        magicPower: gameStats.magicPower + gameStats.level,
+        itemsEarned: [...(gameStats.itemsEarned || []), randomItem]
       };
       setGameStats(newStats);
 
@@ -303,7 +318,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
   };
 
   const restartGame = () => {
-    setGameStats({ level: 1, score: 0, hearts: 3, diamonds: 0, magicPower: 0 });
+    setGameStats({ level: 1, score: 0, hearts: 3, diamonds: 0, magicPower: 0, itemsEarned: [] });
     setEnemyPosition(0);
     setEnemyAttacking(false);
     setPlayerDefending(false);

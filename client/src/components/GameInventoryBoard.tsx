@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, Sparkles } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 interface InventoryItem {
   id: string;
@@ -66,33 +67,27 @@ const getRarityGlow = (rarity: string) => {
 };
 
 export function GameInventoryBoard({ onInventoryUpdate }: GameInventoryBoardProps) {
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
 
-  useEffect(() => {
-    fetchInventory();
-    // Poll for inventory updates every 2 seconds during gameplay
-    const interval = setInterval(fetchInventory, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  // Fetch actual user inventory
+  const { data: inventoryData, refetch } = useQuery<InventoryItem[]>({
+    queryKey: ['/api/inventory'],
+    refetchInterval: 10000, // Refresh every 10 seconds to show new items
+  });
 
-  const fetchInventory = async () => {
-    try {
-      const response = await fetch('/api/inventory');
-      if (response.ok) {
-        const data = await response.json();
-        setInventory(data);
-        onInventoryUpdate?.();
-      }
-    } catch (error) {
-      console.error('Failed to fetch inventory:', error);
-    }
-  };
+  useEffect(() => {
+    refetch(); // Fetch inventory when component mounts
+    const interval = setInterval(refetch, 10000); // Poll for updates
+    return () => clearInterval(interval);
+  }, [refetch]);
+
+  // Use fetched inventory if available, otherwise use an empty array
+  const displayItems = inventoryData && Array.isArray(inventoryData) ? inventoryData : [];
 
   // Create 24 slots (4x6 grid) - expanded inventory
   const totalSlots = 24;
   const slots = Array.from({ length: totalSlots }, (_, index) => {
-    const item = inventory[index];
+    const item = displayItems[index];
     return { id: index, item };
   });
 
@@ -103,7 +98,7 @@ export function GameInventoryBoard({ onInventoryUpdate }: GameInventoryBoardProp
       <CardHeader className="pb-2">
         <CardTitle className="font-pixel text-sm text-amber-300 flex items-center gap-2">
           <Package className="w-4 h-4" />
-          INVENTORY ({inventory.length}/{totalSlots})
+          INVENTORY ({displayItems.length}/{totalSlots})
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -138,7 +133,7 @@ export function GameInventoryBoard({ onInventoryUpdate }: GameInventoryBoardProp
                   <div className="flex items-center justify-center h-full text-lg">
                     {getItemIcon(slot.item.iconName)}
                   </div>
-                  
+
                   {/* Rarity indicator - small colored dot */}
                   <div className={`absolute top-0 right-0 w-1.5 h-1.5 rounded-full ${
                     slot.item.rarity === 'common' ? 'bg-gray-400' :
@@ -146,7 +141,7 @@ export function GameInventoryBoard({ onInventoryUpdate }: GameInventoryBoardProp
                     slot.item.rarity === 'epic' ? 'bg-purple-400' :
                     'bg-yellow-400'
                   }`}></div>
-                  
+
                   {/* Selected indicator */}
                   {selectedSlot === slot.id && (
                     <div className="absolute inset-0 border border-amber-400 bg-amber-400/20 flex items-center justify-center">
@@ -185,7 +180,7 @@ export function GameInventoryBoard({ onInventoryUpdate }: GameInventoryBoardProp
         )}
 
         {/* Empty inventory message */}
-        {inventory.length === 0 && (
+        {displayItems.length === 0 && (
           <div className="text-center py-2">
             <p className="text-gray-500 text-xs font-pixel">
               Your inventory is empty!

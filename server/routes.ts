@@ -364,6 +364,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/inventory/add-temp-item', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, rarity, iconName } = req.body;
+
+      if (!name || !iconName) {
+        return res.status(400).json({ message: "Item name and icon are required" });
+      }
+
+      // Find or create the reward in available_rewards
+      const { db } = await import('./db');
+      const { availableRewards, userInventory } = await import('@shared/schema');
+      const { eq, and } = await import('drizzle-orm');
+
+      let [reward] = await db
+        .select()
+        .from(availableRewards)
+        .where(
+          and(
+            eq(availableRewards.name, name),
+            eq(availableRewards.iconName, iconName)
+          )
+        )
+        .limit(1);
+
+      if (!reward) {
+        // Create new reward if it doesn't exist
+        [reward] = await db
+          .insert(availableRewards)
+          .values({
+            name,
+            description: `Earned in-game`,
+            itemType: 'game_item',
+            iconName,
+            rarity: rarity || 'common',
+            isActive: true,
+          })
+          .returning();
+      }
+
+      // Get total points for tracking
+      const totalPoints = await storage.getUserTotalPoints(userId);
+
+      // Add to user inventory
+      await storage.addToUserInventory({
+        userId,
+        rewardId: reward.id,
+        pointsWhenSelected: totalPoints,
+      });
+
+      console.log(`✅ Added item to inventory: ${name} for user ${userId}`);
+
+      res.json({ success: true, item: reward });
+    } catch (error: any) {
+      console.error("Error adding item to inventory:", error);
+      res.status(500).json({ message: "Failed to add item to inventory" });
+    }
+  });
+
   // Debug endpoint to check database status
   app.get('/api/debug/status', isAuthenticated, async (req: any, res) => {
     try {
