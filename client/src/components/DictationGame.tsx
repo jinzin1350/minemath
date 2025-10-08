@@ -57,7 +57,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
   const [showFeedback, setShowFeedback] = useState(false);
 
   // Save progress before exiting
-  const saveProgressOnExit = useCallback(() => {
+  const saveProgressOnExit = useCallback(async () => {
     const gameStats = {
       score: score,
       accuracy: Math.round((answers.filter(Boolean).length / (currentIndex || 1)) * 100), // Avoid division by zero
@@ -67,7 +67,7 @@ export function DictationGame({ mode, level, onGameComplete, onExit }: Dictation
       mode,
       incomplete: true, // Mark as incomplete
     };
-    onGameComplete(gameStats);
+    await onGameComplete(gameStats);
     onExit();
   }, [score, answers, currentIndex, level, mode, onGameComplete, onExit]);
 

@@ -6,6 +6,7 @@ import { Link } from "wouter";
 import { DictationGame } from "@/components/DictationGame";
 import { DictationResults } from "@/components/DictationResults";
 import { useDictation } from "@/hooks/useDictation";
+import { queryClient } from "@/lib/queryClient";
 import type { GameMode, GameState, GameStats } from "@/types/dictation";
 
 export default function EnglishDictation() {
@@ -22,7 +23,7 @@ export default function EnglishDictation() {
     setGameState("playing");
   };
 
-  const handleGameComplete = (stats: GameStats) => {
+  const handleGameComplete = async (stats: GameStats) => {
     console.log(`🎮 Dictation Game Complete Handler - Mode: ${stats.mode}, Level: ${stats.level}`);
     console.log(`📊 Dictation Stats:`, stats);
     
@@ -40,7 +41,6 @@ export default function EnglishDictation() {
     }
     
     setGameStats(stats);
-    setGameState("results");
 
     // Save to database with detailed logging
     const gameData = {
@@ -62,7 +62,12 @@ export default function EnglishDictation() {
       wordsCorrect: typeof gameData.wordsCorrect,
     });
     
-    saveGameHistory(gameData);
+    // Wait for game history to be saved
+    await new Promise<void>((resolve) => {
+      saveGameHistory(gameData);
+      // Give some time for the mutation to complete
+      setTimeout(() => resolve(), 500);
+    });
 
     // Update user progress
     if (progress) {
@@ -94,6 +99,12 @@ export default function EnglishDictation() {
     } else {
       console.warn(`⚠️ No progress data found, cannot update`);
     }
+
+    // Force refetch of all relevant queries to update UI immediately
+    await queryClient.invalidateQueries({ queryKey: ['/api/dictation/progress'] });
+    await queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] });
+    
+    setGameState("results");
   };
 
   const handlePlayAgain = () => {
