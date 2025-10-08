@@ -101,18 +101,39 @@ export default function EnglishDictation() {
     }
 
     // Force refetch of all relevant queries to update UI immediately
-    await queryClient.invalidateQueries({ queryKey: ['/api/dictation/progress'] });
-    await queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['/api/dictation/progress'] }),
+      queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] }),
+      queryClient.invalidateQueries({ queryKey: ['/api/dictation/game-history'] }),
+      queryClient.invalidateQueries({ queryKey: ['/api/achievements'] }),
+    ]);
+    
+    // Force immediate refetch instead of just invalidating
+    await queryClient.refetchQueries({ queryKey: ['/api/progress/recent'] });
     
     setGameState("results");
   };
 
-  const handlePlayAgain = () => {
+  const handlePlayAgain = async () => {
+    // Refetch all queries before restarting
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: ['/api/progress/recent'] }),
+      queryClient.refetchQueries({ queryKey: ['/api/dictation/progress'] }),
+      queryClient.refetchQueries({ queryKey: ['/api/achievements'] }),
+    ]);
+    
     setGameState("menu");
     setGameStats(null);
   };
 
-  const handleBackToMenu = () => {
+  const handleBackToMenu = async () => {
+    // Refetch all queries before going back to menu
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: ['/api/progress/recent'] }),
+      queryClient.refetchQueries({ queryKey: ['/api/dictation/progress'] }),
+      queryClient.refetchQueries({ queryKey: ['/api/achievements'] }),
+    ]);
+    
     setGameState("menu");
     setGameStats(null);
   };
