@@ -251,8 +251,13 @@ export class DatabaseStorage implements IStorage {
 
     // If progress is already finalized, return it without modification
     if (existingProgress.length > 0 && existingProgress[0].isFinal) {
-      console.log(`📊 Progress already finalized for ${today}, returning existing record`);
+      console.log(`📊 Progress already finalized for ${today}, points=${existingProgress[0].pointsEarned}, cannot update anymore`);
       return existingProgress[0];
+    }
+    
+    // If not finalized, log that we can update
+    if (existingProgress.length > 0) {
+      console.log(`📊 Existing progress found for ${today}, isFinal=${existingProgress[0].isFinal}, current points=${existingProgress[0].pointsEarned}, adding ${progressData.pointsEarned} more`);
     }
 
     // Prepare data for upsert
@@ -423,15 +428,28 @@ export class DatabaseStorage implements IStorage {
       }
 
       const now = new Date();
-      // Use Intl.DateTimeFormat for reliable timezone conversion
+      
+      // Get the current date/time in user's timezone
       const formatter = new Intl.DateTimeFormat('en-CA', {
         timeZone,
         year: 'numeric',
         month: '2-digit',
-        day: '2-digit'
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
       });
 
-      return formatter.format(now); // Returns YYYY-MM-DD format directly
+      const parts = formatter.formatToParts(now);
+      const year = parts.find(p => p.type === 'year')?.value;
+      const month = parts.find(p => p.type === 'month')?.value;
+      const day = parts.find(p => p.type === 'day')?.value;
+
+      const todayStr = `${year}-${month}-${day}`;
+      console.log(`getTodayInTimezone: timeZone=${timeZone}, now=${now.toISOString()}, todayInTz=${todayStr}`);
+      
+      return todayStr;
     } catch (error) {
       console.error('Error calculating today in timezone:', timeZone, error);
       // Fallback to UTC date
@@ -452,32 +470,45 @@ export class DatabaseStorage implements IStorage {
 
       const now = new Date();
       
-      // Get current date in user's timezone
-      const todayInTz = new Intl.DateTimeFormat('en-CA', {
+      // Get current date AND TIME in user's timezone
+      const formatter = new Intl.DateTimeFormat('en-CA', {
         timeZone,
         year: 'numeric',
         month: '2-digit',
-        day: '2-digit'
-      }).format(now);
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
 
-      // Parse today's date and add 1 day
-      const [year, month, day] = todayInTz.split('-').map(n => parseInt(n));
+      const parts = formatter.formatToParts(now);
+      const year = parseInt(parts.find(p => p.type === 'year')?.value || '0');
+      const month = parseInt(parts.find(p => p.type === 'month')?.value || '0');
+      const day = parseInt(parts.find(p => p.type === 'day')?.value || '0');
+
+      // Calculate tomorrow in user's timezone
       const tomorrowLocal = new Date(year, month - 1, day + 1); // month is 0-indexed
-      
-      // Format as YYYY-MM-DD
-      const tomorrowStr = tomorrowLocal.toISOString().split('T')[0];
+      const tomorrowYear = tomorrowLocal.getFullYear();
+      const tomorrowMonth = String(tomorrowLocal.getMonth() + 1).padStart(2, '0');
+      const tomorrowDay = String(tomorrowLocal.getDate()).padStart(2, '0');
+      const tomorrowStr = `${tomorrowYear}-${tomorrowMonth}-${tomorrowDay}`;
 
-      // Create midnight in user's timezone using a more direct approach
-      // We'll create the time assuming it's in the user's timezone, then adjust
-      const tempDate = new Date(`${tomorrowStr}T00:00:00`);
+      // Create a string representing midnight tomorrow in the target timezone
+      // We'll parse this in a way that respects the timezone
+      const midnightString = `${tomorrowStr}T00:00:00`;
       
-      // Get the timezone offset for tomorrow at midnight
-      const offsetMs = this.getTimezoneOffsetForDate(timeZone, tempDate);
+      // Calculate offset: the difference between local time interpretation and UTC
+      const localInterpretation = new Date(midnightString);
+      const utcInterpretation = new Date(`${midnightString}Z`);
       
-      // Adjust to get the correct UTC time
-      const midnightUTC = new Date(tempDate.getTime() - offsetMs);
+      // Get offset by comparing how the timezone interprets this moment vs UTC
+      const offsetMs = this.getTimezoneOffsetForDate(timeZone, localInterpretation);
+      
+      // The actual UTC time of midnight in user's timezone
+      const midnightUTC = new Date(localInterpretation.getTime() - offsetMs);
 
-      console.log(`calculateNextMidnight: timezone=${timeZone}, todayInTz=${todayInTz}, tomorrowLocal=${tomorrowStr}, utcResult=${midnightUTC.toISOString()}`);
+      console.log(`calculateNextMidnight: timezone=${timeZone}, todayInTz=${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}, tomorrowLocal=${tomorrowStr}, utcResult=${midnightUTC.toISOString()}`);
 
       return midnightUTC;
     } catch (error) {
@@ -495,15 +526,36 @@ export class DatabaseStorage implements IStorage {
    */
   private getTimezoneOffsetForDate(timeZone: string, date: Date): number {
     try {
-      // Create two dates representing the same moment in time:
-      // one in UTC and one in the target timezone
-      const utcTime = new Date(date.getTime());
-      
-      // Format the UTC time as if it were in the target timezone
-      const timeInTz = new Date(date.toLocaleString('en-US', { timeZone }));
-      
-      // The difference is the offset
-      return date.getTime() - timeInTz.getTime();
+      // Format the date in both UTC and target timezone
+      const utcFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'UTC',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+
+      const tzFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+
+      const utcParts = utcFormatter.formatToParts(date);
+      const tzParts = tzFormatter.formatToParts(date);
+
+      const utcMs = this.parseFormattedDate(utcParts);
+      const tzMs = this.parseFormattedDate(tzParts);
+
+      return utcMs - tzMs;
     } catch (error) {
       console.error('Error getting timezone offset:', error);
       return 0;
