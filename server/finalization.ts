@@ -48,32 +48,32 @@ export class FinalizationService {
   }
 
   /**
-   * Lazy finalization: Check and finalize specific user's progress on-demand
+   * Lazy finalization: Check and finalize ALL overdue progress for a user on-demand
    * This is called when reading progress data to ensure it's finalized if needed
    */
-  public async checkAndFinalizeUser(userId: string, date: string): Promise<boolean> {
+  public async checkAndFinalizeUser(userId: string): Promise<boolean> {
     try {
-      // Check if user has unfinalized progress that should be finalized
-      const progress = await db
+      const now = new Date();
+      
+      // Check if user has ANY unfinalized progress that should be finalized
+      const overdueProgress = await db
         .select()
         .from(dailyProgress)
         .where(
           and(
             eq(dailyProgress.userId, userId),
-            eq(dailyProgress.date, date),
             eq(dailyProgress.isFinal, false),
-            lt(dailyProgress.finalizeAt, new Date()) // Past finalization time
+            lt(dailyProgress.finalizeAt, now) // Past finalization time
           )
-        )
-        .limit(1);
+        );
 
-      if (progress.length === 0) {
+      if (overdueProgress.length === 0) {
         return false; // Nothing to finalize
       }
 
-      // Use storage layer method to finalize
+      // Use storage layer method to finalize ALL overdue records for this user
       await storage.finalizeDueForUser(userId);
-      console.log(`Lazy finalized progress for user ${userId} on ${date}`);
+      console.log(`Lazy finalized ${overdueProgress.length} overdue progress records for user ${userId}`);
       return true;
     } catch (error) {
       console.error(`Lazy finalization error for user ${userId}:`, error);
