@@ -78,10 +78,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const days = parseInt(req.query.days as string) || 7;
       const month = req.query.month as string;
 
-      // Lazy finalization: Finalize any overdue progress before fetching
-      const { finalizationService } = await import('./finalization');
-      await finalizationService.checkAndFinalizeUser(userId);
-
       let progress;
       if (month) {
         // Get monthly data for parents report
@@ -170,10 +166,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = updateTemporaryProgressSchema.parse(req.body);
 
       const progress = await storage.upsertTemporaryProgress(userId, validatedData);
-
-      // Lazy finalization: Finalize any OLD overdue progress (not today's)
-      const { finalizationService } = await import('./finalization');
-      await finalizationService.checkAndFinalizeUser(userId);
 
       res.json({
         ...progress,

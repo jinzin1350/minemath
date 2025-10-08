@@ -181,6 +181,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecentProgress(userId: string, days: number): Promise<DailyProgress[]> {
+    // Lazy finalization: Check for due finalizations before fetching
+    await this.finalizeDueForUser(userId);
+
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
