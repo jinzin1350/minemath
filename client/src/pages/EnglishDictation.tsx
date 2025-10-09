@@ -1,20 +1,26 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Trophy, Zap, Keyboard, MousePointer } from "lucide-react";
+import { LogOut, BarChart3, Gamepad2, Trophy, FileText, Volume2, Zap, Keyboard, MousePointer } from "lucide-react";
 import { Link } from "wouter";
 import { DictationGame } from "@/components/DictationGame";
 import { DictationResults } from "@/components/DictationResults";
 import { useDictation } from "@/hooks/useDictation";
+import { useAuth } from "@/hooks/useAuth";
 import type { GameMode, GameState, GameStats } from "@/types/dictation";
 
 export default function EnglishDictation() {
+  const { user } = useAuth();
   const [gameState, setGameState] = useState<GameState>("menu");
   const [selectedMode, setSelectedMode] = useState<GameMode>("typing");
   const [selectedLevel, setSelectedLevel] = useState(1);
   const [gameStats, setGameStats] = useState<GameStats | null>(null);
 
   const { progress, progressLoading, saveGameHistory, updateProgress } = useDictation();
+
+  const handleLogout = () => {
+    window.location.href = '/api/logout';
+  };
 
   const handleStartGame = (mode: GameMode, level: number) => {
     setSelectedMode(mode);
@@ -139,77 +145,223 @@ export default function EnglishDictation() {
 
   // Menu state
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-400 to-sky-600 p-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <Button 
-            asChild
-            className="font-pixel bg-red-600 hover:bg-red-700 border-2 border-red-800"
-          >
-            <Link href="/">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
-            </Link>
-          </Button>
+    <div className="min-h-screen">
+      {/* Navigation */}
+      <nav className="bg-card border-b border-card-border sticky top-0 z-50 shadow-md">
+        <div className="max-w-6xl mx-auto px-2 md:px-4 py-1 md:py-2">
+          {/* Mobile Layout */}
+          <div className="md:hidden">
+            {/* Top row: Title and Logout */}
+            <div className="flex items-center justify-between mb-1">
+              <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="font-pixel text-xs px-2 py-1 h-6"
+                data-testid="button-logout"
+              >
+                <LogOut className="h-3 w-3" />
+              </Button>
+            </div>
 
-          {!progressLoading && progress && (
-            <div className="bg-white/90 px-4 py-2 rounded-md">
-              <div className="text-sm text-muted-foreground">Your Progress</div>
-              <div className="font-bold" data-testid="text-total-score">
-                Total Score: {progress.totalScore}
-              </div>
-              <div className="text-sm" data-testid="text-total-accuracy">
-                Accuracy: {progress.accuracy}%
+            {/* Bottom row: Navigation buttons */}
+            <div className="flex gap-1 w-full">
+              <Link href="/" className="flex-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="font-pixel text-xs w-full px-1 py-1 h-7"
+                  data-testid="button-dashboard"
+                >
+                  <BarChart3 className="h-3 w-3" />
+                </Button>
+              </Link>
+              <Link href="/" className="flex-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="font-pixel text-xs w-full px-1 py-1 h-7"
+                  data-testid="button-game"
+                >
+                  <Gamepad2 className="h-3 w-3" />
+                </Button>
+              </Link>
+              <Button
+                variant="default"
+                size="sm"
+                className="font-pixel text-xs flex-1 px-1 py-1 h-7"
+                data-testid="button-english-dictation"
+              >
+                <Volume2 className="h-3 w-3" />
+              </Button>
+              <Link href="/rank" className="flex-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="font-pixel text-xs w-full px-1 py-1 h-7"
+                  data-testid="button-leaderboard"
+                >
+                  <Trophy className="h-3 w-3" />
+                </Button>
+              </Link>
+              <Link href="/" className="flex-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="font-pixel text-xs w-full px-1 py-1 h-7"
+                  data-testid="button-report"
+                >
+                  <FileText className="h-3 w-3" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden md:flex md:flex-row items-center justify-between">
+            <div className="flex flex-row items-center gap-4">
+              <h1 className="font-pixel text-xl text-foreground">MINECRAFT MATH</h1>
+              <div className="flex gap-2">
+                <Link href="/">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="font-pixel text-xs"
+                    data-testid="button-dashboard"
+                  >
+                    <BarChart3 className="h-4 w-4 mr-1" />
+                    DASHBOARD
+                  </Button>
+                </Link>
+                <Link href="/">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="font-pixel text-xs"
+                    data-testid="button-game"
+                  >
+                    <Gamepad2 className="h-4 w-4 mr-1" />
+                    PLAY
+                  </Button>
+                </Link>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="font-pixel text-xs"
+                  data-testid="button-english-dictation"
+                >
+                  <Volume2 className="h-4 w-4 mr-1" />
+                  ENGLISH
+                </Button>
+                <Link href="/rank">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="font-pixel text-xs"
+                    data-testid="button-leaderboard"
+                  >
+                    <Trophy className="h-4 w-4 mr-1" />
+                    LEADERBOARD
+                  </Button>
+                </Link>
+                <Link href="/">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="font-pixel text-xs"
+                    data-testid="button-report"
+                  >
+                    <FileText className="h-4 w-4 mr-1" />
+                    REPORT
+                  </Button>
+                </Link>
               </div>
             </div>
-          )}
+
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                Welcome, {(user as any)?.firstName || (user as any)?.name || 'Player'}!
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="font-pixel text-xs"
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                LOGOUT
+              </Button>
+            </div>
+          </div>
         </div>
+      </nav>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto p-2 md:p-4">
+        {/* Progress Card */}
+        {!progressLoading && progress && (
+          <Card className="p-3 md:p-4 mb-4 md:mb-6 bg-card border-2 md:border-4 border-card-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs md:text-sm text-muted-foreground">Your Progress</div>
+                <div className="font-pixel text-base md:text-lg" data-testid="text-total-score">
+                  Score: {progress.totalScore}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs md:text-sm text-muted-foreground">Accuracy</div>
+                <div className="font-pixel text-base md:text-lg" data-testid="text-total-accuracy">
+                  {progress.accuracy}%
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Title */}
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-4 drop-shadow-lg">
-            English Dictation
+        <div className="text-center mb-4 md:mb-8">
+          <h1 className="font-pixel text-2xl md:text-4xl text-foreground mb-2 md:mb-4">
+            🎧 ENGLISH DICTATION
           </h1>
-          <p className="text-xl text-white/90">
+          <p className="text-sm md:text-lg text-muted-foreground">
             Listen and spell words correctly!
           </p>
         </div>
 
         {/* Game Modes */}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
-          <Card className="p-6 hover-elevate cursor-pointer" onClick={() => handleStartGame("typing", selectedLevel)}>
-            <div className="flex items-center gap-4">
-              <Keyboard className="w-12 h-12 text-blue-500" />
+        <div className="grid md:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-8">
+          <Card className="p-4 md:p-6 hover-elevate cursor-pointer border-2 md:border-4 border-card-border" onClick={() => handleStartGame("typing", selectedLevel)}>
+            <div className="flex items-center gap-2 md:gap-4">
+              <Keyboard className="w-8 h-8 md:w-12 md:h-12 text-blue-500" />
               <div>
-                <h3 className="text-xl font-bold">Typing Mode</h3>
-                <p className="text-muted-foreground">Type the word you hear</p>
+                <h3 className="font-pixel text-sm md:text-xl">Typing Mode</h3>
+                <p className="text-xs md:text-sm text-muted-foreground">Type the word</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-6 hover-elevate cursor-pointer" onClick={() => handleStartGame("multiple-choice", selectedLevel)}>
-            <div className="flex items-center gap-4">
-              <MousePointer className="w-12 h-12 text-green-500" />
+          <Card className="p-4 md:p-6 hover-elevate cursor-pointer border-2 md:border-4 border-card-border" onClick={() => handleStartGame("multiple-choice", selectedLevel)}>
+            <div className="flex items-center gap-2 md:gap-4">
+              <MousePointer className="w-8 h-8 md:w-12 md:h-12 text-green-500" />
               <div>
-                <h3 className="text-xl font-bold">Multiple Choice</h3>
-                <p className="text-muted-foreground">Choose from 4 options</p>
+                <h3 className="font-pixel text-sm md:text-xl">Multiple Choice</h3>
+                <p className="text-xs md:text-sm text-muted-foreground">Choose option</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-6 hover-elevate cursor-pointer" onClick={() => handleStartGame("fill-blanks", selectedLevel)}>
-            <div className="flex items-center gap-4">
-              <Zap className="w-12 h-12 text-purple-500" />
+          <Card className="p-4 md:p-6 hover-elevate cursor-pointer border-2 md:border-4 border-card-border" onClick={() => handleStartGame("fill-blanks", selectedLevel)}>
+            <div className="flex items-center gap-2 md:gap-4">
+              <Zap className="w-8 h-8 md:w-12 md:h-12 text-purple-500" />
               <div>
-                <h3 className="text-xl font-bold">Fill the Blank</h3>
-                <p className="text-muted-foreground">Choose the missing letter</p>
+                <h3 className="font-pixel text-sm md:text-xl">Fill the Blank</h3>
+                <p className="text-xs md:text-sm text-muted-foreground">Missing letter</p>
               </div>
             </div>
           </Card>
         </div>
-
-
       </div>
     </div>
   );
