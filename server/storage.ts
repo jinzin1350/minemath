@@ -2,7 +2,7 @@ import { db } from "./db";
 import { 
   users, 
   dailyProgress, 
-  inventory, 
+  userInventory, 
   achievements,
   userAchievements,
   NewUser,
@@ -219,19 +219,17 @@ export class Storage {
   async getInventory(userId: string) {
     return await db
       .select()
-      .from(inventory)
-      .where(eq(inventory.userId, userId));
+      .from(userInventory)
+      .where(eq(userInventory.userId, userId));
   }
 
-  async addToInventory(userId: string, itemType: string, itemName: string, quantity: number = 1) {
+  async addToInventory(userId: string, rewardId: string, pointsWhenSelected: number) {
     const [item] = await db
-      .insert(inventory)
+      .insert(userInventory)
       .values({
         userId,
-        itemType,
-        itemName,
-        quantity,
-        acquiredAt: new Date()
+        rewardId,
+        pointsWhenSelected
       })
       .returning();
     return item;
