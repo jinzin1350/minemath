@@ -238,17 +238,50 @@ export class DatabaseStorage implements IStorage {
       )
       .limit(1);
 
-    // If progress is already finalized, this shouldn't happen for the current day
-    // Log an error and create a new record for today (this means the date calculation might be wrong)
+    // If progress is already finalized
     if (existingProgress.length > 0 && existingProgress[0].isFinal) {
-      console.error(`⚠️ WARNING: Trying to update finalized progress for ${today}. This should not happen!`);
-      console.error(`⚠️ Finalized record:`, existingProgress[0]);
-      console.error(`⚠️ Current time: ${new Date().toISOString()}, User timezone: ${timeZone}`);
-      console.error(`⚠️ This likely means the date calculation is incorrect for the user's timezone`);
-
-      // Return the finalized record but don't add new points to it
-      // The frontend should show an error or the date calculation needs to be fixed
-      return existingProgress[0];
+      // Check if it was finalized too early (bug in previous version)
+      const finalizedAt = existingProgress[0].finalizedAt;
+      const finalizeAt = existingProgress[0].finalizeAt;
+      
+      console.error(`⚠️ WARNING: Found finalized progress for ${today}`);
+      console.error(`⚠️ Finalized at: ${finalizedAt?.toISOString()}, Should finalize at: ${finalizeAt?.toISOString()}`);
+      console.error(`⚠️ Current UTC time: ${new Date().toISOString()}`);
+      console.error(`⚠️ Current time in ${timeZone}: ${new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(new Date())}`);
+      
+      // If it was finalized too early (before midnight in user's timezone), un-finalize it
+      const currentTimeInUserTz = new Date().toLocaleString('en-US', { timeZone });
+      const userLocalTime = new Date(currentTimeInUserTz);
+      const userHour = userLocalTime.getHours();
+      
+      // If it's still the same day and before midnight, un-finalize and continue
+      if (userHour < 24) {
+        console.log(`🔓 Un-finalizing record finalized too early (it's still ${today} in ${timeZone})`);
+        
+        // Un-finalize the record
+        await db
+          .update(dailyProgress)
+          .set({
+            isFinal: false,
+            finalizedAt: null,
+            finalizeAt: finalizeAt, // Keep the original finalize time
+            updatedAt: new Date(),
+          })
+          .where(eq(dailyProgress.id, existingProgress[0].id));
+        
+        // Continue with adding points (will be handled by the upsert below)
+      } else {
+        return existingProgress[0];
+      }
     }
 
     // Prepare data for upsert
@@ -441,10 +474,27 @@ export class DatabaseStorage implements IStorage {
 
   private calculateNextMidnight(timeZone: string): Date {
     try {
-      // Get current time in user's timezone
       const now = new Date();
-
-      // Format current date/time in user's timezone
+      
+      // Get today's date in user's timezone
+      const todayInTz = this.getTodayInTimezone(timeZone);
+      const [year, month, day] = todayInTz.split('-').map(Number);
+      
+      // Create a date for tomorrow in the user's timezone
+      const tomorrow = new Date(year, month - 1, day + 1);
+      const tomorrowYear = tomorrow.getFullYear();
+      const tomorrowMonth = String(tomorrow.getMonth() + 1).padStart(2, '0');
+      const tomorrowDay = String(tomorrow.getDate()).padStart(2, '0');
+      
+      // Create midnight string for tomorrow
+      const tomorrowMidnightStr = `${tomorrowYear}-${tomorrowMonth}-${tomorrowDay}T00:00:00`;
+      
+      // Try to find the UTC time that corresponds to this local midnight
+      // Start from a reasonable range around UTC midnight tomorrow
+      const utcTomorrow = new Date(now);
+      utcTomorrow.setUTCDate(utcTomorrow.getUTCDate() + 1);
+      utcTomorrow.setUTCHours(0, 0, 0, 0);
+      
       const formatter = new Intl.DateTimeFormat('en-US', {
         timeZone,
         year: 'numeric',
@@ -455,61 +505,33 @@ export class DatabaseStorage implements IStorage {
         second: '2-digit',
         hour12: false
       });
-
-      const parts = formatter.formatToParts(now);
-      const dateParts: Record<string, string> = {};
-      parts.forEach(part => {
-        if (part.type !== 'literal') {
-          dateParts[part.type] = part.value;
-        }
-      });
-
-      // Get tomorrow's date in user's timezone
-      const localDate = new Date(
-        parseInt(dateParts.year),
-        parseInt(dateParts.month) - 1,
-        parseInt(dateParts.day)
-      );
-      localDate.setDate(localDate.getDate() + 1); // Tomorrow
-
-      const tomorrowYear = localDate.getFullYear();
-      const tomorrowMonth = String(localDate.getMonth() + 1).padStart(2, '0');
-      const tomorrowDay = String(localDate.getDate()).padStart(2, '0');
-
-      // Create a date string for tomorrow at midnight in the user's timezone
-      const tomorrowMidnightLocal = `${tomorrowYear}-${tomorrowMonth}-${tomorrowDay}T00:00:00`;
-
-      // Find the UTC time that corresponds to this local midnight
-      // We'll use a binary search approach by checking different UTC times
-      let testDate = new Date();
-      testDate.setUTCHours(0, 0, 0, 0);
-      testDate.setUTCDate(testDate.getUTCDate() + 1);
-
-      // Adjust by trying different hours to find when local time becomes midnight
-      for (let hourOffset = -12; hourOffset <= 12; hourOffset++) {
-        const candidate = new Date(testDate.getTime() + hourOffset * 3600000);
-        const candidateParts = formatter.formatToParts(candidate);
-        const candidateData: Record<string, string> = {};
-        candidateParts.forEach(part => {
-          if (part.type !== 'literal') {
-            candidateData[part.type] = part.value;
+      
+      // Search within ±24 hours of UTC midnight
+      for (let hourOffset = -24; hourOffset <= 24; hourOffset++) {
+        const candidate = new Date(utcTomorrow.getTime() + hourOffset * 3600000);
+        const parts = formatter.formatToParts(candidate);
+        const parsed: Record<string, string> = {};
+        parts.forEach(p => {
+          if (p.type !== 'literal') {
+            parsed[p.type] = p.value;
           }
         });
-
-        if (candidateData.year === String(tomorrowYear) &&
-            candidateData.month === tomorrowMonth &&
-            candidateData.day === tomorrowDay &&
-            candidateData.hour === '00' &&
-            candidateData.minute === '00') {
-          console.log(`calculateNextMidnight: timezone=${timeZone}, localMidnight=${tomorrowMidnightLocal}, utcResult=${candidate.toISOString()}`);
+        
+        if (parsed.year === String(tomorrowYear) &&
+            parsed.month === tomorrowMonth &&
+            parsed.day === tomorrowDay &&
+            parsed.hour === '00' &&
+            parsed.minute === '00') {
+          console.log(`✅ calculateNextMidnight: timezone=${timeZone}, localMidnight=${tomorrowMidnightStr}, utcResult=${candidate.toISOString()}`);
           return candidate;
         }
       }
-
-      // Fallback
-      throw new Error('Could not calculate midnight');
+      
+      // If still not found, fallback
+      console.warn(`⚠️ Could not find exact midnight for ${timeZone}, using UTC fallback`);
+      return utcTomorrow;
     } catch (error) {
-      console.error('Error calculating next midnight:', timeZone, error);
+      console.error('❌ Error calculating next midnight:', timeZone, error);
       // Fallback to next UTC midnight
       const tomorrow = new Date();
       tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
