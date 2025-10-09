@@ -69,12 +69,15 @@ export default function Home() {
       console.log('Progress saved successfully:', progressData);
 
       // Invalidate queries to refresh dashboard data
-      await queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] });
+      // Use predicate to match all progress queries regardless of days parameter
+      await queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/progress/recent')
+      });
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/achievements'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/rewards/opportunities'] });
-      
+
       // Force refetch of all queries to ensure UI updates
       await queryClient.refetchQueries();
 

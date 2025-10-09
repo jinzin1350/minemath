@@ -295,7 +295,12 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
                 <div className="text-center md:text-left">
                   <p className="text-xl md:text-3xl font-pixel text-blue-200 drop-shadow-lg animate-pulse">
                     {(dashboardData.recentProgress || []).find(p => {
-                      const today = new Date().toISOString().split('T')[0];
+                      // Get today's date in user's local timezone (matches backend)
+                      const now = new Date();
+                      const year = now.getFullYear();
+                      const month = String(now.getMonth() + 1).padStart(2, '0');
+                      const day = String(now.getDate()).padStart(2, '0');
+                      const today = `${year}-${month}-${day}`;
                       return p.date === today;
                     })?.pointsEarned || 0}
                   </p>
