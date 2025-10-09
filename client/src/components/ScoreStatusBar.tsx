@@ -27,9 +27,9 @@ export function ScoreStatusBar() {
     ? (recentProgress[0] as ProgressData) 
     : undefined;
 
-  // Calculate countdown to midnight finalization
+  // Calculate countdown to midnight finalization (show even if already finalized)
   useEffect(() => {
-    if (!todayProgress?.finalizeAt || todayProgress.isFinal) {
+    if (!todayProgress?.finalizeAt) {
       setTimeLeft('');
       return;
     }
@@ -40,7 +40,12 @@ export function ScoreStatusBar() {
       const diff = finalizeTime.getTime() - now.getTime();
 
       if (diff <= 0) {
-        setTimeLeft('Finalizing...');
+        // Time has passed, wait for refetch or page reload
+        if (todayProgress.isFinal) {
+          setTimeLeft('');
+        } else {
+          setTimeLeft('Finalizing...');
+        }
         return;
       }
 
@@ -48,7 +53,11 @@ export function ScoreStatusBar() {
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-      setTimeLeft(`${hours}h ${minutes}m ${seconds}s until midnight lock`);
+      if (todayProgress.isFinal) {
+        setTimeLeft(`${hours}h ${minutes}m ${seconds}s until new day`);
+      } else {
+        setTimeLeft(`${hours}h ${minutes}m ${seconds}s until midnight lock`);
+      }
     };
 
     updateCountdown();
@@ -97,13 +106,13 @@ export function ScoreStatusBar() {
                 </Badge>
               </div>
               
-              {todayProgress.isFinal ? (
-                <p className="text-xs text-muted-foreground" data-testid="text-final-status">
-                  Your score is locked and counted on the leaderboard
-                </p>
-              ) : timeLeft ? (
+              {timeLeft ? (
                 <p className="text-xs text-muted-foreground" data-testid="text-countdown">
                   {timeLeft}
+                </p>
+              ) : todayProgress.isFinal ? (
+                <p className="text-xs text-muted-foreground" data-testid="text-final-status">
+                  Your score is locked and counted on the leaderboard
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground" data-testid="text-improvement">
