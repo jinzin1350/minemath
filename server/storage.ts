@@ -209,7 +209,21 @@ export class DatabaseStorage implements IStorage {
     // Calculate finalizeAt: start of next day in user's timezone
     const finalizeAt = this.calculateNextMidnight(timeZone);
 
-    console.log(`📊 upsertTemporaryProgress: userId=${userId}, today=${today}, timeZone=${timeZone}, finalizeAt=${finalizeAt.toISOString()}`);
+    const nowUtc = new Date();
+    const nowInUserTz = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).format(nowUtc);
+    
+    console.log(`📊 upsertTemporaryProgress: userId=${userId}, today=${today}, timeZone=${timeZone}`);
+    console.log(`📊 Current time: UTC=${nowUtc.toISOString()}, UserTZ=${nowInUserTz}`);
+    console.log(`📊 FinalizeAt: ${finalizeAt.toISOString()}`);
     console.log(`📊 Progress data:`, progressData);
 
     // First, check if there's already a finalized record for today
@@ -224,9 +238,16 @@ export class DatabaseStorage implements IStorage {
       )
       .limit(1);
 
-    // If progress is already finalized, return it without modification
+    // If progress is already finalized, this shouldn't happen for the current day
+    // Log an error and create a new record for today (this means the date calculation might be wrong)
     if (existingProgress.length > 0 && existingProgress[0].isFinal) {
-      console.log(`📊 Progress already finalized for ${today}, returning existing record`);
+      console.error(`⚠️ WARNING: Trying to update finalized progress for ${today}. This should not happen!`);
+      console.error(`⚠️ Finalized record:`, existingProgress[0]);
+      console.error(`⚠️ Current time: ${new Date().toISOString()}, User timezone: ${timeZone}`);
+      console.error(`⚠️ This likely means the date calculation is incorrect for the user's timezone`);
+      
+      // Return the finalized record but don't add new points to it
+      // The frontend should show an error or the date calculation needs to be fixed
       return existingProgress[0];
     }
 
@@ -406,7 +427,11 @@ export class DatabaseStorage implements IStorage {
         day: '2-digit'
       });
 
-      return formatter.format(now); // Returns YYYY-MM-DD format directly
+      const todayInTz = formatter.format(now); // Returns YYYY-MM-DD format directly
+      
+      console.log(`📅 getTodayInTimezone: UTC=${now.toISOString()}, timezone=${timeZone}, result=${todayInTz}`);
+      
+      return todayInTz;
     } catch (error) {
       console.error('Error calculating today in timezone:', timeZone, error);
       // Fallback to UTC date
