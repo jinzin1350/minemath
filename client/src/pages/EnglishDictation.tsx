@@ -6,7 +6,6 @@ import { Link } from "wouter";
 import { DictationGame } from "@/components/DictationGame";
 import { DictationResults } from "@/components/DictationResults";
 import { useDictation } from "@/hooks/useDictation";
-import { queryClient } from "@/lib/queryClient";
 import type { GameMode, GameState, GameStats } from "@/types/dictation";
 
 export default function EnglishDictation() {
@@ -23,7 +22,7 @@ export default function EnglishDictation() {
     setGameState("playing");
   };
 
-  const handleGameComplete = async (stats: GameStats) => {
+  const handleGameComplete = (stats: GameStats) => {
     console.log(`🎮 Dictation Game Complete Handler - Mode: ${stats.mode}, Level: ${stats.level}`);
     console.log(`📊 Dictation Stats:`, stats);
     
@@ -41,6 +40,7 @@ export default function EnglishDictation() {
     }
     
     setGameStats(stats);
+    setGameState("results");
 
     // Save to database with detailed logging
     const gameData = {
@@ -62,12 +62,7 @@ export default function EnglishDictation() {
       wordsCorrect: typeof gameData.wordsCorrect,
     });
     
-    // Wait for game history to be saved
-    await new Promise<void>((resolve) => {
-      saveGameHistory(gameData);
-      // Give some time for the mutation to complete
-      setTimeout(() => resolve(), 500);
-    });
+    saveGameHistory(gameData);
 
     // Update user progress
     if (progress) {
@@ -99,41 +94,14 @@ export default function EnglishDictation() {
     } else {
       console.warn(`⚠️ No progress data found, cannot update`);
     }
-
-    // Force refetch of all relevant queries to update UI immediately
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['/api/dictation/progress'] }),
-      queryClient.invalidateQueries({ queryKey: ['/api/progress/recent'] }),
-      queryClient.invalidateQueries({ queryKey: ['/api/dictation/game-history'] }),
-      queryClient.invalidateQueries({ queryKey: ['/api/achievements'] }),
-    ]);
-    
-    // Force immediate refetch instead of just invalidating
-    await queryClient.refetchQueries({ queryKey: ['/api/progress/recent'] });
-    
-    setGameState("results");
   };
 
-  const handlePlayAgain = async () => {
-    // Refetch all queries before restarting
-    await Promise.all([
-      queryClient.refetchQueries({ queryKey: ['/api/progress/recent'] }),
-      queryClient.refetchQueries({ queryKey: ['/api/dictation/progress'] }),
-      queryClient.refetchQueries({ queryKey: ['/api/achievements'] }),
-    ]);
-    
+  const handlePlayAgain = () => {
     setGameState("menu");
     setGameStats(null);
   };
 
-  const handleBackToMenu = async () => {
-    // Refetch all queries before going back to menu
-    await Promise.all([
-      queryClient.refetchQueries({ queryKey: ['/api/progress/recent'] }),
-      queryClient.refetchQueries({ queryKey: ['/api/dictation/progress'] }),
-      queryClient.refetchQueries({ queryKey: ['/api/achievements'] }),
-    ]);
-    
+  const handleBackToMenu = () => {
     setGameState("menu");
     setGameStats(null);
   };

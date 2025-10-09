@@ -45,30 +45,6 @@ export default function Home() {
         level
       });
 
-      // Save items to inventory if any were earned
-      if (stats.itemsEarned && stats.itemsEarned.length > 0) {
-        console.log('🎁 Saving items to inventory:', stats.itemsEarned);
-        
-        for (const item of stats.itemsEarned) {
-          try {
-            await fetch('/api/inventory/add-temp-item', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              credentials: 'include',
-              body: JSON.stringify({
-                name: item.name,
-                rarity: item.rarity,
-                iconName: item.iconName,
-              }),
-            });
-          } catch (itemError) {
-            console.error('Failed to save item:', item, itemError);
-          }
-        }
-      }
-
       // Save temporary progress to backend (until midnight finalization)
       const response = await fetch('/api/progress/temporary', {
         method: 'POST',
