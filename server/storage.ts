@@ -4,7 +4,6 @@ import {
   dailyProgress,
   userInventory,
   achievements,
-  userAchievements,
   gameSessions,
   NewUser,
   NewDailyProgress
@@ -245,29 +244,26 @@ export class Storage {
 
   async getUserAchievements(userId: string) {
     const userAchievementsList = await db
-      .select({
-        achievementId: userAchievements.achievementId,
-        unlockedAt: userAchievements.unlockedAt,
-        name: achievements.name,
-        description: achievements.description,
-        icon: achievements.icon,
-        requiredValue: achievements.requiredValue,
-        category: achievements.category
-      })
-      .from(userAchievements)
-      .leftJoin(achievements, eq(userAchievements.achievementId, achievements.id))
-      .where(eq(userAchievements.userId, userId));
+      .select()
+      .from(achievements)
+      .where(eq(achievements.userId, userId))
+      .orderBy(desc(achievements.unlockedAt));
 
     return userAchievementsList;
   }
 
-  async unlockAchievement(userId: string, achievementId: string) {
+  async unlockAchievement(userId: string, type: string, name: string, description: string, iconType: string, pointsRequired: number) {
     const [unlocked] = await db
-      .insert(userAchievements)
+      .insert(achievements)
       .values({
         userId,
-        achievementId,
-        unlockedAt: new Date()
+        type,
+        name,
+        description,
+        iconType,
+        pointsRequired,
+        unlockedAt: new Date(),
+        isNew: true
       })
       .onConflictDoNothing()
       .returning();
