@@ -21,6 +21,45 @@ export class Storage {
     return user;
   }
 
+  async upsertUser(userData: {
+    id: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    profileImageUrl?: string;
+  }) {
+    const existing = await this.getUser(userData.id);
+
+    if (existing) {
+      // Update existing user
+      const [updated] = await db
+        .update(users)
+        .set({
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userData.id))
+        .returning();
+      return updated;
+    } else {
+      // Create new user
+      const [created] = await db
+        .insert(users)
+        .values({
+          id: userData.id,
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl
+        })
+        .returning();
+      return created;
+    }
+  }
+
   async getUserProgress(userId: string, date: string) {
     const [progress] = await db
       .select()
