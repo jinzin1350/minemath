@@ -25,8 +25,11 @@ import {
   Keyboard,
   MousePointer,
   Volume2,
-  Gamepad2
+  Gamepad2,
+  LogOut
 } from 'lucide-react';
+import { Link } from 'wouter';
+import { useAuth } from '@/hooks/useAuth';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 interface MonthlyProgress {
@@ -87,6 +90,7 @@ interface DictationReport {
 }
 
 export const ParentsReport: React.FC = () => {
+  const { user } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -95,6 +99,10 @@ export const ParentsReport: React.FC = () => {
   const [showLevelSelector, setShowLevelSelector] = useState(false);
   const [reportType, setReportType] = useState<'math' | 'dictation' | 'leaderboard'>('math');
   const queryClient = useQueryClient();
+
+  const handleLogout = () => {
+    window.location.href = '/api/logout';
+  };
 
   // Get user info for current age
   const { data: userInfo } = useQuery({
@@ -614,8 +622,104 @@ export const ParentsReport: React.FC = () => {
 
   if (mathLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
-        <div className="max-w-6xl mx-auto">
+      <div className="min-h-screen">
+        {/* Navigation */}
+        <nav className="bg-card border-b border-card-border sticky top-0 z-50 shadow-md">
+          <div className="max-w-6xl mx-auto px-2 md:px-4 py-1 md:py-2">
+            {/* Mobile Layout */}
+            <div className="md:hidden">
+              <div className="flex items-center justify-between mb-1">
+                <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="font-pixel text-xs px-2 py-1 h-6"
+                >
+                  <LogOut className="h-3 w-3" />
+                </Button>
+              </div>
+              <div className="flex gap-1 w-full">
+                <Link href="/" className="flex-1">
+                  <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
+                    <BarChart3 className="h-3 w-3" />
+                  </Button>
+                </Link>
+                <Link href="/" className="flex-1">
+                  <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
+                    <Gamepad2 className="h-3 w-3" />
+                  </Button>
+                </Link>
+                <Link href="/english-dictation" className="flex-1">
+                  <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
+                    <Volume2 className="h-3 w-3" />
+                  </Button>
+                </Link>
+                <Link href="/rank" className="flex-1">
+                  <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
+                    <Trophy className="h-3 w-3" />
+                  </Button>
+                </Link>
+                <Button variant="default" size="sm" className="font-pixel text-xs flex-1 px-1 py-1 h-7">
+                  <FileText className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Desktop Layout */}
+            <div className="hidden md:flex md:flex-row items-center justify-between">
+              <div className="flex flex-row items-center gap-4">
+                <h1 className="font-pixel text-xl text-foreground">MINECRAFT MATH</h1>
+                <div className="flex gap-2">
+                  <Link href="/">
+                    <Button variant="ghost" size="sm" className="font-pixel text-xs">
+                      <BarChart3 className="h-4 w-4 mr-1" />
+                      DASHBOARD
+                    </Button>
+                  </Link>
+                  <Link href="/">
+                    <Button variant="ghost" size="sm" className="font-pixel text-xs">
+                      <Gamepad2 className="h-4 w-4 mr-1" />
+                      PLAY
+                    </Button>
+                  </Link>
+                  <Link href="/english-dictation">
+                    <Button variant="ghost" size="sm" className="font-pixel text-xs">
+                      <Volume2 className="h-4 w-4 mr-1" />
+                      ENGLISH
+                    </Button>
+                  </Link>
+                  <Link href="/rank">
+                    <Button variant="ghost" size="sm" className="font-pixel text-xs">
+                      <Trophy className="h-4 w-4 mr-1" />
+                      LEADERBOARD
+                    </Button>
+                  </Link>
+                  <Button variant="default" size="sm" className="font-pixel text-xs">
+                    <FileText className="h-4 w-4 mr-1" />
+                    REPORT
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-muted-foreground">
+                  Welcome, {(user as any)?.firstName || (user as any)?.name || 'Player'}!
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="font-pixel text-xs"
+                >
+                  <LogOut className="h-4 w-4 mr-1" />
+                  LOGOUT
+                </Button>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <div className="max-w-6xl mx-auto p-4">
           <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90">
             <CardContent className="p-8 text-center">
               <div className="animate-bounce mb-4">
@@ -630,85 +734,153 @@ export const ParentsReport: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen">
+      {/* Navigation */}
+      <nav className="bg-card border-b border-card-border sticky top-0 z-50 shadow-md">
+        <div className="max-w-6xl mx-auto px-2 md:px-4 py-1 md:py-2">
+          {/* Mobile Layout */}
+          <div className="md:hidden">
+            <div className="flex items-center justify-between mb-1">
+              <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="font-pixel text-xs px-2 py-1 h-6"
+              >
+                <LogOut className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="flex gap-1 w-full">
+              <Link href="/" className="flex-1">
+                <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
+                  <BarChart3 className="h-3 w-3" />
+                </Button>
+              </Link>
+              <Link href="/" className="flex-1">
+                <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
+                  <Gamepad2 className="h-3 w-3" />
+                </Button>
+              </Link>
+              <Link href="/english-dictation" className="flex-1">
+                <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
+                  <Volume2 className="h-3 w-3" />
+                </Button>
+              </Link>
+              <Link href="/rank" className="flex-1">
+                <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
+                  <Trophy className="h-3 w-3" />
+                </Button>
+              </Link>
+              <Button variant="default" size="sm" className="font-pixel text-xs flex-1 px-1 py-1 h-7">
+                <FileText className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden md:flex md:flex-row items-center justify-between">
+            <div className="flex flex-row items-center gap-4">
+              <h1 className="font-pixel text-xl text-foreground">MINECRAFT MATH</h1>
+              <div className="flex gap-2">
+                <Link href="/">
+                  <Button variant="ghost" size="sm" className="font-pixel text-xs">
+                    <BarChart3 className="h-4 w-4 mr-1" />
+                    DASHBOARD
+                  </Button>
+                </Link>
+                <Link href="/">
+                  <Button variant="ghost" size="sm" className="font-pixel text-xs">
+                    <Gamepad2 className="h-4 w-4 mr-1" />
+                    PLAY
+                  </Button>
+                </Link>
+                <Link href="/english-dictation">
+                  <Button variant="ghost" size="sm" className="font-pixel text-xs">
+                    <Volume2 className="h-4 w-4 mr-1" />
+                    ENGLISH
+                  </Button>
+                </Link>
+                <Link href="/rank">
+                  <Button variant="ghost" size="sm" className="font-pixel text-xs">
+                    <Trophy className="h-4 w-4 mr-1" />
+                    LEADERBOARD
+                  </Button>
+                </Link>
+                <Button variant="default" size="sm" className="font-pixel text-xs">
+                  <FileText className="h-4 w-4 mr-1" />
+                  REPORT
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                Welcome, {(user as any)?.firstName || (user as any)?.name || 'Player'}!
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="font-pixel text-xs"
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                LOGOUT
+              </Button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-6xl mx-auto space-y-3 md:space-y-6 p-2 md:p-4">
         {/* Header */}
-        <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90 shadow-2xl backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute top-2 left-2 opacity-30 animate-float">
+        <Card className="border-2 md:border-4 border-card-border bg-card shadow-md md:shadow-2xl backdrop-blur-sm relative overflow-hidden">
+          <div className="absolute top-2 left-2 opacity-30 animate-float hidden md:block">
             <MinecraftBlock type="diamond" size={8} />
           </div>
-          <div className="absolute top-2 right-2 opacity-30 animate-float-delay">
+          <div className="absolute top-2 right-2 opacity-30 animate-float-delay hidden md:block">
             <MinecraftBlock type="grass" size={8} />
           </div>
 
-          <CardHeader className="relative z-10">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <FileText className="h-10 w-10 text-amber-200" />
-                <div>
-                  <CardTitle className="font-pixel text-2xl md:text-3xl text-amber-200 animate-pulse">
-                    📊 {(userInfo as any)?.name ? `${(userInfo as any)?.name}'s` : 'Monthly'} Progress Report
+          <CardHeader className="relative z-10 p-3 md:p-6">
+            <div className="flex flex-col items-start md:items-center gap-3 md:gap-4">
+              <div className="flex items-center gap-2 md:gap-4 w-full">
+                <FileText className="h-6 w-6 md:h-10 md:w-10 text-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="font-pixel text-sm md:text-3xl text-foreground">
+                    📊 Report
                   </CardTitle>
-                  <p className="text-emerald-300 font-pixel text-sm">
-                    Detailed statistics of {(userInfo as any)?.name ? `${(userInfo as any)?.name}'s` : 'your child\'s'} learning progress
+                  <p className="text-muted-foreground font-pixel text-xs md:text-sm hidden md:block">
+                    Detailed statistics of your learning progress
                   </p>
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row gap-2">
+              <div className="flex flex-wrap gap-2 w-full">
                 <input
                   type="month"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="font-pixel px-3 py-2 border-2 border-amber-600 rounded bg-stone-800 text-amber-200"
+                  className="font-pixel px-2 py-1 md:px-3 md:py-2 text-xs md:text-sm border-2 border-card-border rounded bg-card text-foreground flex-shrink-0"
                 />
-
-                {/* Name Input */}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="Enter child's name"
-                    defaultValue={(userInfo as any)?.name || ''}
-                    onBlur={(e) => {
-                      const newName = e.target.value.trim();
-                      if (newName && newName !== (userInfo as any)?.name) {
-                        updateNameMutation.mutate(newName);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        const newName = (e.target as HTMLInputElement).value.trim();
-                        if (newName && newName !== (userInfo as any)?.name) {
-                          updateNameMutation.mutate(newName);
-                        }
-                      }
-                    }}
-                    className="font-pixel px-3 py-2 border-2 border-green-600 rounded bg-stone-800 text-green-200 placeholder-green-400 min-w-[180px]"
-                  />
-                </div>
 
                 <Button
                   onClick={() => setShowAgeSelector(true)}
                   variant="outline"
-                  className="font-pixel border-2 border-blue-600 text-blue-300 hover:bg-blue-600 hover:text-white"
+                  size="sm"
+                  className="font-pixel text-xs border-2"
                 >
-                  <User className="h-4 w-4 mr-2" />
-                  Age: {(userInfo as any)?.age || 'Not Set'}
-                </Button>
-                <Button
-                  onClick={() => setShowLevelSelector(true)}
-                  variant="outline"
-                  className="font-pixel border-2 border-purple-600 text-purple-300 hover:bg-purple-600 hover:text-white"
-                >
-                  <Trophy className="h-4 w-4 mr-2" />
-                  Difficulty Level
+                  <User className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                  <span className="hidden md:inline">Age: {(userInfo as any)?.age || '?'}</span>
+                  <span className="md:hidden">{(userInfo as any)?.age || '?'}</span>
                 </Button>
                 <Button
                   onClick={generateReport}
-                  className="font-pixel bg-green-700 hover:bg-green-800 border-2 border-green-900"
+                  variant="outline"
+                  size="sm"
+                  className="font-pixel text-xs border-2"
                 >
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print Report
+                  <Printer className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                  <span className="hidden md:inline">Print</span>
                 </Button>
               </div>
             </div>
@@ -717,25 +889,28 @@ export const ParentsReport: React.FC = () => {
 
         {/* Main Content with Tabs */}
         <Tabs value={reportType} onValueChange={(value) => setReportType(value as 'math' | 'dictation' | 'leaderboard')} className="w-full">
-          <div className="flex justify-center mb-6">
-            <TabsList className="grid w-full max-w-3xl grid-cols-3 bg-stone-800 border-2 border-amber-600">
+          <div className="flex justify-center mb-3 md:mb-6">
+            <TabsList className="grid w-full max-w-3xl grid-cols-3 bg-card border-2 border-card-border p-1">
               <TabsTrigger
                 value="math"
-                className="font-pixel data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+                className="font-pixel text-xs md:text-sm data-[state=active]:bg-amber-600 data-[state=active]:text-white px-1 md:px-3 py-1 md:py-2"
               >
-                🧮 Math Report
+                <span className="md:hidden">🧮</span>
+                <span className="hidden md:inline">🧮 Math</span>
               </TabsTrigger>
               <TabsTrigger
                 value="dictation"
-                className="font-pixel data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                className="font-pixel text-xs md:text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white px-1 md:px-3 py-1 md:py-2"
               >
-                🎧 Dictation Report
+                <span className="md:hidden">🎧</span>
+                <span className="hidden md:inline">🎧 English</span>
               </TabsTrigger>
               <TabsTrigger
                 value="leaderboard"
-                className="font-pixel data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+                className="font-pixel text-xs md:text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white px-1 md:px-3 py-1 md:py-2"
               >
-                🏆 Global Rankings
+                <span className="md:hidden">🏆</span>
+                <span className="hidden md:inline">🏆 Rank</span>
               </TabsTrigger>
             </TabsList>
           </div>
