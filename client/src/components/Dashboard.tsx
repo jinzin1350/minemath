@@ -205,57 +205,77 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
   }).reverse();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-2 md:p-4">
+      <div className="max-w-6xl mx-auto space-y-3 md:space-y-6">
         {/* Score Status Bar with Finalization Info */}
         <ScoreStatusBar />
         {/* Enhanced Header with Minecraft Style */}
-        <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90 shadow-2xl backdrop-blur-sm relative overflow-hidden">
-          {/* Floating decorative blocks */}
-          <div className="absolute top-2 left-2 opacity-30 animate-float">
+        <Card className="border-2 md:border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90 shadow-2xl backdrop-blur-sm relative overflow-hidden">
+          {/* Floating decorative blocks - hide on mobile for better performance */}
+          <div className="absolute top-2 left-2 opacity-30 animate-float hidden md:block">
             <MinecraftBlock type="grass" size={8} />
           </div>
-          <div className="absolute top-2 right-2 opacity-30 animate-float-delay">
+          <div className="absolute top-2 right-2 opacity-30 animate-float-delay hidden md:block">
             <MinecraftBlock type="stone" size={8} />
           </div>
-          <div className="absolute bottom-2 left-8 opacity-20 animate-bounce">
+          <div className="absolute bottom-2 left-8 opacity-20 animate-bounce hidden lg:block">
             <MinecraftBlock type="dirt" size={6} />
           </div>
-          <div className="absolute bottom-2 right-8 opacity-20 animate-pulse">
+          <div className="absolute bottom-2 right-8 opacity-20 animate-pulse hidden lg:block">
             <MinecraftBlock type="diamond" size={6} />
           </div>
 
           <CardHeader className="pb-2 md:pb-4 relative z-10">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-0">
-              <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 text-center md:text-left">
-                <div className="relative animate-bounce-slow">
-                  <MinecraftSteve scale={1.0} />
-                  {/* Hide sparkle effects on mobile */}
-                  <div className="absolute -top-2 -right-2 text-yellow-400 animate-pulse hidden md:block">✨</div>
-                  <div className="absolute -bottom-2 -left-2 text-blue-400 animate-bounce hidden md:block">💎</div>
+            <div className="flex flex-col items-center gap-2 md:gap-3">
+              {/* Mobile: Compact header */}
+              <div className="flex items-center justify-between w-full md:hidden">
+                <div className="flex items-center gap-2">
+                  <div className="relative scale-75">
+                    <MinecraftSteve scale={1.0} />
+                  </div>
+                  <div className="text-left">
+                    <CardTitle className="font-pixel text-sm text-amber-200 leading-tight">
+                      Hi, {displayName}!
+                    </CardTitle>
+                    <p className="text-emerald-300 font-pixel text-xs">
+                      Ready? ⚔️
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="font-pixel text-lg md:text-2xl text-amber-200 animate-pulse bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent drop-shadow-lg">
-                    Welcome back, {displayName}!
-                  </CardTitle>
-                  <p className="text-emerald-300 font-pixel text-xs md:text-sm animate-fade-in">
-                    🏹 Ready for math adventure? ⚔️
-                  </p>
-                </div>
+                <Button
+                  onClick={onStartGame}
+                  className="font-pixel px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 border-2 border-red-900 text-white shadow-xl text-xs"
+                  data-testid="button-start-game"
+                >
+                  ⚔️ PLAY
+                </Button>
               </div>
-              <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full md:w-auto">
-                <div className="flex gap-2">
-                  <div className="animate-bounce-slow">
-                    <InventoryDisplay userPoints={dashboardData.totalStats.totalPoints} />
+
+              {/* Desktop: Full header */}
+              <div className="hidden md:flex md:flex-row items-center justify-between w-full gap-3">
+                <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 text-center md:text-left">
+                  <div className="relative animate-bounce-slow">
+                    <MinecraftSteve scale={1.0} />
+                    <div className="absolute -top-2 -right-2 text-yellow-400 animate-pulse hidden md:block">✨</div>
+                    <div className="absolute -bottom-2 -left-2 text-blue-400 animate-bounce hidden md:block">💎</div>
                   </div>
-                  <div className="animate-pulse">
-                    <RewardSelector 
-                      userPoints={dashboardData.totalStats.totalPoints}
-                      onRewardSelected={() => {
-                        refetchAchievements(); // Refresh achievements after selection
-                      }}
-                    />
+                  <div>
+                    <CardTitle className="font-pixel text-lg md:text-2xl text-amber-200 animate-pulse bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent drop-shadow-lg">
+                      Welcome back, {displayName}!
+                    </CardTitle>
+                    <p className="text-emerald-300 font-pixel text-xs md:text-sm animate-fade-in">
+                      🏹 Ready for math adventure? ⚔️
+                    </p>
                   </div>
+                </div>
+                <div className="flex flex-row gap-2 md:gap-3">
+                  <InventoryDisplay userPoints={dashboardData.totalStats.totalPoints} />
+                  <RewardSelector
+                    userPoints={dashboardData.totalStats.totalPoints}
+                    onRewardSelected={() => {
+                      refetchAchievements();
+                    }}
+                  />
                   {!mockMode && userInfo?.age && (
                     <Button
                       variant="outline"
@@ -267,17 +287,39 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
                       ⚙️ {userInfo.age}y
                     </Button>
                   )}
+                  <Button
+                    onClick={onStartGame}
+                    className="font-pixel px-6 md:px-10 py-3 md:py-5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 border-2 md:border-4 border-red-900 text-white shadow-2xl hover:scale-110 transition-all duration-300 animate-pulse relative text-sm md:text-base"
+                    data-testid="button-start-game-desktop"
+                  >
+                    <span className="relative z-10 flex items-center gap-1 md:gap-2">
+                      ⚔️ START GAME 🏹
+                    </span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-orange-400/20 animate-ping rounded"></div>
+                  </Button>
                 </div>
-                <Button 
-                  onClick={onStartGame}
-                  className="font-pixel px-6 md:px-10 py-3 md:py-5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 border-2 md:border-4 border-red-900 text-white shadow-2xl hover:scale-110 transition-all duration-300 animate-pulse relative text-sm md:text-base"
-                  data-testid="button-start-game"
-                >
-                  <span className="relative z-10 flex items-center gap-1 md:gap-2">
-                    ⚔️ START GAME 🏹
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-orange-400/20 animate-ping rounded"></div>
-                </Button>
+              </div>
+
+              {/* Mobile: Action buttons row */}
+              <div className="flex gap-2 w-full md:hidden">
+                <InventoryDisplay userPoints={dashboardData.totalStats.totalPoints} />
+                <RewardSelector
+                  userPoints={dashboardData.totalStats.totalPoints}
+                  onRewardSelected={() => {
+                    refetchAchievements();
+                  }}
+                />
+                {!mockMode && userInfo?.age && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAgeSelector(true)}
+                    className="font-pixel border-2 text-xs flex-1"
+                    title={`Current age: ${userInfo.age}`}
+                  >
+                    ⚙️ {userInfo.age}y
+                  </Button>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -384,58 +426,58 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
         </div>
 
         {/* Enhanced Progress Chart */}
-        <Card className="border-4 border-cyan-600 bg-gradient-to-br from-cyan-900/30 to-blue-900/30 shadow-2xl relative overflow-hidden">
-          {/* Floating decorative elements */}
-          <div className="absolute top-2 left-4 opacity-20 animate-float">
+        <Card className="border-2 md:border-4 border-cyan-600 bg-gradient-to-br from-cyan-900/30 to-blue-900/30 shadow-2xl relative overflow-hidden">
+          {/* Floating decorative elements - hide on mobile */}
+          <div className="absolute top-2 left-4 opacity-20 animate-float hidden md:block">
             <MinecraftBlock type="diamond" size={6} />
           </div>
-          <div className="absolute top-2 right-4 opacity-20 animate-bounce">
+          <div className="absolute top-2 right-4 opacity-20 animate-bounce hidden md:block">
             <MinecraftBlock type="grass" size={6} />
           </div>
 
-          <CardHeader className="relative z-10">
-            <div className="flex items-center justify-between">
-              <CardTitle className="font-pixel text-cyan-200 flex items-center gap-2 animate-pulse">
-                📊 7-Day Progress ⚡
+          <CardHeader className="relative z-10 pb-2 md:pb-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+              <CardTitle className="font-pixel text-cyan-200 flex items-center gap-2 text-sm md:text-base">
+                📊 Progress
               </CardTitle>
               <div className="flex gap-2">
                 <Button
                   variant={selectedTimeframe === '7d' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSelectedTimeframe('7d')}
-                  className="font-pixel text-xs border-2 hover:scale-105 transition-all duration-200"
+                  className="font-pixel text-xs border-2 hover:scale-105 transition-all duration-200 flex-1 md:flex-none"
                   data-testid="button-7d"
                 >
-                  ⚡ 7 Days
+                  7D
                 </Button>
                 <Button
                   variant={selectedTimeframe === '30d' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSelectedTimeframe('30d')}
-                  className="font-pixel text-xs border-2 hover:scale-105 transition-all duration-200"
+                  className="font-pixel text-xs border-2 hover:scale-105 transition-all duration-200 flex-1 md:flex-none"
                   data-testid="button-30d"
                 >
-                  🗓️ 30 Days
+                  30D
                 </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent className="relative z-10">
-            <div className="h-64 p-4 bg-black/20 rounded-lg border-2 border-cyan-700">
+            <div className="h-48 md:h-64 p-2 md:p-4 bg-black/20 rounded-lg border-2 border-cyan-700">
               {chartData.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center animate-pulse">
-                  <div className="mb-4 relative">
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div className="mb-2 md:mb-4 relative scale-75 md:scale-100">
                     <MinecraftSteve scale={0.8} />
                     <div className="absolute -top-2 -right-2 text-yellow-400 animate-bounce">⭐</div>
                   </div>
-                  <h3 className="font-pixel text-cyan-300 text-lg mb-2">📊 No Data Yet!</h3>
-                  <p className="text-cyan-400 text-sm font-pixel mb-2">
-                    🎮 Start playing to see your progress chart!
+                  <h3 className="font-pixel text-cyan-300 text-sm md:text-lg mb-1 md:mb-2">📊 No Data Yet!</h3>
+                  <p className="text-cyan-400 text-xs md:text-sm font-pixel mb-1 md:mb-2">
+                    🎮 Start playing!
                   </p>
-                  <p className="text-cyan-500 text-xs">
+                  <p className="text-cyan-500 text-xs hidden md:block">
                     Your daily points and accuracy will appear here
                   </p>
-                  <div className="mt-4 flex gap-2">
+                  <div className="mt-2 md:mt-4 flex gap-2">
                     <div className="animate-bounce">🎯</div>
                     <div className="animate-pulse">📈</div>
                     <div className="animate-bounce">🏆</div>
@@ -443,24 +485,32 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
+                  <BarChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" stroke="#22d3ee" />
-                    <XAxis dataKey="date" className="text-xs font-pixel" stroke="#67e8f9" />
-                    <YAxis className="text-xs font-pixel" stroke="#67e8f9" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'rgba(0, 0, 0, 0.9)', 
+                    <XAxis
+                      dataKey="date"
+                      className="text-xs font-pixel"
+                      stroke="#67e8f9"
+                      tick={{ fontSize: 10 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis className="text-xs font-pixel" stroke="#67e8f9" tick={{ fontSize: 10 }} width={30} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
                         border: '2px solid #06b6d4',
                         borderRadius: '8px',
                         fontFamily: 'monospace',
-                        fontSize: '12px'
+                        fontSize: '10px'
                       }}
-                      labelStyle={{ color: '#67e8f9' }}
-                      itemStyle={{ color: '#22d3ee' }}
+                      labelStyle={{ color: '#67e8f9', fontSize: '10px' }}
+                      itemStyle={{ color: '#22d3ee', fontSize: '10px' }}
                     />
-                    <Bar 
-                      dataKey="points" 
-                      fill="url(#gradient)" 
+                    <Bar
+                      dataKey="points"
+                      fill="url(#gradient)"
                       radius={[4, 4, 0, 0]}
                     />
                     <defs>
@@ -478,19 +528,19 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
 
         {/* Recent Achievements & Activity with Inventory */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
-          {/* Dashboard Inventory Board */}
-          <div className="lg:col-span-1">
+          {/* Dashboard Inventory Board - hide on mobile to reduce scroll */}
+          <div className="hidden lg:block lg:col-span-1">
             <DashboardInventoryBoard userPoints={dashboardData.totalStats.totalPoints} />
           </div>
 
           <Card className="border-2 border-card-border lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="font-pixel text-foreground flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-yellow-500" />
-                Achievement Badges ({achievements?.length || 0})
+            <CardHeader className="pb-2 md:pb-4">
+              <CardTitle className="font-pixel text-foreground flex items-center gap-2 text-sm md:text-base">
+                <Trophy className="h-4 w-4 md:h-5 md:w-5 text-yellow-500" />
+                Achievements ({achievements?.length || 0})
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2 md:space-y-3">
               {achievements && achievements.length > 0 ? (
                 achievements.slice(0, 3).map((achievement) => (
                   <AchievementBadge
@@ -501,20 +551,20 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
                   />
                 ))
               ) : (
-                <div className="text-center py-4">
-                  <Trophy className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Play games to earn achievement badges!
+                <div className="text-center py-3 md:py-4">
+                  <Trophy className="h-6 w-6 md:h-8 md:w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-xs md:text-sm text-muted-foreground">
+                    Play to earn badges!
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    First badge unlocks at 500 points
+                    First at 500 points
                   </p>
                 </div>
               )}
               {achievements && achievements.length > 3 && (
                 <div className="text-center pt-2">
                   <Badge variant="outline" className="font-pixel text-xs">
-                    +{achievements.length - 3} more badges
+                    +{achievements.length - 3} more
                   </Badge>
                 </div>
               )}
@@ -522,39 +572,55 @@ export function Dashboard({ data = mockData, onStartGame, mockMode = false }: Da
           </Card>
 
           <Card className="border-2 border-card-border lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="font-pixel text-foreground flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-blue-500" />
-                Daily Activity
+            <CardHeader className="pb-2 md:pb-4">
+              <CardTitle className="font-pixel text-foreground flex items-center gap-2 text-sm md:text-base">
+                <Calendar className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
+                Recent Activity
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {(dashboardData.recentProgress || []).slice(0, 5).map((day, index) => (
-                  <div key={day.date} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <div>
-                      <p className="font-pixel text-sm text-foreground">
-                        {new Date(day.date).toLocaleDateString('en-US', { 
-                          weekday: 'short', 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {day.correctAnswers}/{day.questionsAnswered} correct
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-pixel text-sm text-foreground">{day.pointsEarned} pts</p>
-                      <p className="text-xs text-green-400">
-                        {Math.round((day.correctAnswers / day.questionsAnswered) * 100)}% accuracy
-                      </p>
-                    </div>
+              <div className="space-y-2 md:space-y-3">
+                {(dashboardData.recentProgress || []).length === 0 ? (
+                  <div className="text-center py-3 md:py-4">
+                    <Calendar className="h-6 w-6 md:h-8 md:w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs md:text-sm text-muted-foreground">
+                      No activity yet
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Start playing to track progress!
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  (dashboardData.recentProgress || []).slice(0, 5).map((day) => (
+                    <div key={day.date} className="flex items-center justify-between p-2 md:p-3 bg-muted rounded-lg">
+                      <div>
+                        <p className="font-pixel text-xs md:text-sm text-foreground">
+                          {new Date(day.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {day.correctAnswers}/{day.questionsAnswered} ✓
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-pixel text-xs md:text-sm text-foreground">{day.pointsEarned} pts</p>
+                        <p className="text-xs text-green-400">
+                          {Math.round((day.correctAnswers / day.questionsAnswered) * 100)}%
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Mobile-only: Inventory Board at bottom */}
+        <div className="lg:hidden">
+          <DashboardInventoryBoard userPoints={dashboardData.totalStats.totalPoints} />
         </div>
       </div>
     </div>
