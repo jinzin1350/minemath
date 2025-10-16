@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./simpleAuth";
 import { insertDailyProgressSchema, insertTemporaryProgressSchema, insertGameSessionSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -10,21 +10,16 @@ const updateDailyProgressSchema = insertDailyProgressSchema.omit({ userId: true,
 const updateTemporaryProgressSchema = insertTemporaryProgressSchema;
 const createGameSessionSchema = insertGameSessionSchema.omit({ userId: true });
 
+// Helper function to get userId from session
+const getUserId = (req: any): string => {
+  return (req.session as any).userId;
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error: any) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+  // Note: /api/auth/user is already defined in simpleAuth.ts, so we skip it here
 
   app.patch('/api/auth/user/age', isAuthenticated, async (req: any, res) => {
     try {

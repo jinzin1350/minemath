@@ -565,6 +565,19 @@ export class Storage {
       .where(eq(userInventory.userId, userId))
       .orderBy(desc(userInventory.selectedAt));
   }
+
+  // Simple auth methods
+  async getUserByEmail(email: string) {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
+    return user;
+  }
+
+  async getUserById(id: string) {
+    return await this.getUser(id);
+  }
 }
 
 export const storage = new Storage();
