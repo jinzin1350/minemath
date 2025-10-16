@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./simpleAuth";
+import { thechildrenaiAuth, USE_THECHILDRENAI_AUTH, setupTheChildrenAIAuth } from "./thechildrenaiAuth";
 import { insertDailyProgressSchema, insertTemporaryProgressSchema, insertGameSessionSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -16,12 +17,19 @@ const getUserId = (req: any): string => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Setup authentication
+  if (USE_THECHILDRENAI_AUTH) {
+    setupTheChildrenAIAuth(app);
+  } else {
+    await setupAuth(app);
+  }
+
+  // Choose auth middleware based on configuration
+  const authMiddleware = USE_THECHILDRENAI_AUTH ? thechildrenaiAuth : isAuthenticated;
 
   // Note: /api/auth/user is already defined in simpleAuth.ts, so we skip it here
 
-  app.patch('/api/auth/user/age', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/auth/user/age', authMiddleware, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       const { age } = req.body;
@@ -38,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/auth/user/name', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/auth/user/name', authMiddleware, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       const { firstName, lastName, name } = req.body;
@@ -67,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Game progress routes
-  app.get('/api/progress/recent', isAuthenticated, async (req: any, res) => {
+  app.get('/api/progress/recent', authMiddleware, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       const days = parseInt(req.query.days as string) || 7;
@@ -89,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Achievement routes
-  app.get('/api/achievements', isAuthenticated, async (req: any, res) => {
+  app.get('/api/achievements', authMiddleware, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       const achievements = await storage.getUserAchievements(userId);
@@ -100,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/achievements/check', isAuthenticated, async (req: any, res) => {
+  app.post('/api/achievements/check', authMiddleware, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       // Security fix: Calculate total points server-side, don't trust client input
@@ -112,7 +120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/achievements/:id/mark-seen', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/achievements/:id/mark-seen', authMiddleware, async (req: any, res) => {
     try {
       const { id } = req.params;
       const userId = getUserId(req);
@@ -125,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/progress/daily', isAuthenticated, async (req: any, res) => {
+  app.post('/api/progress/daily', authMiddleware, async (req: any, res) => {
     try {
       const userId = getUserId(req);
 
@@ -153,7 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // NEW: Temporary progress endpoint (until midnight finalization)
-  app.post('/api/progress/temporary', isAuthenticated, async (req: any, res) => {
+  app.post('/api/progress/temporary', authMiddleware, async (req: any, res) => {
     try {
       const userId = getUserId(req);
 
@@ -180,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // NEW: Leaderboard endpoint (only finalized scores)
-  app.get('/api/leaderboard', isAuthenticated, async (req: any, res) => {
+  app.get('/api/leaderboard', authMiddleware, async (req: any, res) => {
     try {
       // Auto-finalize overdue records first
       await storage.finalizeDueAll();
@@ -222,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // NEW: Admin/Debug endpoint for finalization statistics
-  app.get('/api/admin/finalization-stats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/finalization-stats', authMiddleware, async (req: any, res) => {
     try {
       const { finalizationService } = await import('./finalization');
       const stats = await finalizationService.getFinalizationStats();
@@ -239,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual finalization endpoint for testing
-  app.post('/api/admin/force-finalize', isAuthenticated, async (req: any, res) => {
+  app.post('/api/admin/force-finalize', authMiddleware, async (req: any, res) => {
     try {
       console.log('🔧 Manual finalization requested');
       
@@ -269,7 +277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/game-session', isAuthenticated, async (req: any, res) => {
+  app.post('/api/game-session', authMiddleware, async (req: any, res) => {
     try {
       const userId = getUserId(req);
 
@@ -292,7 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reward system routes
-  app.get('/api/rewards/available', isAuthenticated, async (req: any, res) => {
+  app.get('/api/rewards/available', authMiddleware, async (req: any, res) => {
     try {
       const rewards = await storage.getAvailableRewards();
       res.json(rewards);
@@ -302,7 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/rewards/opportunities', isAuthenticated, async (req: any, res) => {
+  app.get('/api/rewards/opportunities', authMiddleware, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       // Check and create new opportunities based on points
@@ -316,7 +324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/rewards/select', isAuthenticated, async (req: any, res) => {
+  app.post('/api/rewards/select', authMiddleware, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       const { pointsMilestone, rewardId } = req.body;
@@ -348,7 +356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/inventory', isAuthenticated, async (req: any, res) => {
+  app.get('/api/inventory', authMiddleware, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       const inventory = await storage.getUserInventory(userId);
@@ -360,7 +368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Debug endpoint to check database status
-  app.get('/api/debug/status', isAuthenticated, async (req: any, res) => {
+  app.get('/api/debug/status', authMiddleware, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       const user = await storage.getUser(userId);
@@ -381,7 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Global leaderboard for parents report
-  app.get('/api/leaderboard/global', isAuthenticated, async (req: any, res) => {
+  app.get('/api/leaderboard/global', authMiddleware, async (req: any, res) => {
     try {
       const { db } = await import('./db');
       const { dailyProgress, users, dictationGameHistory } = await import('@shared/schema');
@@ -450,7 +458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Debug endpoint for leaderboard
-  app.get('/api/debug/leaderboard', isAuthenticated, async (req: any, res) => {
+  app.get('/api/debug/leaderboard', authMiddleware, async (req: any, res) => {
     try {
       const { db } = await import('./db');
       const { dailyProgress } = await import('@shared/schema');
@@ -492,7 +500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Dictation routes
   const dictationRoutes = await import("./dictation-routes");
-  app.use('/api/dictation', isAuthenticated, dictationRoutes.default);
+  app.use('/api/dictation', authMiddleware, dictationRoutes.default);
 
   const httpServer = createServer(app);
   return httpServer;

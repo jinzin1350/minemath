@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -15,6 +16,27 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // Handle token from URL parameter (TheChildrenAI integration)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    if (token) {
+      // Store token in cookie
+      document.cookie = `child_token=${token}; path=/; max-age=${4 * 60 * 60}`; // 4 hours
+
+      // Remove token from URL for cleaner appearance
+      urlParams.delete('token');
+      const newSearch = urlParams.toString();
+      const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '');
+      window.history.replaceState({}, '', newUrl);
+
+      // Reload to trigger auth check with the new cookie
+      window.location.reload();
+    }
+  }, []);
 
   if (isLoading) {
     return (

@@ -14,7 +14,11 @@
       "Bash(git pull:*)",
       "Bash(npm run build:*)",
       "Bash(echo:*)",
-      "Bash(npm run db:push:*)"
+      "Bash(npm run db:push:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Read(//c/**)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
