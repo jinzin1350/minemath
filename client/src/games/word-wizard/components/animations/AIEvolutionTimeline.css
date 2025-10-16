@@ -1,0 +1,342 @@
+.ai-evolution-timeline {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.timeline-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1f2937;
+  margin: 0 0 20px 0;
+  text-align: center;
+}
+
+.timeline-track {
+  position: relative;
+  padding: 10px 0;
+}
+
+.milestone-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  position: relative;
+  margin-bottom: 25px;
+  padding: 10px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.milestone-item.current {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.milestone-item.achieved {
+  opacity: 1;
+}
+
+.milestone-item.locked {
+  opacity: 0.5;
+}
+
+.milestone-connector {
+  position: absolute;
+  left: 30px;
+  top: 60px;
+  width: 3px;
+  height: 100%;
+}
+
+.connector-line {
+  width: 100%;
+  height: 80%;
+  background: #e5e7eb;
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.connector-line.active {
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+}
+
+.connector-line.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, transparent 100%);
+  animation: flow 2s infinite;
+}
+
+@keyframes flow {
+  0% { transform: translateY(-20px); }
+  100% { transform: translateY(100px); }
+}
+
+.milestone-icon-wrapper {
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.milestone-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  background: white;
+  border: 3px solid #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.milestone-item.achieved .milestone-icon {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-color: #10b981;
+}
+
+.milestone-item.current .milestone-icon {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+}
+
+.milestone-item.locked .milestone-icon {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.locked-icon {
+  font-size: 24px;
+  opacity: 0.5;
+}
+
+.milestone-content {
+  flex: 1;
+  padding-top: 5px;
+}
+
+.milestone-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+.milestone-predictions {
+  font-size: 12px;
+  color: #667eea;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.milestone-description {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.progress-summary {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid #e5e7eb;
+}
+
+.current-progress-bar {
+  width: 100%;
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progress-fill-timeline {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  position: relative;
+}
+
+.progress-fill-timeline::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+  animation: shimmer 2s infinite;
+}
+
+.progress-text-container {
+  text-align: center;
+}
+
+.progress-count {
+  font-size: 14px;
+  color: #374151;
+  margin: 0 0 5px 0;
+}
+
+.progress-count strong {
+  font-size: 18px;
+  color: #667eea;
+  font-weight: 800;
+}
+
+.motivational-text {
+  font-size: 13px;
+  color: #10b981;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Mobile responsive - horizontal scrolling layout */
+@media (max-width: 1024px) {
+  .ai-evolution-timeline {
+    padding: 12px;
+  }
+
+  .timeline-title {
+    font-size: 15px;
+    margin-bottom: 15px;
+  }
+
+  .timeline-track {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding: 10px 5px 15px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .timeline-track::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .timeline-track::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  .timeline-track::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+  }
+
+  .milestone-item {
+    flex-direction: column;
+    align-items: center;
+    min-width: 100px;
+    margin-bottom: 0;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .milestone-connector {
+    display: none; /* Hide vertical connectors on mobile */
+  }
+
+  .milestone-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 30px;
+  }
+
+  .milestone-content {
+    padding-top: 0;
+    text-align: center;
+  }
+
+  .milestone-label {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .milestone-predictions {
+    font-size: 10px;
+  }
+
+  .milestone-description {
+    font-size: 11px;
+    display: none; /* Hide descriptions to save space */
+  }
+
+  .progress-summary {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .milestone-item {
+    min-width: 90px;
+  }
+
+  .milestone-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 25px;
+  }
+
+  .milestone-label {
+    font-size: 12px;
+  }
+
+  .milestone-predictions {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-evolution-timeline {
+    padding: 10px;
+  }
+
+  .timeline-title {
+    font-size: 14px;
+  }
+
+  .milestone-item {
+    min-width: 75px;
+    padding: 6px;
+  }
+
+  .milestone-icon {
+    width: 45px;
+    height: 45px;
+    font-size: 22px;
+  }
+
+  .milestone-label {
+    font-size: 11px;
+  }
+
+  .milestone-predictions {
+    font-size: 9px;
+  }
+
+  .progress-count {
+    font-size: 12px;
+  }
+
+  .progress-count strong {
+    font-size: 16px;
+  }
+
+  .motivational-text {
+    font-size: 11px;
+  }
+}

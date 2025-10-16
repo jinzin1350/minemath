@@ -1,0 +1,142 @@
+.word-connection-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  pointer-events: none;
+}
+
+.word-connection-container {
+  background: white;
+  padding: 25px;
+  border-radius: 20px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+}
+
+.connection-visual {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.word-bubble {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 25px;
+  font-weight: 700;
+  font-size: 16px;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  white-space: nowrap;
+}
+
+.connection-arrow {
+  position: relative;
+  width: 100px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arrow-line {
+  position: absolute;
+  left: 0;
+  right: 20px;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 2px;
+}
+
+.arrow-particles {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #fbbf24;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+}
+
+.arrow-head {
+  position: absolute;
+  right: 0;
+  font-size: 24px;
+  color: #764ba2;
+  font-weight: bold;
+}
+
+.connection-message {
+  text-align: center;
+  font-size: 15px;
+  color: #4b5563;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 2px dashed #e5e7eb;
+}
+
+.connection-message strong {
+  color: #667eea;
+  font-weight: 800;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .word-connection-container {
+    padding: 20px;
+    max-width: 90%;
+  }
+
+  .connection-visual {
+    gap: 10px;
+  }
+
+  .word-bubble {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .connection-arrow {
+    width: 80px;
+  }
+
+  .connection-message {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .connection-visual {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .connection-arrow {
+    width: 40px;
+    height: 60px;
+    transform: rotate(90deg);
+  }
+
+  .word-bubble {
+    font-size: 13px;
+    padding: 8px 14px;
+  }
+
+  .connection-message {
+    font-size: 13px;
+  }
+}

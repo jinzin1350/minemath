@@ -9,6 +9,7 @@ import { ParentsReport } from "@/components/ParentsReport";
 import { RankTab } from "./components/RankTab";
 import Home from "@/pages/Home";
 import EnglishDictation from "@/pages/EnglishDictation";
+import WordWizard from "@/pages/WordWizard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -33,6 +34,7 @@ function Router() {
         <>
           <Route path="/" component={Home} />
           <Route path="/english-dictation" component={EnglishDictation} />
+          <Route path="/word-wizard" component={WordWizard} />
           <Route path="/parents-report" component={ParentsReport} />
           <Route path="/rank" component={RankTab} />
         </>

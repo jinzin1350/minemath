@@ -1,0 +1,174 @@
+.powerup-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.powerup-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.powerup-icons-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.powerup-icon-container {
+  position: relative;
+}
+
+.powerup-icon-button {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s ease;
+}
+
+.powerup-icon-button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+}
+
+.powerup-icon-button .icon {
+  font-size: 28px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.powerup-icon-button .badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #fbbf24;
+  color: #1f2937;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.5);
+}
+
+.powerup-tooltip {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  min-width: 180px;
+  max-width: 200px;
+  border: 2px solid #667eea;
+}
+
+/* Add arrow pointing down */
+.powerup-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid #667eea;
+}
+
+/* For rightmost icons, align tooltip to the right */
+.powerup-icon-container:nth-last-child(-n+2) .powerup-tooltip {
+  left: auto;
+  right: 0;
+  transform: translateX(0);
+}
+
+.powerup-icon-container:nth-last-child(-n+2) .powerup-tooltip::after {
+  left: auto;
+  right: 15px;
+  transform: translateX(0);
+}
+
+/* For leftmost icons, align tooltip to the left */
+.powerup-icon-container:nth-child(-n+2) .powerup-tooltip {
+  left: 0;
+  transform: translateX(0);
+}
+
+.powerup-icon-container:nth-child(-n+2) .powerup-tooltip::after {
+  left: 15px;
+  transform: translateX(0);
+}
+
+.tooltip-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 5px;
+}
+
+.tooltip-description {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+
+.tooltip-cost {
+  font-size: 10px;
+  font-weight: 700;
+  color: #f59e0b;
+  margin-bottom: 8px;
+}
+
+.use-button {
+  width: 100%;
+  padding: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.use-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+@media (max-width: 768px) {
+  .powerup-icon-button {
+    width: 45px;
+    height: 45px;
+  }
+
+  .powerup-icon-button .icon {
+    font-size: 24px;
+  }
+
+  .powerup-tooltip {
+    min-width: 160px;
+  }
+}
