@@ -23,7 +23,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/auth/user/age', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const { age } = req.body;
 
       if (!age || age < 8 || age > 25) {
@@ -40,7 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/auth/user/name', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const { firstName, lastName, name } = req.body;
 
       // Support both individual firstName/lastName and combined name
@@ -69,7 +69,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Game progress routes
   app.get('/api/progress/recent', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const days = parseInt(req.query.days as string) || 7;
       const month = req.query.month as string;
 
@@ -91,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Achievement routes
   app.get('/api/achievements', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const achievements = await storage.getUserAchievements(userId);
       res.json(achievements);
     } catch (error) {
@@ -102,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/achievements/check', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       // Security fix: Calculate total points server-side, don't trust client input
       const newAchievements = await storage.checkAndAwardPointAchievements(userId);
       res.json(newAchievements);
@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/achievements/:id/mark-seen', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       // Security fix: Verify ownership - users can only mark their own achievements as seen
       await storage.markAchievementAsSeen(id, userId);
       res.json({ success: true });
@@ -127,7 +127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/progress/daily', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
 
       // Validate request body with Zod schema
       const validatedData = updateDailyProgressSchema.parse(req.body);
@@ -155,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // NEW: Temporary progress endpoint (until midnight finalization)
   app.post('/api/progress/temporary', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
 
       // Validate request body with Zod schema (includes optional timezone)
       const validatedData = updateTemporaryProgressSchema.parse(req.body);
@@ -271,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/game-session', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
 
       // Validate request body with Zod schema
       const validatedData = createGameSessionSchema.parse(req.body);
@@ -304,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/rewards/opportunities', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       // Check and create new opportunities based on points
       await storage.checkAndCreateRewardOpportunities(userId);
       // Return available opportunities
@@ -318,7 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/rewards/select', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const { pointsMilestone, rewardId } = req.body;
 
       if (!pointsMilestone || !rewardId) {
@@ -350,7 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/inventory', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const inventory = await storage.getUserInventory(userId);
       res.json(inventory);
     } catch (error) {
@@ -362,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Debug endpoint to check database status
   app.get('/api/debug/status', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req);
       const user = await storage.getUser(userId);
       const totalPoints = await storage.getUserTotalPoints(userId);
       const recentProgress = await storage.getRecentProgress(userId, 7);

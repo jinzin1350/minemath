@@ -8,6 +8,7 @@ import { LandingPage } from "@/components/LandingPage";
 import { ParentsReport } from "@/components/ParentsReport";
 import { RankTab } from "./components/RankTab";
 import Home from "@/pages/Home";
+import Auth from "@/pages/Auth";
 import EnglishDictation from "@/pages/EnglishDictation";
 import WordWizard from "@/pages/WordWizard";
 import NotFound from "@/pages/not-found";
@@ -29,7 +30,10 @@ function Router() {
   return (
     <Switch>
       {!isAuthenticated ? (
-        <Route path="/" component={LandingPage} />
+        <>
+          <Route path="/" component={LandingPage} />
+          <Route path="/auth" component={Auth} />
+        </>
       ) : (
         <>
           <Route path="/" component={Home} />

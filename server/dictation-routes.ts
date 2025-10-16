@@ -79,11 +79,10 @@ router.get("/categories", async (req, res) => {
 // GET /api/dictation/progress - Get user's dictation progress
 router.get("/progress", async (req: any, res) => {
   try {
-    if (!req.user) {
+    const userId = (req.session as any).userId;
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-
-    const userId = req.user.claims.sub;
 
     let progress = await db
       .select()
@@ -119,11 +118,10 @@ router.get("/progress", async (req: any, res) => {
 // POST /api/dictation/progress - Update user's dictation progress
 router.post("/progress", async (req: any, res) => {
   try {
-    if (!req.user) {
+    const userId = (req.session as any).userId;
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-
-    const userId = req.user.claims.sub;
     const updateSchema = insertDictationUserProgressSchema.partial().omit({ userId: true });
     const validatedData = updateSchema.parse(req.body);
 
@@ -172,11 +170,10 @@ router.post("/progress", async (req: any, res) => {
 // POST /api/dictation/game-history - Save game session history
 router.post("/game-history", async (req: any, res) => {
   try {
-    if (!req.user) {
+    const userId = (req.session as any).userId;
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-
-    const userId = req.user.claims.sub;
     console.log(`📝 Saving dictation game history for user ${userId} - Mode: ${req.body.gameMode}:`, req.body);
     
     // Ensure accuracy is an integer (0-100)
@@ -217,11 +214,10 @@ router.post("/game-history", async (req: any, res) => {
 // GET /api/dictation/game-history - Get user's game history
 router.get("/game-history", async (req: any, res) => {
   try {
-    if (!req.user) {
+    const userId = (req.session as any).userId;
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-
-    const userId = req.user.claims.sub;
     const limit = parseInt(req.query.limit as string) || 10;
 
     const history = await db
@@ -263,11 +259,10 @@ router.get("/stats", async (req, res) => {
 // GET /api/dictation/progress-report - Get detailed progress report for a specific month
 router.get("/progress-report", async (req: any, res) => {
   try {
-    if (!req.user) {
+    const userId = (req.session as any).userId;
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-
-    const userId = req.user.claims.sub;
     const month = req.query.month as string; // Format: YYYY-MM
     
     console.log(`📊 Dictation progress report requested for user ${userId}, month: ${month}`);
@@ -400,11 +395,10 @@ router.get("/progress-report", async (req: any, res) => {
 // GET /api/dictation/weekly-report - Get 7-day summary
 router.get("/weekly-report", async (req: any, res) => {
   try {
-    if (!req.user) {
+    const userId = (req.session as any).userId;
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-
-    const userId = req.user.claims.sub;
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 7);

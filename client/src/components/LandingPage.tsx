@@ -2,18 +2,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MinecraftSteve, MinecraftZombie, MinecraftBlock } from './MinecraftCharacters';
 import { Calculator, Target, Trophy, Users, Zap, Heart } from 'lucide-react';
+import { useLocation } from 'wouter';
 
 interface LandingPageProps {
   onLogin?: () => void;
 }
 
 export function LandingPage({ onLogin }: LandingPageProps) {
+  const [, setLocation] = useLocation();
+
   const handleLogin = () => {
     if (onLogin) {
       onLogin();
     } else {
-      // Redirect to login API endpoint
-      window.location.href = '/api/login';
+      // Redirect to auth page
+      setLocation('/auth');
     }
   };
 
