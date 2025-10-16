@@ -17,14 +17,15 @@ const getUserId = (req: any): string => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup authentication
+  // Setup authentication - ALWAYS setup both to support fallback
+  await setupAuth(app); // Setup simple auth (provides session, login, signup endpoints)
+
   if (USE_THECHILDRENAI_AUTH) {
-    setupTheChildrenAIAuth(app);
-  } else {
-    await setupAuth(app);
+    setupTheChildrenAIAuth(app); // Also setup TheChildrenAI verification
   }
 
   // Choose auth middleware based on configuration
+  // thechildrenaiAuth now falls back to session auth if no token is present
   const authMiddleware = USE_THECHILDRENAI_AUTH ? thechildrenaiAuth : isAuthenticated;
 
   // Note: /api/auth/user is already defined in simpleAuth.ts, so we skip it here

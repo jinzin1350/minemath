@@ -55,6 +55,7 @@ export async function verifyChildToken(token: string): Promise<ChildTokenData | 
 
 /**
  * Middleware to authenticate requests using TheChildrenAI JWT tokens
+ * Falls back to session-based auth if no token is present
  */
 export const thechildrenaiAuth: RequestHandler = async (req: any, res, next) => {
   try {
@@ -64,7 +65,14 @@ export const thechildrenaiAuth: RequestHandler = async (req: any, res, next) => 
 
     const token = tokenFromQuery || tokenFromCookie;
 
+    // If no token, check for existing session (fallback to simple auth)
     if (!token) {
+      // Check if user has session from simple auth
+      const userId = (req.session as any).userId;
+      if (userId) {
+        // User is authenticated via simple auth, allow request
+        return next();
+      }
       return res.status(401).json({ message: "No authentication token provided" });
     }
 
