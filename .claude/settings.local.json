@@ -18,7 +18,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Read(//c/**)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(node -e \"\nconst token = ''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYwMjI4OTAzLCJpYXQiOjE3NjAyMTQ1MDMsImp0aSI6ImNmZWRmYWM4M2M5ODRhYTU5OGVlYWZhOGNkYjk2MTA5IiwiY2hpbGRfaWQiOiIwYzExNWFiOC1iMDkxLTRmNzYtYmFmZS1lOWM2YjM2MzJmZDIiLCJwYXJlbnRfaWQiOiJlMTNkNTMyOS0zZWFlLTQ0NjYtYWY1OC0zMThkNjUxNDEyZmIiLCJkaXNwbGF5X25hbWUiOiJOb2FoIiwidXNlcl90eXBlIjoiY2hpbGQiLCJkZXZpY2VfaWQiOiI2NTM0N2FhOS1iOTA4LTQxZmYtOWU1ZS1iOWNiMmJiNTgwMGEifQ.3SGvpwJIbrgZ-_2SxNxFhuR4wNyvTqe3RDkmRMJ_LXQ'';\nconst payload = JSON.parse(Buffer.from(token.split(''.'')[1], ''base64'').toString());\nconsole.log(JSON.stringify(payload, null, 2));\n\")"
     ],
     "deny": [],
     "ask": []

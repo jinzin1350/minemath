@@ -8,10 +8,10 @@ const THECHILDRENAI_API_URL = process.env.THECHILDRENAI_API_URL || 'https://api.
 interface ChildTokenData {
   child_id: string;
   display_name: string;
-  age: number;
-  grade_level: number;
-  parent_email: string;
-  avatar_color: string;
+  age?: number;
+  grade_level?: number;
+  parent_email?: string;
+  avatar_color?: string;
 }
 
 interface VerifyTokenResponse {
@@ -91,19 +91,21 @@ export const thechildrenaiAuth: RequestHandler = async (req: any, res, next) => 
       console.log(`👶 Creating new user for child: ${childData.display_name}`);
       user = await storage.createUser({
         id: childData.child_id,
-        email: childData.parent_email,
+        email: childData.parent_email || `child_${childData.child_id}@thechildrenai.com`,
         firstName: childData.display_name,
-        age: childData.age,
+        age: childData.age || 8, // Default age if not provided
       });
     } else {
       // Update existing user info if changed
       console.log(`👋 Updating user info for child: ${childData.display_name}`);
-      if (
-        user.firstName !== childData.display_name ||
-        user.age !== childData.age ||
-        user.email !== childData.parent_email
-      ) {
+      const shouldUpdateName = user.firstName !== childData.display_name;
+      const shouldUpdateAge = childData.age && user.age !== childData.age;
+      const shouldUpdateEmail = childData.parent_email && user.email !== childData.parent_email;
+
+      if (shouldUpdateName) {
         await storage.updateUserName(childData.child_id, childData.display_name, '');
+      }
+      if (shouldUpdateAge) {
         await storage.updateUserAge(childData.child_id, childData.age);
       }
     }
