@@ -60,8 +60,14 @@ export async function verifyChildToken(token: string): Promise<ChildTokenData | 
 export const thechildrenaiAuth: RequestHandler = async (req: any, res, next) => {
   try {
     // Extract token from query params or cookies
-    const tokenFromQuery = req.query.token as string;
+    let tokenFromQuery = req.query.token as string;
     const tokenFromCookie = req.cookies?.child_token;
+
+    // Clean up token - remove any trailing quotes or special characters
+    if (tokenFromQuery) {
+      tokenFromQuery = tokenFromQuery.trim().replace(/['"]+$/g, '');
+      console.log('🔍 Token from query (cleaned):', tokenFromQuery.substring(0, 50) + '...');
+    }
 
     const token = tokenFromQuery || tokenFromCookie;
 
@@ -71,8 +77,10 @@ export const thechildrenaiAuth: RequestHandler = async (req: any, res, next) => 
       const userId = (req.session as any).userId;
       if (userId) {
         // User is authenticated via simple auth, allow request
+        console.log('✅ Using session-based auth for user:', userId);
         return next();
       }
+      console.log('❌ No token and no session found');
       return res.status(401).json({ message: "No authentication token provided" });
     }
 

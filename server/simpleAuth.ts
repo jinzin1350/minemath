@@ -4,6 +4,7 @@ import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { z } from "zod";
+import { USE_THECHILDRENAI_AUTH, thechildrenaiAuth } from "./thechildrenaiAuth";
 
 const SALT_ROUNDS = 10;
 
@@ -139,7 +140,10 @@ export async function setupAuth(app: Express) {
   });
 
   // Get current user endpoint
-  app.get("/api/auth/user", isAuthenticated, async (req, res) => {
+  // Use conditional auth middleware to support both TheChildrenAI and simple auth
+  const authMiddleware = USE_THECHILDRENAI_AUTH ? thechildrenaiAuth : isAuthenticated;
+
+  app.get("/api/auth/user", authMiddleware, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const user = await storage.getUserById(userId);
