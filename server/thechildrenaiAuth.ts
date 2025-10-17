@@ -95,31 +95,61 @@ export const thechildrenaiAuth: RequestHandler = async (req: any, res, next) => 
     let user = await storage.getUser(childData.child_id);
 
     if (!user) {
-      // Create new user with child_id as primary key
-      console.log(`👶 Creating new user for child: ${childData.display_name}`);
-      user = await storage.createUser({
-        id: childData.child_id,
-        email: childData.parent_email || `child_${childData.child_id}@thechildrenai.com`,
-        firstName: childData.display_name,
-        age: childData.age || 8, // Default age if not provided
-      });
+      // Check if user exists with this email (from simple auth)
+      if (childData.parent_email) {
+        const existingUser = await storage.getUserByEmail(childData.parent_email);
+        if (existingUser) {
+          console.log(`👤 User already exists with email: ${childData.parent_email}, using existing account`);
+          user = existingUser;
+
+          // Update their name and age if provided
+          if (childData.display_name && existingUser.firstName !== childData.display_name) {
+            await storage.updateUserName(existingUser.id, childData.display_name, '');
+          }
+          if (childData.age && existingUser.age !== childData.age) {
+            await storage.updateUserAge(existingUser.id, childData.age);
+          }
+        }
+      }
+
+      // If still no user, create new one
+      if (!user) {
+        console.log(`👶 Creating new user for child: ${childData.display_name}`);
+        try {
+          user = await storage.createUser({
+            id: childData.child_id,
+            email: childData.parent_email || `child_${childData.child_id}@thechildrenai.com`,
+            firstName: childData.display_name,
+            age: childData.age || 8,
+          });
+        } catch (error: any) {
+          // Handle email conflict by using a unique email
+          if (error.code === '23505' && error.constraint === 'users_email_unique') {
+            console.log(`⚠️ Email conflict, creating user with unique email`);
+            user = await storage.createUser({
+              id: childData.child_id,
+              email: `child_${childData.child_id}@thechildrenai.com`,
+              firstName: childData.display_name,
+              age: childData.age || 8,
+            });
+          } else {
+            throw error;
+          }
+        }
+      }
     } else {
       // Update existing user info if changed
       console.log(`👋 Updating user info for child: ${childData.display_name}`);
-      const shouldUpdateName = user.firstName !== childData.display_name;
-      const shouldUpdateAge = childData.age && user.age !== childData.age;
-      const shouldUpdateEmail = childData.parent_email && user.email !== childData.parent_email;
-
-      if (shouldUpdateName) {
+      if (childData.display_name && user.firstName !== childData.display_name) {
         await storage.updateUserName(childData.child_id, childData.display_name, '');
       }
-      if (shouldUpdateAge) {
+      if (childData.age && user.age !== childData.age) {
         await storage.updateUserAge(childData.child_id, childData.age);
       }
     }
 
-    // Store child info in session
-    (req.session as any).userId = childData.child_id;
+    // Store child info in session (use the actual user ID, not necessarily child_id)
+    (req.session as any).userId = user.id;
     (req.session as any).childData = childData;
 
     // Set cookie if token was from query (first time)
