@@ -291,13 +291,14 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
       }, 2000);
     } else {
       setFeedback(`❌ Wrong answer! Correct answer: ${currentQuestion.answer} (No points earned)`);
-      
+
       // Wrong answer gives enemy advantage - reduces time by 3 seconds
       setTimeLeft(prev => Math.max(1, prev - 3));
 
       setTimeout(() => {
         setFeedback('');
         setUserAnswer('');
+        generateQuestion(); // Move to next question after showing correct answer
       }, 2000);
     }
   };
