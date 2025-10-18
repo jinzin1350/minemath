@@ -91,35 +91,14 @@
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
-  /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
-
-  /* Fallback for older browsers */
-  --sidebar-primary-border: hsl(var(--sidebar-primary));
-  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --sidebar-accent-border: hsl(var(--sidebar-accent));
-  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --primary-border: hsl(var(--primary));
-  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --secondary-border: hsl(var(--secondary));
-  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --muted-border: hsl(var(--muted));
-  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --accent-border: hsl(var(--accent));
-  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --destructive-border: hsl(var(--destructive));
-  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  /* Computed borders for better mobile browser compatibility */
+  --sidebar-primary-border: 120 30% 17%;
+  --sidebar-accent-border: 120 25% 70%;
+  --primary-border: 120 30% 17%;
+  --secondary-border: 120 18% 72%;
+  --muted-border: 120 15% 74%;
+  --accent-border: 120 20% 77%;
+  --destructive-border: 0 70% 42%;
 }
 
 .dark {
@@ -203,6 +182,14 @@
   --shadow-xl: 0px 2px 0px 0px hsl(120 15% 5% / 0.40), 0px 8px 10px -1px hsl(120 15% 5% / 0.45);
   --shadow-2xl: 0px 2px 0px 0px hsl(120 15% 5% / 0.50);
 
+  /* Computed borders for better mobile browser compatibility */
+  --sidebar-primary-border: 120 25% 24%;
+  --sidebar-accent-border: 120 18% 27%;
+  --primary-border: 120 25% 24%;
+  --secondary-border: 120 15% 29%;
+  --muted-border: 120 12% 25%;
+  --accent-border: 120 15% 27%;
+  --destructive-border: 0 70% 59%;
 }
 
 @layer base {
