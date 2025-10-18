@@ -1,0 +1,158 @@
+/* Minecraft-themed Game Styles */
+
+/* Minecraft-style backgrounds */
+.bg-minecraft-stone {
+  background: linear-gradient(135deg, #7a7a7a 0%, #5a5a5a 100%);
+  border: 2px solid #4a4a4a;
+}
+
+.bg-minecraft-grass {
+  background: linear-gradient(135deg, #6fa845 0%, #5a8f36 100%);
+  border: 2px solid #4a7829;
+}
+
+.bg-minecraft-dirt {
+  background: linear-gradient(135deg, #8b5a3c 0%, #6d4628 100%);
+  border: 2px solid #5a3821;
+}
+
+.bg-minecraft-wood {
+  background: linear-gradient(135deg, #9b6e4f 0%, #7d563f 100%);
+  border: 2px solid #654430;
+}
+
+/* Minecraft-style shadow */
+.shadow-minecraft {
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.3),
+    0 8px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* Pixel font */
+.font-pixel {
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+  }
+}
+
+.animate-float {
+  animation: float 2s ease-in-out infinite;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+/* Pixelated effects */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Block-style buttons */
+.btn-minecraft {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  border: 3px solid #2c5f8d;
+  box-shadow:
+    0 4px 0 #1e4d7a,
+    0 6px 12px rgba(0, 0, 0, 0.5);
+  transition: all 0.1s;
+}
+
+.btn-minecraft:hover {
+  transform: translateY(2px);
+  box-shadow:
+    0 2px 0 #1e4d7a,
+    0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.btn-minecraft:active {
+  transform: translateY(4px);
+  box-shadow: none;
+}
+
+/* Health bar */
+.health-bar {
+  background: #2d2d2d;
+  border: 2px solid #000;
+  height: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.health-bar-fill {
+  background: linear-gradient(180deg, #ff4444 0%, #cc0000 100%);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Score popup animation */
+@keyframes score-popup {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(-30px) scale(1.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-60px) scale(1);
+    opacity: 0;
+  }
+}
+
+.score-popup {
+  animation: score-popup 1s ease-out forwards;
+}
+
+/* Damage flash */
+@keyframes damage-flash {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.5) saturate(0);
+  }
+}
+
+.damage-flash {
+  animation: damage-flash 0.3s ease;
+}
