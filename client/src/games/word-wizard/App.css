@@ -202,36 +202,56 @@ body {
 
 @media (max-width: 768px) {
   .app {
-    padding: 8px;
+    padding: 5px;
+    overflow-y: auto;
   }
 
   .app-header {
-    padding: 10px 15px;
+    padding: 8px 12px;
+    margin-bottom: 5px;
   }
 
   .app-title {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .title-icon {
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .header-buttons {
-    gap: 8px;
+    gap: 6px;
+  }
+
+  .header-button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .menu-button {
+    width: 36px;
+    padding: 8px;
   }
 
   .menu-dropdown {
-    top: 70px;
+    top: 60px;
+  }
+
+  .app-container {
+    gap: 5px;
+  }
+
+  .main-content {
+    gap: 5px;
   }
 
   .app-footer {
-    padding: 8px;
-    margin-top: 8px;
+    padding: 6px;
+    margin-top: 5px;
   }
 
   .app-footer p {
-    font-size: 14px;
+    font-size: 11px;
   }
 }
 

@@ -168,36 +168,51 @@
 
 @media (max-width: 768px) {
   .game-board {
-    padding: 20px;
+    padding: 10px;
+  }
+
+  .question-header {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  .timer {
+    font-size: 16px;
+  }
+
+  .question-level {
+    font-size: 13px;
+    padding: 5px 12px;
   }
 
   .sentence-display {
-    font-size: 22px;
-    margin: 30px 0;
+    font-size: 18px;
+    margin: 12px 0;
+    min-height: 50px;
   }
 
   .blank-space {
-    min-width: 100px;
-    padding: 6px 15px;
+    min-width: 80px;
+    padding: 5px 12px;
+    border-bottom-width: 3px;
   }
 
   .options-container {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 8px;
+    margin-top: 10px;
   }
 
   .option-button {
-    padding: 18px;
-    font-size: 16px;
-    min-height: 60px;
+    padding: 12px;
+    font-size: 15px;
+    min-height: 50px;
   }
 
-  .question-header {
-    font-size: 16px;
-  }
-
-  .timer {
-    font-size: 18px;
+  .hint-box {
+    margin-top: 12px;
+    padding: 10px;
+    font-size: 13px;
   }
 }
 

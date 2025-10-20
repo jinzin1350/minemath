@@ -102,18 +102,33 @@
 
 @media (max-width: 768px) {
   .score-panel {
-    padding: 15px;
+    padding: 8px 10px;
+  }
+
+  .score-label {
+    font-size: 9px;
+    margin-bottom: 1px;
   }
 
   .score-value {
-    font-size: 36px;
+    font-size: 20px;
   }
 
-  .streak-value {
-    font-size: 28px;
+  .level-section {
+    padding: 6px;
   }
 
   .level-title {
-    font-size: 16px;
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  .progress-bar-container {
+    height: 6px;
+    margin-bottom: 3px;
+  }
+
+  .progress-text {
+    font-size: 9px;
   }
 }

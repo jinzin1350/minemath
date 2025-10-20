@@ -204,26 +204,26 @@
 /* Mobile responsive - horizontal scrolling layout */
 @media (max-width: 1024px) {
   .ai-evolution-timeline {
-    padding: 12px;
+    padding: 8px;
   }
 
   .timeline-title {
-    font-size: 15px;
-    margin-bottom: 15px;
+    font-size: 12px;
+    margin-bottom: 8px;
   }
 
   .timeline-track {
     display: flex;
-    gap: 15px;
+    gap: 10px;
     overflow-x: auto;
-    padding: 10px 5px 15px;
+    padding: 8px 3px 10px;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
   }
 
   /* Hide scrollbar but keep functionality */
   .timeline-track::-webkit-scrollbar {
-    height: 4px;
+    height: 3px;
   }
 
   .timeline-track::-webkit-scrollbar-track {
@@ -239,10 +239,10 @@
   .milestone-item {
     flex-direction: column;
     align-items: center;
-    min-width: 100px;
+    min-width: 70px;
     margin-bottom: 0;
-    padding: 8px;
-    gap: 8px;
+    padding: 5px;
+    gap: 5px;
   }
 
   .milestone-connector {
@@ -250,9 +250,10 @@
   }
 
   .milestone-icon {
-    width: 60px;
-    height: 60px;
-    font-size: 30px;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    border-width: 2px;
   }
 
   .milestone-content {
@@ -261,12 +262,12 @@
   }
 
   .milestone-label {
-    font-size: 13px;
+    font-size: 10px;
     white-space: nowrap;
   }
 
   .milestone-predictions {
-    font-size: 10px;
+    font-size: 8px;
   }
 
   .milestone-description {
@@ -275,8 +276,26 @@
   }
 
   .progress-summary {
-    margin-top: 10px;
-    padding-top: 10px;
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+
+  .current-progress-bar {
+    height: 8px;
+    margin-bottom: 8px;
+  }
+
+  .progress-count {
+    font-size: 11px;
+    margin-bottom: 3px;
+  }
+
+  .progress-count strong {
+    font-size: 14px;
+  }
+
+  .motivational-text {
+    font-size: 10px;
   }
 }
 

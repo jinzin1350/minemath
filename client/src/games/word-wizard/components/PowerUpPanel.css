@@ -159,16 +159,55 @@
 }
 
 @media (max-width: 768px) {
+  .powerup-panel {
+    padding: 6px 8px;
+  }
+
+  .powerup-title {
+    font-size: 11px;
+    margin-bottom: 5px;
+  }
+
+  .powerup-icons-row {
+    gap: 8px;
+  }
+
   .powerup-icon-button {
-    width: 45px;
-    height: 45px;
+    width: 38px;
+    height: 38px;
   }
 
   .powerup-icon-button .icon {
-    font-size: 24px;
+    font-size: 20px;
+  }
+
+  .powerup-icon-button .badge {
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+    top: -3px;
+    right: -3px;
   }
 
   .powerup-tooltip {
     min-width: 160px;
+    padding: 10px;
+  }
+
+  .tooltip-name {
+    font-size: 11px;
+  }
+
+  .tooltip-description {
+    font-size: 10px;
+  }
+
+  .tooltip-cost {
+    font-size: 9px;
+  }
+
+  .use-button {
+    padding: 6px;
+    font-size: 11px;
   }
 }

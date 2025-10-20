@@ -114,22 +114,55 @@
 }
 
 @media (max-width: 768px) {
+  .lexi-robot-container {
+    padding: 5px;
+  }
+
   .robot-head {
-    width: 80px;
-    height: 80px;
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+  }
+
+  .robot-antenna {
+    top: -15px;
+    width: 2px;
+    height: 15px;
+  }
+
+  .antenna-ball {
+    width: 8px;
+    height: 8px;
+    top: -6px;
   }
 
   .robot-face {
-    font-size: 40px;
+    font-size: 24px;
   }
 
   .robot-body {
-    width: 60px;
-    height: 50px;
+    width: 40px;
+    height: 35px;
+    border-radius: 8px;
+  }
+
+  .robot-light {
+    width: 10px;
+    height: 10px;
   }
 
   .speech-bubble {
-    font-size: 14px;
-    max-width: 250px;
+    font-size: 11px;
+    max-width: 200px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    border-radius: 10px;
+  }
+
+  .speech-bubble::before {
+    top: -8px;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid white;
   }
 }
