@@ -1,24 +1,13 @@
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MinecraftSteve, MinecraftZombie, MinecraftBlock } from './MinecraftCharacters';
-import { Calculator, Target, Trophy, Users, Zap, Heart } from 'lucide-react';
-import { useLocation } from 'wouter';
+import { Calculator, Target, Trophy, Zap, Heart, Info } from 'lucide-react';
 
 interface LandingPageProps {
   onLogin?: () => void;
 }
 
 export function LandingPage({ onLogin }: LandingPageProps) {
-  const [, setLocation] = useLocation();
-
-  const handleLogin = () => {
-    if (onLogin) {
-      onLogin();
-    } else {
-      // Redirect to auth page
-      setLocation('/auth');
-    }
-  };
+  // This page is shown when users are not authenticated via TheChildrenAI token
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800">
@@ -47,28 +36,37 @@ export function LandingPage({ onLogin }: LandingPageProps) {
             </p>
 
             <div className="space-y-6">
-              <Button
-                onClick={handleLogin}
-                className="font-pixel text-lg px-8 py-4 bg-green-600 hover:bg-green-700 text-white border-2 border-green-400"
-                data-testid="button-start-adventure"
-              >
-                <div className="flex items-center gap-2">
-                  <Zap className="h-5 w-5" />
-                  PLAY NOW - FREE
+              <div className="bg-blue-900/60 rounded-lg p-6 border-2 border-blue-400/50 backdrop-blur-sm">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <Info className="h-8 w-8 text-blue-300" />
+                  <h3 className="text-2xl text-white font-pixel">ACCESS VIA THECHILDRENAI</h3>
                 </div>
-              </Button>
+                <div className="text-center text-gray-200 space-y-3">
+                  <p className="text-lg">
+                    MineMath is integrated with <span className="font-bold text-blue-300">TheChildrenAI.com</span>
+                  </p>
+                  <p className="text-md">
+                    Please access this game through your TheChildrenAI dashboard to play.
+                  </p>
+                  <div className="mt-4 pt-4 border-t border-blue-400/30">
+                    <p className="text-sm text-blue-200">
+                      ✨ Your progress is automatically saved and synced with your TheChildrenAI account
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               <div className="bg-black/20 rounded-lg p-4 border border-green-400/30">
                 <div className="flex items-center gap-2 mb-2">
                   <Target className="h-5 w-5 text-green-400" />
                   <p className="text-lg text-green-200 font-pixel">
-                    Quick & Secure Sign In
+                    What You'll Get
                   </p>
                 </div>
                 <div className="text-sm text-gray-300 space-y-1">
                   <div className="flex items-center gap-2">
                     <Calculator className="h-4 w-4 text-blue-400" />
-                    <p>Safe sign-in through secure provider</p>
+                    <p>Safe & secure through TheChildrenAI platform</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Trophy className="h-4 w-4 text-yellow-400" />
@@ -249,23 +247,37 @@ export function LandingPage({ onLogin }: LandingPageProps) {
           </h2>
 
           <p className="text-lg text-gray-200 mb-8">
-            Join thousands of students making math fun and easy!
+            Access MineMath through your TheChildrenAI account!
           </p>
 
           <div className="space-y-4">
-            <Button
-              onClick={handleLogin}
-              className="font-pixel text-xl px-12 py-6 bg-orange-600 hover:bg-orange-700 text-white border-2 border-orange-400"
-              data-testid="button-join-adventure"
-            >
-              <div className="flex items-center gap-3">
-                <Users className="h-6 w-6" />
-                START PLAYING NOW
+            <div className="bg-blue-900/60 rounded-lg p-6 border-2 border-blue-400/50 backdrop-blur-sm">
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <Info className="h-6 w-6 text-blue-300" />
+                <p className="text-xl text-white font-pixel">HOW TO PLAY</p>
               </div>
-            </Button>
+              <ol className="text-left text-gray-200 space-y-2 max-w-md mx-auto">
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-blue-300 min-w-[24px]">1.</span>
+                  <span>Visit <strong className="text-blue-300">TheChildrenAI.com</strong></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-blue-300 min-w-[24px]">2.</span>
+                  <span>Log in to your account</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-blue-300 min-w-[24px]">3.</span>
+                  <span>Find MineMath in your games dashboard</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-blue-300 min-w-[24px]">4.</span>
+                  <span>Click to launch and start playing!</span>
+                </li>
+              </ol>
+            </div>
 
-            <p className="text-sm text-orange-200">
-              Free forever • No credit card needed • Play instantly
+            <p className="text-sm text-blue-200">
+              Free forever • No credit card needed • Secure & safe
             </p>
           </div>
         </div>
