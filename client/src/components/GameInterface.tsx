@@ -254,7 +254,7 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
       // Different celebration messages based on operation
       let celebrationEmoji = '';
       if (currentQuestion.operation === '+') celebrationEmoji = '➕';
-      else if (currentQuestion.operation === '-') celebrationEmoji = '➖'; 
+      else if (currentQuestion.operation === '-') celebrationEmoji = '➖';
       else if (currentQuestion.operation === '*') celebrationEmoji = '✖️';
 
       if (currentEnemy) {
@@ -290,16 +290,23 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
         }
       }, 2000);
     } else {
-      setFeedback(`❌ Wrong answer! Correct answer: ${currentQuestion.answer} (No points earned)`);
+      // Deduct 2 points for wrong answer (minimum 0)
+      const newScore = Math.max(0, gameStats.score - 2);
+      setGameStats(prev => ({ ...prev, score: newScore }));
 
-      // Wrong answer gives enemy advantage - reduces time by 3 seconds
-      setTimeLeft(prev => Math.max(1, prev - 3));
+      // Show feedback without revealing correct answer
+      setFeedback(`❌ Wrong! Try again!`);
 
+      // Enemy advances closer with each wrong answer (add 10% to position)
+      setEnemyPosition(prev => Math.min(100, prev + 10));
+
+      // Clear user input to allow retry
+      setUserAnswer('');
+
+      // Clear feedback after 1 second but stay on same question
       setTimeout(() => {
         setFeedback('');
-        setUserAnswer('');
-        generateQuestion(); // Move to next question after showing correct answer
-      }, 2000);
+      }, 1000);
     }
   };
 
@@ -378,33 +385,18 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
-            // Time's up! Enemy wins
-            setEnemyAttacking(true);
+            // Time's up! Timer stays at 0, enemy stops moving
             setEnemyMoving(false);
-            setFeedback('⏰ Time\'s up! Enemy attacks!');
-            
-            setTimeout(() => {
-              const newHearts = gameStats.hearts - 1;
-              setGameStats(prev => ({ ...prev, hearts: newHearts }));
-              if (newHearts <= 0) {
-                setGameState('gameOver');
-                onGameComplete?.(gameStats);
-              } else {
-                setFeedback('');
-                setUserAnswer('');
-                generateQuestion();
-              }
-            }, 2000);
-            
+            // Don't show any feedback, just let timer stay at 0
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-      
+
       return () => clearInterval(timer);
     }
-  }, [gameState, gameStats.hearts, onGameComplete]); // Remove timeLeft from dependencies
+  }, [gameState]); // Only depend on gameState
 
   // Enemy movement effect - consistent movement over 15 seconds
   useEffect(() => {
