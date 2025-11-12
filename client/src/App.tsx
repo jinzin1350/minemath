@@ -54,7 +54,7 @@ function Router() {
       {!isAuthenticated ? (
         <>
           <Route path="/" component={LandingPage} />
-          {/* Auth route removed - users access via TheChildrenAI token only */}
+          <Route path="/auth" component={Auth} />
         </>
       ) : (
         <>

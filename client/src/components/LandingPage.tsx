@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { MinecraftSteve, MinecraftZombie, MinecraftBlock } from './MinecraftCharacters';
-import { Calculator, Target, Trophy, Zap, Heart, Info } from 'lucide-react';
+import { Calculator, Target, Trophy, Zap, Heart, Info, LogIn } from 'lucide-react';
+import { Link } from 'wouter';
 
 interface LandingPageProps {
   onLogin?: () => void;
@@ -8,6 +10,7 @@ interface LandingPageProps {
 
 export function LandingPage({ onLogin }: LandingPageProps) {
   // This page is shown when users are not authenticated via TheChildrenAI token
+  const isLocalMode = process.env.NODE_ENV === 'development';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800">
@@ -36,6 +39,26 @@ export function LandingPage({ onLogin }: LandingPageProps) {
             </p>
 
             <div className="space-y-6">
+              {isLocalMode && (
+                <div className="bg-green-900/60 rounded-lg p-6 border-2 border-green-400/50 backdrop-blur-sm">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <LogIn className="h-8 w-8 text-green-300" />
+                    <h3 className="text-2xl text-white font-pixel">LOCAL TESTING MODE</h3>
+                  </div>
+                  <div className="text-center text-gray-200 space-y-3">
+                    <p className="text-lg">
+                      You're running in development mode
+                    </p>
+                    <Link href="/auth">
+                      <Button className="font-pixel text-lg px-8 py-6 bg-green-600 hover:bg-green-700">
+                        <LogIn className="h-5 w-5 mr-2" />
+                        LOGIN / SIGN UP
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-blue-900/60 rounded-lg p-6 border-2 border-blue-400/50 backdrop-blur-sm">
                 <div className="flex items-center justify-center gap-3 mb-4">
                   <Info className="h-8 w-8 text-blue-300" />
