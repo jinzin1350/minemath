@@ -303,6 +303,9 @@ export const MissionTerminal: React.FC<MissionTerminalProps> = ({ mission, robot
   const scenarios = getMissionScenarios(mission.id);
   const currentScenario = scenarios[currentRoundIndex];
 
+  // Debug log to verify unique content is loading
+  console.log(`🎮 Mission ${mission.id}: ${mission.title}`, currentScenario);
+
   const handleSubmit = () => {
     if (!input.trim()) return;
     setIsProcessing(true);
