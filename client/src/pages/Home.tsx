@@ -5,7 +5,7 @@ import { GameInterface } from '@/components/GameInterface';
 import { Leaderboard } from '@/components/Leaderboard';
 import { ParentsReport } from '@/components/ParentsReport';
 import { Button } from '@/components/ui/button';
-import { LogOut, BarChart3, Gamepad2, Trophy, FileText, Volume2, Wand2 } from 'lucide-react';
+import { LogOut, BarChart3, Gamepad2, Trophy, FileText, Volume2, Wand2, Bot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 import { Link } from 'wouter';
@@ -160,6 +160,16 @@ export default function Home() {
                   <Wand2 className="h-3 w-3" />
                 </Button>
               </Link>
+              <Link href="/robo-trainer" className="flex-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="font-pixel text-xs w-full px-1 py-1 h-7"
+                  data-testid="button-robo-trainer"
+                >
+                  <Bot className="h-3 w-3" />
+                </Button>
+              </Link>
               <Link href="/rank" className="flex-1">
                 <Button
                   variant="ghost"
@@ -227,6 +237,17 @@ export default function Home() {
                   >
                     <Wand2 className="h-4 w-4 mr-1" />
                     WORD WIZARD
+                  </Button>
+                </Link>
+                <Link href="/robo-trainer">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="font-pixel text-xs"
+                    data-testid="button-robo-trainer"
+                  >
+                    <Bot className="h-4 w-4 mr-1" />
+                    ROBO TRAINER
                   </Button>
                 </Link>
                 <Link href="/rank">
