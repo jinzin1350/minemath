@@ -1,0 +1,5 @@
+{
+  "name": "RoboTrainer Academy",
+  "description": "An educational game where kids train their own AI robot using natural language instructions and compete against rival bots to see whose training is superior.",
+  "requestFramePermissions": []
+}

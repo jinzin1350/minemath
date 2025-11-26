@@ -162,9 +162,18 @@ export const thechildrenaiAuth: RequestHandler = async (req: any, res, next) => 
     }
 
     next();
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error in TheChildrenAI auth middleware:', error);
-    res.status(500).json({ message: "Authentication error" });
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      constraint: error.constraint
+    });
+    res.status(500).json({
+      message: "Authentication error",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

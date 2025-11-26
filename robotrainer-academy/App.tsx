@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { GamePhase, RobotProfile, RobotColor, Mission, TrainingMemory } from './types';
 import { CURRICULUM } from './data/curriculum';
 import { CampaignMap } from './components/CampaignMap';
@@ -9,13 +9,12 @@ import { RobotAvatar } from './components/RobotAvatar';
 
 const App: React.FC = () => {
   const [phase, setPhase] = useState<GamePhase>(GamePhase.WELCOME);
-  const [isLoading, setIsLoading] = useState(true);
-
+  
   // Robot State
   const [robot, setRobot] = useState<RobotProfile>({
     name: '',
     color: RobotColor.BLUE,
-    level: 1,
+    level: 1, // Determines current chapter (1-10)
     xp: 0,
     memory: []
   });
@@ -27,63 +26,6 @@ const App: React.FC = () => {
   // Gameplay State
   const [completedMissionIds, setCompletedMissionIds] = useState<number[]>([]);
   const [activeMission, setActiveMission] = useState<Mission | null>(null);
-
-  // Load robot progress from database on mount
-  useEffect(() => {
-    const loadProgress = async () => {
-      try {
-        const response = await fetch('/api/robo-trainer/progress');
-        if (response.ok) {
-          const progress = await response.json();
-          if (progress && progress.robotName) {
-            setRobot({
-              name: progress.robotName,
-              color: progress.robotColor as RobotColor,
-              level: progress.level,
-              xp: progress.xp,
-              memory: progress.memory || []
-            });
-            setCompletedMissionIds(progress.completedMissionIds || []);
-            setPhase(GamePhase.MAP);
-            console.log('🤖 Loaded robot progress:', progress);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load robot progress:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadProgress();
-  }, []);
-
-  // Save progress to database whenever robot state changes
-  useEffect(() => {
-    if (robot.name && !isLoading) {
-      const saveProgress = async () => {
-        try {
-          await fetch('/api/robo-trainer/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              robotName: robot.name,
-              robotColor: robot.color,
-              level: robot.level,
-              xp: robot.xp,
-              memory: robot.memory,
-              completedMissionIds
-            })
-          });
-          console.log('💾 Saved robot progress to database');
-        } catch (error) {
-          console.error('Failed to save robot progress:', error);
-        }
-      };
-
-      saveProgress();
-    }
-  }, [robot, completedMissionIds, isLoading]);
 
   const createRobot = () => {
     if(!newName) return;
@@ -103,7 +45,7 @@ const App: React.FC = () => {
         memory: [...prev.memory, ...memories],
         xp: prev.xp + 30 // 10xp per round * 3
     }));
-
+    
     if (activeMission) {
         setCompletedMissionIds(prev => [...prev, activeMission.id]);
     }
@@ -124,28 +66,17 @@ const App: React.FC = () => {
       setPhase(GamePhase.VICTORY);
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-sky-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🤖</div>
-          <p className="text-xl text-slate-600">Loading RoboTrainer...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-sky-100 font-sans text-slate-800 pb-10">
-
+      
       {/* Top Navigation */}
       <nav className="bg-white shadow-sm p-4 sticky top-0 z-50">
           <div className="max-w-6xl mx-auto flex justify-between items-center">
               <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center text-white font-bold font-pixel">AI</div>
+                  <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center text-white font-bold pixel-font">AI</div>
                   <span className="font-black text-indigo-900 tracking-tight hidden md:inline">RoboTrainer Academy</span>
               </div>
-
+              
               {phase !== GamePhase.WELCOME && (
                   <div className="flex items-center gap-4">
                        <div className="hidden md:flex flex-col text-right">
@@ -165,11 +96,11 @@ const App: React.FC = () => {
         {/* 1. WELCOME / CREATION */}
         {phase === GamePhase.WELCOME && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-                <h1 className="text-4xl md:text-6xl font-black text-indigo-900 mb-8 font-pixel leading-snug">
+                <h1 className="text-4xl md:text-6xl font-black text-indigo-900 mb-8 pixel-font leading-snug">
                     BUILD YOUR<br/>
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">INTELLIGENCE</span>
                 </h1>
-
+                
                 <div className="bg-white p-8 rounded-3xl shadow-xl border-b-8 border-indigo-100 max-w-md w-full">
                     <div className="mb-6 flex justify-center">
                         <RobotAvatar color={newColor} size="lg" />
@@ -178,22 +109,22 @@ const App: React.FC = () => {
                     <div className="space-y-4">
                         <div className="flex justify-center gap-2 mb-4">
                             {Object.values(RobotColor).map(c => (
-                                <button
-                                    key={c}
+                                <button 
+                                    key={c} 
                                     onClick={() => setNewColor(c)}
                                     className={`w-8 h-8 rounded-full border-2 ${newColor === c ? 'border-black scale-110' : 'border-transparent'}`}
                                     style={{backgroundColor: c}}
                                 />
                             ))}
                         </div>
-                        <input
-                            type="text"
+                        <input 
+                            type="text" 
                             placeholder="NAME YOUR ROBOT"
                             className="w-full text-center p-4 bg-slate-50 rounded-xl font-bold border-2 border-slate-200 focus:border-indigo-500 outline-none uppercase"
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                         />
-                        <button
+                        <button 
                             onClick={createRobot}
                             disabled={!newName}
                             className={`w-full py-4 rounded-xl font-black text-white text-lg transition-all ${!newName ? 'bg-slate-300' : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/30'}`}
@@ -207,8 +138,8 @@ const App: React.FC = () => {
 
         {/* 2. CAMPAIGN MAP */}
         {phase === GamePhase.MAP && (
-            <CampaignMap
-                robot={robot}
+            <CampaignMap 
+                robot={robot} 
                 completedMissionIds={completedMissionIds}
                 onSelectMission={handleMissionSelect}
                 onSelectBoss={handleBossSelect}
@@ -217,8 +148,8 @@ const App: React.FC = () => {
 
         {/* 3. MISSION INTERFACE */}
         {phase === GamePhase.MISSION && activeMission && (
-            <div>
-                <MissionTerminal
+            <div className="animate-fade-in-up">
+                <MissionTerminal 
                     mission={activeMission}
                     robot={robot}
                     onMissionComplete={handleMissionComplete}
@@ -229,7 +160,7 @@ const App: React.FC = () => {
 
         {/* 4. BOSS BATTLE */}
         {phase === GamePhase.BATTLE && (
-            <BattleArena
+            <BattleArena 
                 userRobot={robot}
                 chapterId={robot.level}
                 onBattleComplete={(result) => {
@@ -246,14 +177,14 @@ const App: React.FC = () => {
 
         {/* 5. VICTORY SCREEN */}
         {phase === GamePhase.VICTORY && (
-            <div className="text-center py-20">
+            <div className="text-center py-20 animate-bounce-in">
                 <div className="text-6xl mb-4">🏆</div>
                 <h2 className="text-4xl font-black text-indigo-900 mb-4">CHAPTER COMPLETE!</h2>
                 <p className="text-xl text-slate-600 mb-8">Your robot has evolved. Next chapter unlocked.</p>
                 <div className="flex justify-center mb-8">
                      <RobotAvatar color={robot.color} size="lg" isHappy={true} />
                 </div>
-                <button
+                <button 
                     onClick={() => setPhase(GamePhase.MAP)}
                     className="bg-green-500 text-white px-8 py-4 rounded-xl font-bold text-xl shadow-lg hover:bg-green-600 transition"
                 >

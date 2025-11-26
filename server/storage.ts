@@ -578,6 +578,61 @@ export class Storage {
   async getUserById(id: string) {
     return await this.getUser(id);
   }
+
+  // RoboTrainer methods
+  async getRobotProgress(userId: string) {
+    const { robotProgress } = await import('@shared/schema');
+    const [progress] = await db
+      .select()
+      .from(robotProgress)
+      .where(eq(robotProgress.userId, userId));
+    return progress;
+  }
+
+  async saveRobotProgress(userId: string, data: {
+    robotName: string;
+    robotColor: string;
+    level: number;
+    xp: number;
+    memory: any[];
+    completedMissionIds: number[];
+  }) {
+    const { robotProgress } = await import('@shared/schema');
+    const existing = await this.getRobotProgress(userId);
+
+    if (existing) {
+      // Update existing robot
+      const [updated] = await db
+        .update(robotProgress)
+        .set({
+          robotName: data.robotName,
+          robotColor: data.robotColor,
+          level: data.level,
+          xp: data.xp,
+          memory: data.memory,
+          completedMissionIds: data.completedMissionIds,
+          updatedAt: new Date()
+        })
+        .where(eq(robotProgress.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      // Create new robot progress
+      const [created] = await db
+        .insert(robotProgress)
+        .values({
+          userId,
+          robotName: data.robotName,
+          robotColor: data.robotColor,
+          level: data.level,
+          xp: data.xp,
+          memory: data.memory,
+          completedMissionIds: data.completedMissionIds
+        })
+        .returning();
+      return created;
+    }
+  }
 }
 
 export const storage = new Storage();

@@ -11,7 +11,12 @@
       "Bash(test:*)",
       "Bash(openssl rand:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm run check:*)"
+      "Bash(npm run check:*)",
+      "Bash(git rm:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run check:client:*)",
+      "Bash(npm install:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

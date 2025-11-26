@@ -260,3 +260,32 @@ export type UserInventory = typeof userInventory.$inferSelect;
 export type InsertUserInventory = z.infer<typeof insertUserInventorySchema>;
 export type RewardOpportunity = typeof rewardOpportunities.$inferSelect;
 export type InsertRewardOpportunity = z.infer<typeof insertRewardOpportunitySchema>;
+
+// ========== ROBO TRAINER MODULE SCHEMAS ==========
+// Robot progress tracking
+export const robotProgress = pgTable("robot_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull().unique(),
+  robotName: varchar("robot_name").notNull(),
+  robotColor: varchar("robot_color").notNull(),
+  level: integer("level").default(1),
+  xp: integer("xp").default(0),
+  memory: jsonb("memory").default([]),
+  completedMissionIds: jsonb("completed_mission_ids").default([]),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Zod schemas for robot progress
+export const insertRobotProgressSchema = createInsertSchema(robotProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateRobotProgressSchema = insertRobotProgressSchema.partial();
+
+// TypeScript types for robot progress
+export type RobotProgress = typeof robotProgress.$inferSelect;
+export type InsertRobotProgress = z.infer<typeof insertRobotProgressSchema>;
+export type UpdateRobotProgress = z.infer<typeof updateRobotProgressSchema>;

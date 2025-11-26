@@ -499,6 +499,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RoboTrainer routes
+  app.get('/api/robo-trainer/progress', authMiddleware, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const progress = await storage.getRobotProgress(userId);
+      res.json(progress || null);
+    } catch (error) {
+      console.error("Error fetching robot progress:", error);
+      res.status(500).json({ message: "Failed to fetch robot progress" });
+    }
+  });
+
+  app.post('/api/robo-trainer/save', authMiddleware, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const { robotName, robotColor, level, xp, memory, completedMissionIds } = req.body;
+
+      if (!robotName || !robotColor) {
+        return res.status(400).json({ message: "Robot name and color are required" });
+      }
+
+      const progress = await storage.saveRobotProgress(userId, {
+        robotName,
+        robotColor,
+        level: level || 1,
+        xp: xp || 0,
+        memory: memory || [],
+        completedMissionIds: completedMissionIds || []
+      });
+
+      res.json(progress);
+    } catch (error) {
+      console.error("Error saving robot progress:", error);
+      res.status(500).json({ message: "Failed to save robot progress" });
+    }
+  });
+
   // Dictation routes
   const dictationRoutes = await import("./dictation-routes");
   app.use('/api/dictation', authMiddleware, dictationRoutes.default);
