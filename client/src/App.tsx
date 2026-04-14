@@ -11,7 +11,6 @@ import { RankTab } from "./components/RankTab";
 import Home from "@/pages/Home";
 import Auth from "@/pages/Auth";
 import EnglishDictation from "@/pages/EnglishDictation";
-import WordWizard from "@/pages/WordWizard";
 import RoboTrainer from "@/pages/RoboTrainer";
 import NotFound from "@/pages/not-found";
 
@@ -61,7 +60,6 @@ function Router() {
         <>
           <Route path="/" component={Home} />
           <Route path="/english-dictation" component={EnglishDictation} />
-          <Route path="/word-wizard" component={WordWizard} />
           <Route path="/robo-trainer" component={RoboTrainer} />
           <Route path="/parents-report" component={ParentsReport} />
           <Route path="/rank" component={RankTab} />

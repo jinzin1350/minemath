@@ -7,3 +7,6 @@ vite.config.ts.*
 .mcp.json
 .env
 .env.local
+.serverless/
+cf-current.json
+.claude/

@@ -38,17 +38,6 @@ export const games: GameInfo[] = [
     minAge: 8,
     isActive: true,
   },
-  {
-    id: 'word-wizard',
-    name: 'Word Wizard',
-    description: 'AI-powered vocabulary adventure',
-    route: '/word-wizard',
-    icon: '🧙',
-    category: 'language',
-    difficulty: 'medium',
-    minAge: 10,
-    isActive: true,
-  },
   // Add your new games here
   // {
   //   id: 'puzzle-quest',

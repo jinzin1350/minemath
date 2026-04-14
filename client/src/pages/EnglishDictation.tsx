@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { BottomNav } from "@/components/BottomNav";
 import { LogOut, BarChart3, Gamepad2, Trophy, FileText, Volume2, Zap, Keyboard, MousePointer } from "lucide-react";
 import { Link } from "wouter";
 import { DictationGame } from "@/components/DictationGame";
@@ -121,182 +122,71 @@ export default function EnglishDictation() {
   
 
 
+  const nav = (
+    <nav className="bg-card border-b border-card-border sticky top-0 z-50 shadow-md">
+      <div className="max-w-6xl mx-auto px-2 md:px-4 py-1 md:py-2">
+        {/* Mobile */}
+        <div className="md:hidden flex items-center justify-between">
+          <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
+          <Button variant="outline" size="sm" onClick={handleLogout} className="font-pixel text-xs px-2 py-1 h-7" data-testid="button-logout">
+            <LogOut className="h-3 w-3 mr-1" />EXIT
+          </Button>
+        </div>
+        {/* Desktop */}
+        <div className="hidden md:flex md:flex-row items-center justify-between">
+          <div className="flex flex-row items-center gap-4">
+            <h1 className="font-pixel text-xl text-foreground">MINECRAFT MATH</h1>
+            <div className="flex gap-2">
+              <Link href="/"><Button variant="ghost" size="sm" className="font-pixel text-xs"><BarChart3 className="h-4 w-4 mr-1" />DASHBOARD</Button></Link>
+              <Link href="/"><Button variant="ghost" size="sm" className="font-pixel text-xs"><Gamepad2 className="h-4 w-4 mr-1" />PLAY</Button></Link>
+              <Button variant="default" size="sm" className="font-pixel text-xs"><Volume2 className="h-4 w-4 mr-1" />ENGLISH</Button>
+              <Link href="/rank"><Button variant="ghost" size="sm" className="font-pixel text-xs"><Trophy className="h-4 w-4 mr-1" />LEADERBOARD</Button></Link>
+              <Link href="/"><Button variant="ghost" size="sm" className="font-pixel text-xs"><FileText className="h-4 w-4 mr-1" />REPORT</Button></Link>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">Welcome, {(user as any)?.firstName || (user as any)?.name || 'Player'}!</span>
+            <Button variant="outline" size="sm" onClick={handleLogout} className="font-pixel text-xs" data-testid="button-logout">
+              <LogOut className="h-4 w-4 mr-1" />LOGOUT
+            </Button>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+
   // Render game states
   if (gameState === "playing") {
     return (
-      <DictationGame
-        mode={selectedMode}
-        level={selectedLevel}
-        onGameComplete={handleGameComplete}
-        onExit={handleExitGame}
-      />
+      <div className="min-h-screen flex flex-col">
+        {nav}
+        <DictationGame
+          mode={selectedMode}
+          level={selectedLevel}
+          onGameComplete={handleGameComplete}
+          onExit={handleExitGame}
+        />
+      </div>
     );
   }
 
   if (gameState === "results" && gameStats) {
     return (
-      <DictationResults
-        stats={gameStats}
-        onPlayAgain={handlePlayAgain}
-        onBackToMenu={handleBackToMenu}
-      />
+      <div className="min-h-screen flex flex-col">
+        {nav}
+        <DictationResults
+          stats={gameStats}
+          onPlayAgain={handlePlayAgain}
+          onBackToMenu={handleBackToMenu}
+        />
+      </div>
     );
   }
 
   // Menu state
   return (
     <div className="min-h-screen">
-      {/* Navigation */}
-      <nav className="bg-card border-b border-card-border sticky top-0 z-50 shadow-md">
-        <div className="max-w-6xl mx-auto px-2 md:px-4 py-1 md:py-2">
-          {/* Mobile Layout */}
-          <div className="md:hidden">
-            {/* Top row: Title and Logout */}
-            <div className="flex items-center justify-between mb-1">
-              <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="font-pixel text-xs px-2 py-1 h-6"
-                data-testid="button-logout"
-              >
-                <LogOut className="h-3 w-3" />
-              </Button>
-            </div>
-
-            {/* Bottom row: Navigation buttons */}
-            <div className="flex gap-1 w-full">
-              <Link href="/" className="flex-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="font-pixel text-xs w-full px-1 py-1 h-7"
-                  data-testid="button-dashboard"
-                >
-                  <BarChart3 className="h-3 w-3" />
-                </Button>
-              </Link>
-              <Link href="/" className="flex-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="font-pixel text-xs w-full px-1 py-1 h-7"
-                  data-testid="button-game"
-                >
-                  <Gamepad2 className="h-3 w-3" />
-                </Button>
-              </Link>
-              <Button
-                variant="default"
-                size="sm"
-                className="font-pixel text-xs flex-1 px-1 py-1 h-7"
-                data-testid="button-english-dictation"
-              >
-                <Volume2 className="h-3 w-3" />
-              </Button>
-              <Link href="/rank" className="flex-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="font-pixel text-xs w-full px-1 py-1 h-7"
-                  data-testid="button-leaderboard"
-                >
-                  <Trophy className="h-3 w-3" />
-                </Button>
-              </Link>
-              <Link href="/" className="flex-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="font-pixel text-xs w-full px-1 py-1 h-7"
-                  data-testid="button-report"
-                >
-                  <FileText className="h-3 w-3" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Desktop Layout */}
-          <div className="hidden md:flex md:flex-row items-center justify-between">
-            <div className="flex flex-row items-center gap-4">
-              <h1 className="font-pixel text-xl text-foreground">MINECRAFT MATH</h1>
-              <div className="flex gap-2">
-                <Link href="/">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="font-pixel text-xs"
-                    data-testid="button-dashboard"
-                  >
-                    <BarChart3 className="h-4 w-4 mr-1" />
-                    DASHBOARD
-                  </Button>
-                </Link>
-                <Link href="/">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="font-pixel text-xs"
-                    data-testid="button-game"
-                  >
-                    <Gamepad2 className="h-4 w-4 mr-1" />
-                    PLAY
-                  </Button>
-                </Link>
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="font-pixel text-xs"
-                  data-testid="button-english-dictation"
-                >
-                  <Volume2 className="h-4 w-4 mr-1" />
-                  ENGLISH
-                </Button>
-                <Link href="/rank">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="font-pixel text-xs"
-                    data-testid="button-leaderboard"
-                  >
-                    <Trophy className="h-4 w-4 mr-1" />
-                    LEADERBOARD
-                  </Button>
-                </Link>
-                <Link href="/">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="font-pixel text-xs"
-                    data-testid="button-report"
-                  >
-                    <FileText className="h-4 w-4 mr-1" />
-                    REPORT
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                Welcome, {(user as any)?.firstName || (user as any)?.name || 'Player'}!
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="font-pixel text-xs"
-                data-testid="button-logout"
-              >
-                <LogOut className="h-4 w-4 mr-1" />
-                LOGOUT
-              </Button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      {nav}
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto p-2 md:p-4">
@@ -306,15 +196,11 @@ export default function EnglishDictation() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xs md:text-sm text-muted-foreground">Your Progress</div>
-                <div className="font-pixel text-base md:text-lg" data-testid="text-total-score">
-                  Score: {progress.totalScore}
-                </div>
+                <div className="font-pixel text-base md:text-lg" data-testid="text-total-score">Score: {progress.totalScore}</div>
               </div>
               <div className="text-right">
                 <div className="text-xs md:text-sm text-muted-foreground">Accuracy</div>
-                <div className="font-pixel text-base md:text-lg" data-testid="text-total-accuracy">
-                  {progress.accuracy}%
-                </div>
+                <div className="font-pixel text-base md:text-lg" data-testid="text-total-accuracy">{progress.accuracy}%</div>
               </div>
             </div>
           </Card>
@@ -322,12 +208,8 @@ export default function EnglishDictation() {
 
         {/* Title */}
         <div className="text-center mb-4 md:mb-8">
-          <h1 className="font-pixel text-2xl md:text-4xl text-foreground mb-2 md:mb-4">
-            🎧 ENGLISH DICTATION
-          </h1>
-          <p className="text-sm md:text-lg text-muted-foreground">
-            Listen and spell words correctly!
-          </p>
+          <h1 className="font-pixel text-2xl md:text-4xl text-foreground mb-2 md:mb-4">🎧 ENGLISH DICTATION</h1>
+          <p className="text-sm md:text-lg text-muted-foreground">Listen and spell words correctly!</p>
         </div>
 
         {/* Game Modes */}
@@ -363,6 +245,7 @@ export default function EnglishDictation() {
           </Card>
         </div>
       </div>
+      <BottomNav />
     </div>
   );
 }

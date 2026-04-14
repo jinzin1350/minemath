@@ -4,8 +4,9 @@ import { Dashboard } from '@/components/Dashboard';
 import { GameInterface } from '@/components/GameInterface';
 import { Leaderboard } from '@/components/Leaderboard';
 import { ParentsReport } from '@/components/ParentsReport';
+import { BottomNav } from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
-import { LogOut, BarChart3, Gamepad2, Trophy, FileText, Volume2, Wand2, Bot } from 'lucide-react';
+import { LogOut, BarChart3, Gamepad2, Trophy, FileText, Volume2, Bot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 import { Link } from 'wouter';
@@ -104,92 +105,19 @@ export default function Home() {
       {/* Navigation */}
       <nav className="bg-card border-b border-card-border sticky top-0 z-50 shadow-md">
         <div className="max-w-6xl mx-auto px-2 md:px-4 py-1 md:py-2">
-          {/* Mobile Layout */}
-          <div className="md:hidden">
-            {/* Top row: Title and Logout */}
-            <div className="flex items-center justify-between mb-1">
-              <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="font-pixel text-xs px-2 py-1 h-6"
-                data-testid="button-logout"
-              >
-                <LogOut className="h-3 w-3" />
-              </Button>
-            </div>
-
-            {/* Bottom row: Navigation buttons */}
-            <div className="flex gap-1 w-full">
-              <Button
-                variant={currentView === 'dashboard' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setCurrentView('dashboard')}
-                className="font-pixel text-xs flex-1 px-1 py-1 h-7"
-                data-testid="button-dashboard"
-              >
-                <BarChart3 className="h-3 w-3" />
-              </Button>
-              <Button
-                variant={currentView === 'game' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setCurrentView('game')}
-                className="font-pixel text-xs flex-1 px-1 py-1 h-7"
-                data-testid="button-game"
-              >
-                <Gamepad2 className="h-3 w-3" />
-              </Button>
-              <Link href="/english-dictation" className="flex-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="font-pixel text-xs w-full px-1 py-1 h-7"
-                  data-testid="button-english-dictation"
-                >
-                  <Volume2 className="h-3 w-3" />
-                </Button>
-              </Link>
-              <Link href="/word-wizard" className="flex-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="font-pixel text-xs w-full px-1 py-1 h-7"
-                  data-testid="button-word-wizard"
-                >
-                  <Wand2 className="h-3 w-3" />
-                </Button>
-              </Link>
-              <Link href="/robo-trainer" className="flex-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="font-pixel text-xs w-full px-1 py-1 h-7"
-                  data-testid="button-robo-trainer"
-                >
-                  <Bot className="h-3 w-3" />
-                </Button>
-              </Link>
-              <Link href="/rank" className="flex-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="font-pixel text-xs w-full px-1 py-1 h-7"
-                  data-testid="button-leaderboard"
-                >
-                  <Trophy className="h-3 w-3" />
-                </Button>
-              </Link>
-              <Button
-                variant={currentView === 'report' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setCurrentView('report')}
-                className="font-pixel text-xs flex-1 px-1 py-1 h-7"
-                data-testid="button-report"
-              >
-                <FileText className="h-3 w-3" />
-              </Button>
-            </div>
+          {/* Mobile Layout - just title + logout */}
+          <div className="md:hidden flex items-center justify-between">
+            <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="font-pixel text-xs px-2 py-1 h-7"
+              data-testid="button-logout"
+            >
+              <LogOut className="h-3 w-3 mr-1" />
+              EXIT
+            </Button>
           </div>
 
           {/* Desktop Layout */}
@@ -226,17 +154,6 @@ export default function Home() {
                   >
                     <Volume2 className="h-4 w-4 mr-1" />
                     ENGLISH
-                  </Button>
-                </Link>
-                <Link href="/word-wizard">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="font-pixel text-xs"
-                    data-testid="button-word-wizard"
-                  >
-                    <Wand2 className="h-4 w-4 mr-1" />
-                    WORD WIZARD
                   </Button>
                 </Link>
                 <Link href="/robo-trainer">
@@ -294,21 +211,25 @@ export default function Home() {
       </nav>
 
       {/* Main Content */}
-      {currentView === 'dashboard' && (
-        <Dashboard onStartGame={() => setCurrentView('game')} />
-      )}
-      
-      {currentView === 'game' && (
-        <GameInterface onGameComplete={handleGameComplete} />
-      )}
-      
-      {currentView === 'leaderboard' && (
-        <Leaderboard />
-      )}
-      
-      {currentView === 'report' && (
-        <ParentsReport />
-      )}
+      <div className="pb-16 md:pb-0">
+        {currentView === 'dashboard' && (
+          <Dashboard onStartGame={() => setCurrentView('game')} />
+        )}
+
+        {currentView === 'game' && (
+          <GameInterface onGameComplete={handleGameComplete} />
+        )}
+
+        {currentView === 'leaderboard' && (
+          <Leaderboard />
+        )}
+
+        {currentView === 'report' && (
+          <ParentsReport />
+        )}
+      </div>
+
+      <BottomNav homeView={currentView} onViewChange={setCurrentView} />
     </div>
   );
 }

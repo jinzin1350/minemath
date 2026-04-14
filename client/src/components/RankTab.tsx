@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { MinecraftSteve, MinecraftBlock } from './MinecraftCharacters';
+import { BottomNav } from './BottomNav';
 import { Trophy, Crown, Medal, Star, RefreshCw, User, TrendingUp, LogOut, BarChart3, Gamepad2, FileText, Volume2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
@@ -79,44 +80,18 @@ export function RankTab() {
         {/* Navigation */}
         <nav className="bg-card border-b border-card-border sticky top-0 z-50 shadow-md">
           <div className="max-w-6xl mx-auto px-2 md:px-4 py-1 md:py-2">
-            {/* Mobile Layout */}
-            <div className="md:hidden">
-              <div className="flex items-center justify-between mb-1">
-                <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="font-pixel text-xs px-2 py-1 h-6"
-                >
-                  <LogOut className="h-3 w-3" />
-                </Button>
-              </div>
-              <div className="flex gap-1 w-full">
-                <Link href="/" className="flex-1">
-                  <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
-                    <BarChart3 className="h-3 w-3" />
-                  </Button>
-                </Link>
-                <Link href="/" className="flex-1">
-                  <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
-                    <Gamepad2 className="h-3 w-3" />
-                  </Button>
-                </Link>
-                <Link href="/english-dictation" className="flex-1">
-                  <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
-                    <Volume2 className="h-3 w-3" />
-                  </Button>
-                </Link>
-                <Button variant="default" size="sm" className="font-pixel text-xs flex-1 px-1 py-1 h-7">
-                  <Trophy className="h-3 w-3" />
-                </Button>
-                <Link href="/" className="flex-1">
-                  <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
-                    <FileText className="h-3 w-3" />
-                  </Button>
-                </Link>
-              </div>
+            {/* Mobile Layout - just title + logout */}
+            <div className="md:hidden flex items-center justify-between">
+              <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="font-pixel text-xs px-2 py-1 h-7"
+              >
+                <LogOut className="h-3 w-3 mr-1" />
+                EXIT
+              </Button>
             </div>
 
             {/* Desktop Layout */}
@@ -172,7 +147,7 @@ export function RankTab() {
           </div>
         </nav>
 
-        <div className="max-w-4xl mx-auto p-4">
+        <div className="max-w-4xl mx-auto p-4 pb-20">
           <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90">
             <CardContent className="p-8 text-center">
               <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-amber-200" />
@@ -180,6 +155,7 @@ export function RankTab() {
             </CardContent>
           </Card>
         </div>
+        <BottomNav />
       </div>
     );
   }
@@ -190,44 +166,18 @@ export function RankTab() {
         {/* Navigation */}
         <nav className="bg-card border-b border-card-border sticky top-0 z-50 shadow-md">
           <div className="max-w-6xl mx-auto px-2 md:px-4 py-1 md:py-2">
-            {/* Mobile Layout */}
-            <div className="md:hidden">
-              <div className="flex items-center justify-between mb-1">
-                <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="font-pixel text-xs px-2 py-1 h-6"
-                >
-                  <LogOut className="h-3 w-3" />
-                </Button>
-              </div>
-              <div className="flex gap-1 w-full">
-                <Link href="/" className="flex-1">
-                  <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
-                    <BarChart3 className="h-3 w-3" />
-                  </Button>
-                </Link>
-                <Link href="/" className="flex-1">
-                  <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
-                    <Gamepad2 className="h-3 w-3" />
-                  </Button>
-                </Link>
-                <Link href="/english-dictation" className="flex-1">
-                  <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
-                    <Volume2 className="h-3 w-3" />
-                  </Button>
-                </Link>
-                <Button variant="default" size="sm" className="font-pixel text-xs flex-1 px-1 py-1 h-7">
-                  <Trophy className="h-3 w-3" />
-                </Button>
-                <Link href="/" className="flex-1">
-                  <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
-                    <FileText className="h-3 w-3" />
-                  </Button>
-                </Link>
-              </div>
+            {/* Mobile Layout - just title + logout */}
+            <div className="md:hidden flex items-center justify-between">
+              <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="font-pixel text-xs px-2 py-1 h-7"
+              >
+                <LogOut className="h-3 w-3 mr-1" />
+                EXIT
+              </Button>
             </div>
 
             {/* Desktop Layout */}
@@ -312,6 +262,7 @@ export function RankTab() {
             </CardContent>
           </Card>
         </div>
+        <BottomNav />
       </div>
     );
   }
@@ -414,7 +365,7 @@ export function RankTab() {
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto space-y-3 md:space-y-6 p-2 md:p-4">
+      <div className="max-w-4xl mx-auto space-y-3 md:space-y-6 p-2 md:p-4 pb-20 md:pb-4">
         {/* Header */}
         <Card className="border-2 md:border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90 shadow-2xl backdrop-blur-sm relative overflow-hidden">
           {/* Decorative blocks - hide on mobile */}
@@ -669,6 +620,7 @@ export function RankTab() {
           </CardContent>
         </Card>
       </div>
+      <BottomNav />
     </div>
   );
 }

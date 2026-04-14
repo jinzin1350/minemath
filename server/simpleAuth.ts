@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
 import type { Express, RequestHandler } from "express";
-import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { z } from "zod";
 import { USE_THECHILDRENAI_AUTH, thechildrenaiAuth } from "./thechildrenaiAuth";
@@ -11,17 +12,23 @@ const SALT_ROUNDS = 10;
 // Session configuration
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: true,
-    ttl: sessionTtl,
-    tableName: "sessions",
+  const PgSession = connectPgSimple(session);
+
+  const pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 2,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+    ssl: { rejectUnauthorized: false },
   });
 
   return session({
     secret: process.env.SESSION_SECRET || "your-secret-key-change-this",
-    store: sessionStore,
+    store: new PgSession({
+      pool,
+      tableName: "sessions",
+      createTableIfMissing: false,
+    }),
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -130,14 +137,16 @@ export async function setupAuth(app: Express) {
   });
 
   // Logout endpoint
-  app.post("/api/logout", (req, res) => {
-    req.session.destroy((err) => {
+  const logoutHandler = (req: any, res: any) => {
+    req.session.destroy((err: any) => {
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
       }
-      res.json({ message: "Logout successful" });
+      res.redirect("/");
     });
-  });
+  };
+  app.post("/api/logout", logoutHandler);
+  app.get("/api/logout", logoutHandler);
 
   // Get current user endpoint
   // Use conditional auth middleware to support both TheChildrenAI and simple auth
