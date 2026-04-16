@@ -1,400 +1,368 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
-import { MinecraftSteve, MinecraftBlock } from './MinecraftCharacters';
-import { Trophy, Crown, Medal, Star, Calendar, RefreshCw } from 'lucide-react';
 
-interface LeaderboardEntry {
+interface GlobalEntry {
   userId: string;
   userName: string;
-  pointsEarned: number;
+  mathScore: number;
+  dictationScore: number;
+  totalScore: number;
   rank: number;
-  isCurrentUser?: boolean;
 }
 
-interface LeaderboardData {
-  leaderboard: LeaderboardEntry[];
-  date: string | null;
+interface GlobalLeaderboardData {
+  leaderboard: GlobalEntry[];
+  currentUserEntry: GlobalEntry | null;
   total: number;
-  message?: string;
+}
+
+const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+const RANK_COLORS: Record<number, { border: string; bg: string; text: string; glow: string }> = {
+  1: { border: '#b45309', bg: '#1c0e00', text: '#fcd34d', glow: '0 0 20px rgba(245,158,11,0.4)' },
+  2: { border: '#6b7280', bg: '#0f1117', text: '#d1d5db', glow: '0 0 12px rgba(107,114,128,0.3)' },
+  3: { border: '#92400e', bg: '#140800', text: '#fbbf24', glow: '0 0 12px rgba(180,83,9,0.25)' },
+};
+
+function PixelRobotIcon({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 24 28" width="24" height="28" style={{ imageRendering: 'pixelated' }}>
+      <rect x="4" y="2" width="16" height="14" fill={color} />
+      <rect x="6" y="4" width="12" height="9" fill="#0a0f1a" />
+      <rect x="7" y="5" width="4" height="4" fill="#67e8f9" />
+      <rect x="13" y="5" width="4" height="4" fill="#67e8f9" />
+      <rect x="8" y="10" width="8" height="2" fill="#67e8f9" />
+      <rect x="1" y="6" width="3" height="5" fill={color} />
+      <rect x="20" y="6" width="3" height="5" fill={color} />
+      <rect x="9" y="16" width="6" height="3" fill="#6b7280" />
+      <rect x="5" y="19" width="14" height="9" fill={color} />
+      <rect x="7" y="20" width="4" height="7" fill="#6b7280" />
+      <rect x="13" y="20" width="4" height="7" fill="#6b7280" />
+    </svg>
+  );
 }
 
 export function Leaderboard() {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
-  // Fetch current user info
-  const { data: currentUser } = useQuery({
+  const { data: currentUser } = useQuery<{ id: string; firstName: string; lastName: string }>({
     queryKey: ['/api/auth/user'],
   });
 
-  // Fetch leaderboard data
-  const { data: leaderboardData, isLoading, refetch } = useQuery({
-    queryKey: ['/api/leaderboard', selectedDate],
-    refetchInterval: 30000, // Refresh every 30 seconds
-  }) as { data: LeaderboardData | undefined, isLoading: boolean, refetch: () => void };
+  const { data, isLoading, isError, refetch } = useQuery<GlobalLeaderboardData>({
+    queryKey: ['/api/leaderboard/global'],
+    refetchInterval: 30_000,
+  });
 
-  // Auto-select latest finalized date if available
-  useEffect(() => {
-    if (leaderboardData?.date && !selectedDate) {
-      setSelectedDate(leaderboardData.date);
-    }
-  }, [leaderboardData?.date, selectedDate]);
+  const leaderboard = data?.leaderboard ?? [];
+  const currentUserEntry = data?.currentUserEntry ?? null;
+  const myEntry = currentUserEntry ?? leaderboard.find(e => e.userId === currentUser?.id) ?? null;
 
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <Crown className="h-5 w-5 text-yellow-500" data-testid="icon-rank-1" />;
-      case 2:
-        return <Medal className="h-5 w-5 text-gray-400" data-testid="icon-rank-2" />;
-      case 3:
-        return <Medal className="h-5 w-5 text-amber-600" data-testid="icon-rank-3" />;
-      default:
-        return <Star className="h-5 w-5 text-muted-foreground" data-testid={`icon-rank-${rank}`} />;
-    }
-  };
-
-  const getRankBadgeVariant = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return "default" as const;
-      case 2:
-      case 3:
-        return "secondary" as const;
-      default:
-        return "outline" as const;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(`${dateString}T00:00:00Z`);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long',
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      timeZone: 'UTC'
-    });
-  };
-
+  /* ── Loading ── */
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
-        <div className="max-w-4xl mx-auto">
-          <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90">
-            <CardContent className="p-8 text-center">
-              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-amber-200" />
-              <p className="font-pixel text-amber-200">Loading leaderboard...</p>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#060b14' }}>
+        <div
+          className="p-8 text-center"
+          style={{ background: '#0d1117', border: '4px solid #f59e0b', boxShadow: '0 0 24px rgba(245,158,11,0.3)' }}
+        >
+          <div className="text-4xl mb-3 animate-pulse">🏆</div>
+          <p className="font-pixel text-amber-300 text-xs animate-pulse tracking-widest">
+            LOADING LEADERBOARD...
+          </p>
         </div>
       </div>
     );
   }
 
-  if (!leaderboardData?.leaderboard?.length) {
-    const handleForceFinalize = async () => {
-      try {
-        console.log('🔧 Requesting manual finalization...');
-        const response = await fetch('/api/admin/force-finalize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        const result = await response.json();
-        console.log('🔧 Finalization result:', result);
-        
-        // Refresh leaderboard after finalization
-        setTimeout(() => refetch(), 1000);
-      } catch (error) {
-        console.error('Error forcing finalization:', error);
-      }
-    };
-
-    const handleDebugInfo = async () => {
-      try {
-        const response = await fetch('/api/debug/leaderboard');
-        const debug = await response.json();
-        console.log('🔍 Leaderboard debug info:', debug);
-        alert(`Debug Info:\n- Total Progress Records: ${debug.allProgressCount}\n- Finalized: ${debug.finalizedCount}\n- Pending: ${debug.pendingCount}\n- Latest Finalized Date: ${debug.latestFinalizedDate || 'None'}\n- Leaderboard Entries: ${debug.leaderboardCount}\n\nCheck console for more details.`);
-      } catch (error) {
-        console.error('Error fetching debug info:', error);
-      }
-    };
-
+  /* ── Error ── */
+  if (isError) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
-        <div className="max-w-4xl mx-auto">
-          <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90">
-            <CardHeader>
-              <CardTitle className="font-pixel text-2xl text-amber-200 text-center">
-                <Trophy className="inline h-8 w-8 mr-2" />
-                Daily Leaderboard
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 text-center">
-              <div className="mb-4">
-                <MinecraftSteve scale={1.5} />
-              </div>
-              <p className="font-pixel text-amber-200 mb-2" data-testid="text-no-scores">
-                {leaderboardData?.message || "No finalized scores available yet"}
-              </p>
-              <p className="text-emerald-300 text-sm mb-4">
-                Scores are finalized at midnight in your timezone!
-              </p>
-              <div className="flex flex-col gap-3 items-center">
-                <Button 
-                  onClick={() => refetch()} 
-                  variant="outline" 
-                  className="font-pixel"
-                  data-testid="button-refresh"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  REFRESH
-                </Button>
-                <Button 
-                  onClick={handleForceFinalize} 
-                  variant="secondary" 
-                  size="sm"
-                  className="font-pixel text-xs"
-                >
-                  🔧 FORCE FINALIZE
-                </Button>
-                <Button 
-                  onClick={handleDebugInfo} 
-                  variant="ghost" 
-                  size="sm"
-                  className="font-pixel text-xs"
-                >
-                  🔍 DEBUG INFO
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#060b14' }}>
+        <div
+          className="p-8 text-center max-w-sm w-full"
+          style={{ background: '#0d1117', border: '4px solid #991b1b' }}
+        >
+          <div className="text-4xl mb-3">⚠️</div>
+          <p className="font-pixel text-red-300 text-xs mb-4">Failed to load leaderboard</p>
+          <button
+            onClick={() => refetch()}
+            className="font-pixel text-xs text-amber-200 px-4 py-2 transition-all duration-100 active:translate-y-0.5"
+            style={{ background: '#451a03', border: '3px solid #b45309', borderBottom: '5px solid #78350f' }}
+          >
+            ↻ RETRY
+          </button>
         </div>
       </div>
     );
   }
+
+  /* ── Empty ── */
+  if (!leaderboard.length) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#060b14' }}>
+        <div
+          className="p-8 text-center max-w-sm w-full"
+          style={{ background: '#0d1117', border: '4px solid #b45309', boxShadow: '0 0 20px rgba(180,83,9,0.2)' }}
+        >
+          <div className="text-4xl mb-3">🎮</div>
+          <p className="font-pixel text-amber-300 text-xs mb-1">NO SCORES YET</p>
+          <p className="font-pixel text-gray-500 text-[10px] mb-4">
+            Play games to get on the leaderboard!
+          </p>
+          <button
+            onClick={() => refetch()}
+            className="font-pixel text-xs text-amber-200 px-4 py-2 transition-all duration-100 active:translate-y-0.5"
+            style={{ background: '#451a03', border: '3px solid #b45309', borderBottom: '5px solid #78350f' }}
+          >
+            ↻ REFRESH
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const top3 = leaderboard.slice(0, 3);
+  const rest = leaderboard.slice(3);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90 shadow-2xl backdrop-blur-sm relative overflow-hidden">
-          {/* Decorative blocks */}
-          <div className="absolute top-2 left-2 opacity-30 animate-float">
-            <MinecraftBlock type="gold" size={8} />
+    <div
+      className="min-h-screen pb-20 md:pb-4"
+      style={{ background: '#060b14', imageRendering: 'pixelated' }}
+    >
+      <div className="max-w-2xl mx-auto p-4 space-y-4">
+
+        {/* ── Title banner ── */}
+        <div
+          className="text-center py-5 px-4 relative overflow-hidden"
+          style={{ background: '#0d1117', border: '4px solid #b45309', boxShadow: '0 0 30px rgba(245,158,11,0.2)' }}
+        >
+          {/* decorative pixel blocks */}
+          <div className="absolute left-3 top-3 flex gap-1 opacity-30">
+            {['#ef4444','#f97316','#22c55e'].map((c,i) => (
+              <div key={i} className="w-3 h-3 animate-pulse" style={{ background: c, animationDelay: `${i*0.2}s` }} />
+            ))}
           </div>
-          <div className="absolute top-2 right-2 opacity-30 animate-float-delay">
-            <MinecraftBlock type="diamond" size={8} />
+          <div className="absolute right-3 top-3 flex gap-1 opacity-30">
+            {['#3b82f6','#a855f7','#f59e0b'].map((c,i) => (
+              <div key={i} className="w-3 h-3 animate-pulse" style={{ background: c, animationDelay: `${i*0.15}s` }} />
+            ))}
           </div>
-          
-          <CardHeader className="relative z-10">
+
+          <div className="font-pixel text-2xl md:text-3xl text-amber-300 mb-1">
+            🏆 LEADERBOARD
+          </div>
+          <div className="font-pixel text-[10px] text-gray-500 tracking-widest">
+            ALL-TIME CHAMPIONS
+          </div>
+          <div className="font-pixel text-[9px] text-gray-700 mt-1">
+            {data?.total ?? 0} players ranked
+          </div>
+        </div>
+
+        {/* ── My rank card ── */}
+        {myEntry && (
+          <div
+            className="p-4 relative"
+            style={{
+              background: '#0a0e1f',
+              border: '3px solid #1d4ed8',
+              boxShadow: '0 0 20px rgba(29,78,216,0.3)',
+            }}
+          >
+            <div
+              className="absolute -top-2 left-4 font-pixel text-[9px] text-blue-300 px-2 py-0.5"
+              style={{ background: '#0a0e1f', border: '1px solid #1d4ed8' }}
+            >
+              YOUR RANK
+            </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Trophy className="h-10 w-10 text-yellow-500" />
+              <div className="flex items-center gap-3">
+                <div
+                  className="font-pixel text-2xl text-blue-200 w-12 text-center"
+                  style={{ textShadow: '0 0 12px rgba(59,130,246,0.6)' }}
+                >
+                  #{myEntry.rank}
+                </div>
                 <div>
-                  <CardTitle className="font-pixel text-3xl text-amber-200 animate-pulse">
-                    Daily Champions
-                  </CardTitle>
-                  <p className="text-emerald-300 font-pixel text-sm">
-                    🏆 Final scores for {leaderboardData.date ? formatDate(leaderboardData.date) : 'today'} 🏆
-                  </p>
+                  <div className="font-pixel text-sm text-blue-200">{myEntry.userName}</div>
+                  <div className="flex gap-3 mt-0.5">
+                    <span className="font-pixel text-[9px] text-emerald-400">
+                      ⚔️ {myEntry.mathScore.toLocaleString()} math
+                    </span>
+                    <span className="font-pixel text-[9px] text-purple-400">
+                      📖 {myEntry.dictationScore.toLocaleString()} english
+                    </span>
+                  </div>
                 </div>
               </div>
-              <Button 
-                onClick={() => refetch()} 
-                variant="outline" 
-                size="sm"
-                className="font-pixel"
-                data-testid="button-refresh-header"
-              >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                REFRESH
-              </Button>
+              <div className="text-right">
+                <div
+                  className="font-pixel text-lg text-yellow-300"
+                  style={{ textShadow: '0 0 10px rgba(253,224,71,0.5)' }}
+                >
+                  {myEntry.totalScore.toLocaleString()}
+                </div>
+                <div className="font-pixel text-[9px] text-gray-600">TOTAL PTS</div>
+                {myEntry.rank === 1 && (
+                  <div className="font-pixel text-[9px] text-amber-400 animate-pulse mt-0.5">
+                    👑 CHAMPION
+                  </div>
+                )}
+                {myEntry.rank <= 3 && myEntry.rank > 1 && (
+                  <div className="font-pixel text-[9px] text-amber-500 mt-0.5">
+                    {MEDAL[myEntry.rank]} PODIUM
+                  </div>
+                )}
+              </div>
             </div>
-          </CardHeader>
-        </Card>
-
-        {/* User's Rank Summary */}
-        {currentUser && leaderboardData && (
-          <Card className="border-4 border-blue-600 bg-gradient-to-r from-blue-900/90 to-indigo-900/90 shadow-2xl">
-            <CardHeader>
-              <CardTitle className="font-pixel text-xl text-blue-200 text-center">
-                🎯 Your Ranking Today
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-              {(() => {
-                const userEntry = leaderboardData.leaderboard.find(entry => entry.userId === currentUser.id);
-                if (userEntry) {
-                  const pointsToNext = userEntry.rank > 1 
-                    ? leaderboardData.leaderboard[userEntry.rank - 2].pointsEarned - userEntry.pointsEarned
-                    : 0;
-                  
-                  return (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-center gap-4">
-                        <div className="text-center">
-                          <p className="text-3xl font-pixel text-blue-200">#{userEntry.rank}</p>
-                          <p className="text-sm text-blue-300">Your Rank</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-3xl font-pixel text-yellow-200">{userEntry.pointsEarned}</p>
-                          <p className="text-sm text-yellow-300">Your Points</p>
-                        </div>
-                        {userEntry.rank > 1 && (
-                          <div className="text-center">
-                            <p className="text-2xl font-pixel text-red-200">+{pointsToNext}</p>
-                            <p className="text-sm text-red-300">Points to Rank Up</p>
-                          </div>
-                        )}
-                      </div>
-                      {userEntry.rank === 1 && (
-                        <p className="font-pixel text-yellow-400 animate-pulse">
-                          👑 YOU ARE THE CHAMPION! 👑
-                        </p>
-                      )}
-                      {userEntry.rank <= 3 && userEntry.rank > 1 && (
-                        <p className="font-pixel text-amber-400">
-                          🏆 You're on the podium! Amazing work!
-                        </p>
-                      )}
-                      {userEntry.rank > 3 && (
-                        <p className="font-pixel text-blue-300">
-                          💪 Keep playing to climb higher!
-                        </p>
-                      )}
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div className="space-y-2">
-                      <p className="font-pixel text-gray-400">🎮 Not ranked yet today</p>
-                      <p className="text-sm text-gray-500">Play some games to get on the leaderboard!</p>
-                    </div>
-                  );
-                }
-              })()}
-            </CardContent>
-          </Card>
+          </div>
         )}
 
-        {/* Leaderboard */}
-        <Card className="border-4 border-amber-600 bg-gradient-to-b from-stone-900/90 to-slate-900/90 shadow-2xl">
-          <CardContent className="p-0">
-            <div className="space-y-2 p-4">
-              {leaderboardData.leaderboard.map((entry, index) => {
-                const isCurrentUser = currentUser && entry.userId === currentUser.id;
+        {/* ── Top 3 podium ── */}
+        {top3.length > 0 && (
+          <div>
+            <div className="font-pixel text-[9px] text-gray-600 mb-2 tracking-widest">
+              ◆ TOP PLAYERS ◆
+            </div>
+            <div className="space-y-2">
+              {top3.map(entry => {
+                const isMe = entry.userId === currentUser?.id;
+                const rc = RANK_COLORS[entry.rank] ?? { border: '#374151', bg: '#080e14', text: '#9ca3af', glow: 'none' };
                 return (
-                <div
-                  key={`${entry.userId}-${entry.rank}`}
-                  className={`
-                    flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 relative
-                    ${isCurrentUser
-                      ? 'bg-gradient-to-r from-blue-900/70 to-cyan-900/70 border-blue-400 shadow-lg shadow-blue-400/30 ring-2 ring-blue-300 animate-pulse-slow'
-                      : entry.rank === 1 
-                      ? 'bg-gradient-to-r from-yellow-900/50 to-amber-900/50 border-yellow-500 shadow-lg shadow-yellow-500/20' 
-                      : entry.rank === 2
-                      ? 'bg-gradient-to-r from-slate-800/50 to-gray-800/50 border-gray-400 shadow-md shadow-gray-400/20'
-                      : entry.rank === 3
-                      ? 'bg-gradient-to-r from-amber-900/30 to-orange-900/30 border-amber-600 shadow-md shadow-amber-600/20'
-                      : 'bg-gradient-to-r from-stone-800/30 to-slate-800/30 border-stone-600 hover:border-stone-500'
-                    }
-                  `}
-                  data-testid={`leaderboard-entry-${entry.rank}`}
-                >
-                  {isCurrentUser && (
-                    <div className="absolute -top-2 -right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-pixel animate-bounce">
-                      YOU
-                    </div>
-                  )}
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      {getRankIcon(entry.rank)}
-                      <Badge 
-                        variant={getRankBadgeVariant(entry.rank)}
-                        className="font-pixel min-w-[3rem] justify-center"
-                        data-testid={`badge-rank-${entry.rank}`}
-                      >
-                        #{entry.rank}
-                      </Badge>
-                    </div>
-                    
+                  <div
+                    key={entry.userId}
+                    className="flex items-center justify-between p-4 transition-all"
+                    style={{
+                      background: isMe ? '#0a0e1f' : rc.bg,
+                      border: `3px solid ${isMe ? '#1d4ed8' : rc.border}`,
+                      boxShadow: isMe ? '0 0 18px rgba(29,78,216,0.35)' : rc.glow,
+                    }}
+                  >
+                    {/* Rank + avatar */}
                     <div className="flex items-center gap-3">
-                      <div className={`
-                        transform transition-transform
-                        ${entry.rank === 1 ? 'scale-110 animate-bounce-slow' : ''}
-                      `}>
-                        <MinecraftSteve scale={entry.rank === 1 ? 1.2 : 0.8} />
+                      <div className="w-10 text-center">
+                        <div className="text-2xl">{MEDAL[entry.rank] ?? `#${entry.rank}`}</div>
                       </div>
+                      <PixelRobotIcon color={isMe ? '#3b82f6' : entry.rank === 1 ? '#f59e0b' : entry.rank === 2 ? '#9ca3af' : '#d97706'} />
                       <div>
-                        <p className={`
-                          font-pixel font-medium
-                          ${isCurrentUser
-                            ? 'text-blue-200 text-lg'
-                            : entry.rank === 1 
-                            ? 'text-yellow-200 text-lg' 
-                            : entry.rank <= 3 
-                            ? 'text-amber-200' 
-                            : 'text-stone-200'
-                          }
-                        `} data-testid={`text-username-${entry.rank}`}>
-                          {isCurrentUser ? `${entry.userName} (You)` : entry.userName}
-                        </p>
-                        {entry.rank === 1 && (
-                          <p className="text-xs text-yellow-400 font-pixel animate-pulse">
-                            👑 CHAMPION 👑
-                          </p>
-                        )}
+                        <div
+                          className="font-pixel text-xs"
+                          style={{ color: isMe ? '#93c5fd' : rc.text }}
+                        >
+                          {entry.userName}
+                          {isMe && <span className="text-blue-400 ml-1">(YOU)</span>}
+                        </div>
+                        <div className="flex gap-2 mt-0.5">
+                          <span className="font-pixel text-[8px] text-emerald-500">
+                            ⚔️ {entry.mathScore.toLocaleString()}
+                          </span>
+                          <span className="font-pixel text-[8px] text-purple-500">
+                            📖 {entry.dictationScore.toLocaleString()}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="text-right">
-                    <p className={`
-                      font-pixel font-bold text-lg
-                      ${isCurrentUser
-                        ? 'text-blue-200'
-                        : entry.rank === 1 
-                        ? 'text-yellow-200' 
-                        : entry.rank <= 3 
-                        ? 'text-amber-200' 
-                        : 'text-stone-200'
-                      }
-                    `} data-testid={`text-points-${entry.rank}`}>
-                      {entry.pointsEarned.toLocaleString()} pts
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Final Score
-                    </p>
-                    {entry.rank > 1 && leaderboardData.leaderboard[0] && (
-                      <p className="text-xs text-red-400 font-pixel">
-                        -{(leaderboardData.leaderboard[0].pointsEarned - entry.pointsEarned).toLocaleString()} from #1
-                      </p>
-                    )}
+                    {/* Score */}
+                    <div className="text-right">
+                      <div
+                        className="font-pixel text-lg"
+                        style={{
+                          color: isMe ? '#93c5fd' : rc.text,
+                          textShadow: entry.rank === 1 ? '0 0 12px rgba(253,224,71,0.6)' : 'none',
+                        }}
+                      >
+                        {entry.totalScore.toLocaleString()}
+                      </div>
+                      <div className="font-pixel text-[8px] text-gray-600">pts</div>
+                      {entry.rank === 1 && (
+                        <div className="font-pixel text-[8px] text-amber-400 animate-pulse">
+                          👑 #1
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
+                );
               })}
             </div>
+          </div>
+        )}
 
-            {/* Footer */}
-            <div className="border-t border-stone-600 p-4 bg-stone-900/50">
-              <div className="flex items-center justify-between text-sm text-stone-400">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span data-testid="text-date-info">
-                    Showing {leaderboardData.total} finalized scores
-                  </span>
-                </div>
-                <span className="font-pixel text-xs">
-                  Scores lock at midnight 🌙
-                </span>
-              </div>
+        {/* ── Remaining players ── */}
+        {rest.length > 0 && (
+          <div>
+            <div className="font-pixel text-[9px] text-gray-600 mb-2 tracking-widest">
+              ◆ ALL PLAYERS ◆
             </div>
-          </CardContent>
-        </Card>
+            <div
+              style={{ background: '#0d1117', border: '2px solid #1f2937' }}
+            >
+              {rest.map((entry, idx) => {
+                const isMe = entry.userId === currentUser?.id;
+                return (
+                  <div
+                    key={entry.userId}
+                    className="flex items-center justify-between px-4 py-3 transition-all"
+                    style={{
+                      background: isMe ? '#0a0e1f' : 'transparent',
+                      borderBottom: idx < rest.length - 1 ? '1px solid #1a1f2a' : 'none',
+                      borderLeft: isMe ? '3px solid #1d4ed8' : '3px solid transparent',
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="font-pixel text-xs w-8 text-center"
+                        style={{ color: isMe ? '#93c5fd' : '#4b5563' }}
+                      >
+                        #{entry.rank}
+                      </div>
+                      <div>
+                        <div
+                          className="font-pixel text-[10px]"
+                          style={{ color: isMe ? '#93c5fd' : '#9ca3af' }}
+                        >
+                          {entry.userName}
+                          {isMe && <span className="text-blue-400 ml-1">(YOU)</span>}
+                        </div>
+                        <div className="flex gap-2 mt-0.5">
+                          <span className="font-pixel text-[8px] text-emerald-700">
+                            ⚔️ {entry.mathScore.toLocaleString()}
+                          </span>
+                          <span className="font-pixel text-[8px] text-purple-700">
+                            📖 {entry.dictationScore.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      className="font-pixel text-xs"
+                      style={{ color: isMe ? '#93c5fd' : '#6b7280' }}
+                    >
+                      {entry.totalScore.toLocaleString()}
+                      <span className="text-[8px] text-gray-700 ml-1">pts</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Footer / refresh ── */}
+        <div
+          className="flex items-center justify-between px-4 py-3"
+          style={{ background: '#0a0f14', border: '2px solid #1a1f2a' }}
+        >
+          <div className="font-pixel text-[9px] text-gray-700">
+            🌙 Updates every 30 seconds
+          </div>
+          <button
+            onClick={() => refetch()}
+            className="font-pixel text-[9px] text-amber-400 px-3 py-1.5 transition-all duration-100 active:translate-y-0.5"
+            style={{ background: '#1c0e00', border: '2px solid #451a03', borderBottom: '3px solid #2d1200' }}
+          >
+            ↻ REFRESH
+          </button>
+        </div>
+
       </div>
     </div>
   );

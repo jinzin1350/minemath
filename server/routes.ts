@@ -2,7 +2,6 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./simpleAuth";
-import { thechildrenaiAuth, USE_THECHILDRENAI_AUTH, setupTheChildrenAIAuth } from "./thechildrenaiAuth";
 import { insertDailyProgressSchema, insertTemporaryProgressSchema, insertGameSessionSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -20,13 +19,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication - ALWAYS setup both to support fallback
   await setupAuth(app); // Setup simple auth (provides session, login, signup endpoints)
 
-  if (USE_THECHILDRENAI_AUTH) {
-    setupTheChildrenAIAuth(app); // Also setup TheChildrenAI verification
-  }
-
-  // Choose auth middleware based on configuration
-  // thechildrenaiAuth now falls back to session auth if no token is present
-  const authMiddleware = USE_THECHILDRENAI_AUTH ? thechildrenaiAuth : isAuthenticated;
+  const authMiddleware = isAuthenticated;
 
   // Note: /api/auth/user is already defined in simpleAuth.ts, so we skip it here
 
@@ -396,6 +389,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { dailyProgress, users, dictationGameHistory } = await import('@shared/schema');
       const { eq, desc, sum, sql } = await import('drizzle-orm');
 
+      const currentUserId = getUserId(req);
+
       // Get all users with their total math scores
       const mathScores = await db
         .select({
@@ -423,11 +418,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(users);
 
-      // Combine all scores
-      const globalLeaderboard = usersList.map(user => {
+      // Build score map for each user
+      const allUsersWithScores = usersList.map(user => {
         const mathScore = mathScores.find(m => m.userId === user.id)?.totalMathScore || 0;
         const dictationScore = dictationScores.find(d => d.userId === user.id)?.totalDictationScore || 0;
-        
+
         const firstName = user.firstName?.trim() || 'Player';
         const lastName = user.lastName?.trim() || '';
         const fullName = lastName ? `${firstName} ${lastName}` : firstName;
@@ -439,16 +434,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dictationScore: Number(dictationScore),
           totalScore: Number(mathScore) + Number(dictationScore),
         };
-      })
-      .filter(user => user.totalScore > 0) // Only show users with scores
-      .sort((a, b) => b.totalScore - a.totalScore) // Sort by total score descending
-      .map((user, index) => ({
-        ...user,
-        rank: index + 1,
-      }));
+      });
+
+      // Sort by total score descending, then assign ranks
+      const sorted = allUsersWithScores
+        .sort((a, b) => b.totalScore - a.totalScore);
+
+      // Main leaderboard: only users with scores > 0
+      const globalLeaderboard = sorted
+        .filter(user => user.totalScore > 0)
+        .map((user, index) => ({ ...user, rank: index + 1 }));
+
+      // Always include the current user's entry (even if score is 0)
+      let currentUserEntry = globalLeaderboard.find(u => u.userId === currentUserId);
+      if (!currentUserEntry) {
+        const userInfo = allUsersWithScores.find(u => u.userId === currentUserId);
+        if (userInfo) {
+          currentUserEntry = {
+            ...userInfo,
+            rank: globalLeaderboard.length + 1,
+          };
+        }
+      }
 
       res.json({
         leaderboard: globalLeaderboard,
+        currentUserEntry: currentUserEntry || null,
         total: globalLeaderboard.length,
         timestamp: new Date().toISOString()
       });
@@ -539,6 +550,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dictation routes
   const dictationRoutes = await import("./dictation-routes");
   app.use('/api/dictation', authMiddleware, dictationRoutes.default);
+
+  // ── DAILY CHEST + STREAK ────────────────────────────────────
+
+  // GET /api/daily-chest — current chest status + streak
+  app.get('/api/daily-chest', authMiddleware, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const timeZone = (req.query.timeZone as string) || 'UTC';
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone }); // YYYY-MM-DD
+
+      const [chest, streak] = await Promise.all([
+        storage.getOrCreateDailyChest(userId, todayStr),
+        storage.getUserStreak(userId),
+      ]);
+
+      // calculate how many correct answers today
+      const progress = await storage.getUserProgress(userId, todayStr);
+      const correctToday = progress?.correctAnswers ?? 0;
+
+      res.json({
+        date: todayStr,
+        loginChest: {
+          opened: chest.loginChestOpened,
+          points: chest.loginRewardPoints,
+        },
+        gameChest: {
+          opened: chest.gameChestOpened,
+          points: chest.gameRewardPoints,
+          itemId: chest.gameRewardItemId,
+          correctToday,
+          needed: Math.max(0, 5 - correctToday),
+          unlocked: correctToday >= 5,
+        },
+        streak: {
+          current: streak.currentStreak,
+          max: streak.maxStreak,
+          lastPlayedDate: streak.lastPlayedDate,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching daily chest:", error);
+      res.status(500).json({ message: "Failed to fetch daily chest" });
+    }
+  });
+
+  // POST /api/daily-chest/login — open login chest + update streak
+  app.post('/api/daily-chest/login', authMiddleware, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const timeZone = (req.body.timeZone as string) || 'UTC';
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone });
+
+      const [chestResult, streakResult] = await Promise.all([
+        storage.openLoginChest(userId, todayStr),
+        storage.updateStreak(userId, todayStr),
+      ]);
+
+      res.json({ chest: chestResult, streak: streakResult });
+    } catch (error) {
+      console.error("Error opening login chest:", error);
+      res.status(500).json({ message: "Failed to open login chest" });
+    }
+  });
+
+  // POST /api/daily-chest/game — open game chest (requires 5 correct today)
+  app.post('/api/daily-chest/game', authMiddleware, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const timeZone = (req.body.timeZone as string) || 'UTC';
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone });
+
+      const result = await storage.openGameChest(userId, todayStr);
+      res.json(result);
+    } catch (error) {
+      console.error("Error opening game chest:", error);
+      res.status(500).json({ message: "Failed to open game chest" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

@@ -431,7 +431,10 @@ export class Storage {
 
   async getMonthlyProgress(userId: string, month: string) {
     const startDate = `${month}-01`;
-    const endDate = `${month}-31`;
+    // Compute the actual last day of the month to avoid invalid dates like "2026-04-31"
+    const [year, mon] = month.split('-').map(Number);
+    const lastDay = new Date(year, mon, 0).getDate(); // day 0 of next month = last day of this month
+    const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
 
     const progress = await db
       .select()
@@ -579,7 +582,136 @@ export class Storage {
     return await this.getUser(id);
   }
 
-  // RoboTrainer methods
+  // ── STREAK ──────────────────────────────────────────────────
+
+  async getUserStreak(userId: string) {
+    const user = await this.getUser(userId);
+    return {
+      currentStreak: user?.currentStreak ?? 0,
+      maxStreak: user?.maxStreak ?? 0,
+      lastPlayedDate: user?.lastPlayedDate ?? null,
+    };
+  }
+
+  async updateStreak(userId: string, todayStr: string) {
+    const user = await this.getUser(userId);
+    if (!user) return { currentStreak: 0, maxStreak: 0 };
+
+    const last = user.lastPlayedDate; // 'YYYY-MM-DD' or null
+    let newStreak = user.currentStreak ?? 0;
+
+    if (!last) {
+      newStreak = 1; // first time ever
+    } else if (last === todayStr) {
+      // already counted today — no change
+      return { currentStreak: newStreak, maxStreak: user.maxStreak ?? 0 };
+    } else {
+      // check if last was exactly yesterday
+      const lastDate = new Date(last + 'T00:00:00');
+      const todayDate = new Date(todayStr + 'T00:00:00');
+      const diffDays = Math.round((todayDate.getTime() - lastDate.getTime()) / 86400000);
+      newStreak = diffDays === 1 ? newStreak + 1 : 1;
+    }
+
+    const newMax = Math.max(newStreak, user.maxStreak ?? 0);
+    await db.update(users).set({
+      currentStreak: newStreak,
+      maxStreak: newMax,
+      lastPlayedDate: todayStr,
+      updatedAt: new Date(),
+    }).where(eq(users.id, userId));
+
+    return { currentStreak: newStreak, maxStreak: newMax };
+  }
+
+  // ── DAILY CHEST ─────────────────────────────────────────────
+
+  async getOrCreateDailyChest(userId: string, todayStr: string) {
+    const { dailyChest } = await import('@shared/schema');
+    const [existing] = await db
+      .select().from(dailyChest)
+      .where(and(eq(dailyChest.userId, userId), eq(dailyChest.date, todayStr)));
+    if (existing) return existing;
+
+    const [created] = await db.insert(dailyChest).values({
+      userId, date: todayStr,
+    }).returning();
+    return created;
+  }
+
+  async openLoginChest(userId: string, todayStr: string) {
+    const { dailyChest } = await import('@shared/schema');
+    const chest = await this.getOrCreateDailyChest(userId, todayStr);
+    if (chest.loginChestOpened) return { alreadyOpened: true, points: chest.loginRewardPoints };
+
+    const bonusPoints = Math.floor(Math.random() * 21) + 10; // 10–30
+
+    await db.update(dailyChest).set({
+      loginChestOpened: true,
+      loginRewardPoints: bonusPoints,
+      loginOpenedAt: new Date(),
+    }).where(eq(dailyChest.id, chest.id));
+
+    // add bonus points to today's daily_progress if exists
+    const existing = await this.getUserProgress(userId, todayStr);
+    if (existing) {
+      await db.update(dailyProgress).set({
+        pointsEarned: existing.pointsEarned + bonusPoints,
+        updatedAt: new Date(),
+      }).where(eq(dailyProgress.id, existing.id));
+    }
+
+    return { alreadyOpened: false, points: bonusPoints };
+  }
+
+  async openGameChest(userId: string, todayStr: string) {
+    const { dailyChest, availableRewards } = await import('@shared/schema');
+    const chest = await this.getOrCreateDailyChest(userId, todayStr);
+    if (chest.gameChestOpened) return { alreadyOpened: true, points: chest.gameRewardPoints, itemId: chest.gameRewardItemId };
+
+    // check correct answers today
+    const progress = await this.getUserProgress(userId, todayStr);
+    const correctToday = progress?.correctAnswers ?? 0;
+    if (correctToday < 5) return { canOpen: false, correctToday, needed: 5 - correctToday };
+
+    // pick random item weighted by rarity
+    const allRewards = await db.select().from(availableRewards).where(eq(availableRewards.isActive, true));
+    let item = null;
+    if (allRewards.length > 0) {
+      const weights: Record<string, number> = { common: 60, rare: 25, epic: 12, legendary: 3 };
+      const pool: typeof allRewards = [];
+      for (const r of allRewards) {
+        const w = weights[r.rarity] ?? 10;
+        for (let i = 0; i < w; i++) pool.push(r);
+      }
+      item = pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    const bonusPoints = Math.floor(Math.random() * 71) + 30; // 30–100
+
+    await db.update(dailyChest).set({
+      gameChestOpened: true,
+      gameRewardPoints: bonusPoints,
+      gameRewardItemId: item?.id ?? null,
+      gameOpenedAt: new Date(),
+    }).where(eq(dailyChest.id, chest.id));
+
+    // add bonus points + item to inventory
+    if (progress) {
+      await db.update(dailyProgress).set({
+        pointsEarned: progress.pointsEarned + bonusPoints,
+        updatedAt: new Date(),
+      }).where(eq(dailyProgress.id, progress.id));
+    }
+    if (item) {
+      const totalPoints = await this.getUserTotalPoints(userId);
+      await this.addToUserInventory({ userId, rewardId: item.id, pointsWhenSelected: totalPoints });
+    }
+
+    return { canOpen: true, alreadyOpened: false, points: bonusPoints, item: item ? { id: item.id, name: item.name, iconName: item.iconName, rarity: item.rarity } : null };
+  }
+
+  // ── RoboTrainer methods
   async getRobotProgress(userId: string) {
     const { robotProgress } = await import('@shared/schema');
     const [progress] = await db

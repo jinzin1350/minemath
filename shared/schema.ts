@@ -23,6 +23,10 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   age: integer("age"), // Age for difficulty adjustment based on Canadian education system
+  // Streak tracking
+  currentStreak: integer("current_streak").default(0),
+  maxStreak: integer("max_streak").default(0),
+  lastPlayedDate: date("last_played_date"), // YYYY-MM-DD in user's timezone
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -108,6 +112,25 @@ export const rewardOpportunities = pgTable("reward_opportunities", {
   usedAt: timestamp("used_at"),
 }, (table) => [
   unique("unique_milestone_per_user").on(table.userId, table.pointsMilestone)
+]);
+
+// Daily chest — one row per user per day, resets every midnight
+export const dailyChest = pgTable("daily_chest", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  date: date("date").notNull(), // YYYY-MM-DD in user's timezone
+  // Login chest — unlocked just by visiting the site
+  loginChestOpened: boolean("login_chest_opened").default(false),
+  loginRewardPoints: integer("login_reward_points").default(0),
+  loginOpenedAt: timestamp("login_opened_at"),
+  // Game chest — unlocked after 5 correct answers in a day
+  gameChestOpened: boolean("game_chest_opened").default(false),
+  gameRewardPoints: integer("game_reward_points").default(0),
+  gameRewardItemId: varchar("game_reward_item_id").references(() => availableRewards.id),
+  gameOpenedAt: timestamp("game_opened_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("unique_daily_chest").on(table.userId, table.date)
 ]);
 
 // Schema types
@@ -289,3 +312,5 @@ export const updateRobotProgressSchema = insertRobotProgressSchema.partial();
 export type RobotProgress = typeof robotProgress.$inferSelect;
 export type InsertRobotProgress = z.infer<typeof insertRobotProgressSchema>;
 export type UpdateRobotProgress = z.infer<typeof updateRobotProgressSchema>;
+
+export type DailyChest = typeof dailyChest.$inferSelect;
