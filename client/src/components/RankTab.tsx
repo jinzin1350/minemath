@@ -1,16 +1,8 @@
-
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
-import { MinecraftSteve, MinecraftBlock } from './MinecraftCharacters';
 import { BottomNav } from './BottomNav';
-import { Trophy, Crown, Medal, Star, RefreshCw, User, TrendingUp, LogOut, BarChart3, Gamepad2, FileText, Volume2 } from 'lucide-react';
-import { Link } from 'wouter';
-import { useAuth } from '@/hooks/useAuth';
+import { NavBar } from './NavBar';
 
-interface GlobalLeaderboardEntry {
+interface GlobalEntry {
   userId: string;
   userName: string;
   mathScore: number;
@@ -20,247 +12,111 @@ interface GlobalLeaderboardEntry {
 }
 
 interface GlobalLeaderboardData {
-  leaderboard: GlobalLeaderboardEntry[];
+  leaderboard: GlobalEntry[];
+  currentUserEntry: GlobalEntry | null;
   total: number;
   timestamp: string;
 }
 
+const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+// Pixel-art Minecraft robot icon
+function PixelBot({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 20 24" width="20" height="24" style={{ imageRendering: 'pixelated', flexShrink: 0 }}>
+      <rect x="3" y="2"  width="14" height="12" fill={color} />
+      <rect x="5" y="4"  width="10" height="7"  fill="#050d14" />
+      <rect x="6" y="5"  width="3"  height="3"  fill="#67e8f9" />
+      <rect x="11" y="5" width="3"  height="3"  fill="#67e8f9" />
+      <rect x="6" y="9"  width="8"  height="2"  fill="#67e8f9" />
+      <rect x="0" y="5"  width="3"  height="4"  fill={color} />
+      <rect x="17" y="5" width="3"  height="4"  fill={color} />
+      <rect x="7" y="14" width="6"  height="3"  fill="#374151" />
+      <rect x="3" y="17" width="14" height="7"  fill={color} />
+      <rect x="5" y="18" width="4"  height="6"  fill="#1f2937" />
+      <rect x="11" y="18" width="4" height="6"  fill="#1f2937" />
+    </svg>
+  );
+}
+
+const RANK_STYLE: Record<number, { border: string; bg: string; textColor: string; glow: string; botColor: string }> = {
+  1: { border: '#b45309', bg: '#160a00', textColor: '#fcd34d', glow: '0 0 18px rgba(245,158,11,0.4)', botColor: '#f59e0b' },
+  2: { border: '#4b5563', bg: '#0e1016', textColor: '#d1d5db', glow: '0 0 10px rgba(75,85,99,0.25)',  botColor: '#9ca3af' },
+  3: { border: '#78350f', bg: '#120700', textColor: '#fb923c', glow: '0 0 10px rgba(120,53,15,0.25)', botColor: '#d97706' },
+};
+const DEFAULT_STYLE = { border: '#1f2937', bg: 'transparent', textColor: '#6b7280', glow: 'none', botColor: '#374151' };
+
 export function RankTab() {
-  const { user } = useAuth();
-
-  const handleLogout = () => {
-    window.location.href = '/api/logout';
-  };
-
-  // Fetch current user info
-  const { data: currentUser } = useQuery({
+  const { data: currentUser } = useQuery<{ id: string; firstName?: string; email: string }>({
     queryKey: ['/api/auth/user'],
   });
 
-  // Fetch global leaderboard data
-  const { data: leaderboardData, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery<GlobalLeaderboardData>({
     queryKey: ['/api/leaderboard/global'],
-    refetchInterval: 30000, // Refresh every 30 seconds
-    staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache the data
-  }) as { data: GlobalLeaderboardData | undefined, isLoading: boolean, refetch: () => void };
+    refetchInterval: 30_000,
+    staleTime: 0,
+  });
 
-  // Debug logging
-  console.log('🏆 RankTab - Leaderboard data:', leaderboardData);
-  console.log('🏆 RankTab - Is loading:', isLoading);
+  const leaderboard = data?.leaderboard ?? [];
+  const myEntry = data?.currentUserEntry ?? leaderboard.find(e => e.userId === currentUser?.id) ?? null;
+  const avgScore = leaderboard.length
+    ? Math.round(leaderboard.reduce((s, e) => s + e.totalScore, 0) / leaderboard.length)
+    : 0;
+  const topScore = leaderboard.length ? Math.max(...leaderboard.map(e => e.totalScore)) : 0;
 
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <Crown className="h-5 w-5 text-yellow-500" />;
-      case 2:
-        return <Medal className="h-5 w-5 text-gray-400" />;
-      case 3:
-        return <Medal className="h-5 w-5 text-amber-600" />;
-      default:
-        return <Star className="h-5 w-5 text-muted-foreground" />;
-    }
-  };
-
-  const getRankBadgeVariant = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return "default" as const;
-      case 2:
-      case 3:
-        return "secondary" as const;
-      default:
-        return "outline" as const;
-    }
-  };
-
+  /* ── Loading ── */
   if (isLoading) {
     return (
-      <div className="min-h-screen">
-        {/* Navigation */}
-        <nav className="bg-card border-b border-card-border sticky top-0 z-50 shadow-md">
-          <div className="max-w-6xl mx-auto px-2 md:px-4 py-1 md:py-2">
-            {/* Mobile Layout - just title + logout */}
-            <div className="md:hidden flex items-center justify-between">
-              <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="font-pixel text-xs px-2 py-1 h-7"
-              >
-                <LogOut className="h-3 w-3 mr-1" />
-                EXIT
-              </Button>
-            </div>
-
-            {/* Desktop Layout */}
-            <div className="hidden md:flex md:flex-row items-center justify-between">
-              <div className="flex flex-row items-center gap-4">
-                <h1 className="font-pixel text-xl text-foreground">MINECRAFT MATH</h1>
-                <div className="flex gap-2">
-                  <Link href="/">
-                    <Button variant="ghost" size="sm" className="font-pixel text-xs">
-                      <BarChart3 className="h-4 w-4 mr-1" />
-                      DASHBOARD
-                    </Button>
-                  </Link>
-                  <Link href="/">
-                    <Button variant="ghost" size="sm" className="font-pixel text-xs">
-                      <Gamepad2 className="h-4 w-4 mr-1" />
-                      PLAY
-                    </Button>
-                  </Link>
-                  <Link href="/english-dictation">
-                    <Button variant="ghost" size="sm" className="font-pixel text-xs">
-                      <Volume2 className="h-4 w-4 mr-1" />
-                      ENGLISH
-                    </Button>
-                  </Link>
-                  <Button variant="default" size="sm" className="font-pixel text-xs">
-                    <Trophy className="h-4 w-4 mr-1" />
-                    LEADERBOARD
-                  </Button>
-                  <Link href="/">
-                    <Button variant="ghost" size="sm" className="font-pixel text-xs">
-                      <FileText className="h-4 w-4 mr-1" />
-                      REPORT
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground">
-                  Welcome, {(user as any)?.firstName || (user as any)?.name || 'Player'}!
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="font-pixel text-xs"
-                >
-                  <LogOut className="h-4 w-4 mr-1" />
-                  LOGOUT
-                </Button>
-              </div>
-            </div>
+      <div className="min-h-screen flex flex-col" style={{ background: '#060b14' }}>
+        <NavBar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="p-8 text-center" style={{ background: '#0d1117', border: '4px solid #f59e0b', boxShadow: '0 0 24px rgba(245,158,11,0.3)' }}>
+            <div className="text-4xl mb-3 animate-pulse">🏆</div>
+            <p className="font-pixel text-amber-300 text-xs animate-pulse tracking-widest">LOADING RANKINGS...</p>
           </div>
-        </nav>
-
-        <div className="max-w-4xl mx-auto p-4 pb-20">
-          <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90">
-            <CardContent className="p-8 text-center">
-              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-amber-200" />
-              <p className="font-pixel text-amber-200">Loading rankings...</p>
-            </CardContent>
-          </Card>
         </div>
         <BottomNav />
       </div>
     );
   }
 
-  if (!leaderboardData?.leaderboard?.length) {
+  /* ── Error ── */
+  if (isError) {
     return (
-      <div className="min-h-screen">
-        {/* Navigation */}
-        <nav className="bg-card border-b border-card-border sticky top-0 z-50 shadow-md">
-          <div className="max-w-6xl mx-auto px-2 md:px-4 py-1 md:py-2">
-            {/* Mobile Layout - just title + logout */}
-            <div className="md:hidden flex items-center justify-between">
-              <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="font-pixel text-xs px-2 py-1 h-7"
-              >
-                <LogOut className="h-3 w-3 mr-1" />
-                EXIT
-              </Button>
-            </div>
-
-            {/* Desktop Layout */}
-            <div className="hidden md:flex md:flex-row items-center justify-between">
-              <div className="flex flex-row items-center gap-4">
-                <h1 className="font-pixel text-xl text-foreground">MINECRAFT MATH</h1>
-                <div className="flex gap-2">
-                  <Link href="/">
-                    <Button variant="ghost" size="sm" className="font-pixel text-xs">
-                      <BarChart3 className="h-4 w-4 mr-1" />
-                      DASHBOARD
-                    </Button>
-                  </Link>
-                  <Link href="/">
-                    <Button variant="ghost" size="sm" className="font-pixel text-xs">
-                      <Gamepad2 className="h-4 w-4 mr-1" />
-                      PLAY
-                    </Button>
-                  </Link>
-                  <Link href="/english-dictation">
-                    <Button variant="ghost" size="sm" className="font-pixel text-xs">
-                      <Volume2 className="h-4 w-4 mr-1" />
-                      ENGLISH
-                    </Button>
-                  </Link>
-                  <Button variant="default" size="sm" className="font-pixel text-xs">
-                    <Trophy className="h-4 w-4 mr-1" />
-                    LEADERBOARD
-                  </Button>
-                  <Link href="/">
-                    <Button variant="ghost" size="sm" className="font-pixel text-xs">
-                      <FileText className="h-4 w-4 mr-1" />
-                      REPORT
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground">
-                  Welcome, {(user as any)?.firstName || (user as any)?.name || 'Player'}!
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="font-pixel text-xs"
-                >
-                  <LogOut className="h-4 w-4 mr-1" />
-                  LOGOUT
-                </Button>
-              </div>
-            </div>
+      <div className="min-h-screen flex flex-col" style={{ background: '#060b14' }}>
+        <NavBar />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="p-8 text-center max-w-sm w-full" style={{ background: '#0d1117', border: '4px solid #991b1b' }}>
+            <div className="text-4xl mb-3">⚠️</div>
+            <p className="font-pixel text-red-300 text-xs mb-4">Connection error. Check your network.</p>
+            <button onClick={() => refetch()}
+              className="font-pixel text-xs text-amber-200 px-5 py-2 transition-all duration-100 active:translate-y-0.5"
+              style={{ background: '#451a03', border: '3px solid #b45309', borderBottom: '5px solid #78350f' }}>
+              ↻ RETRY
+            </button>
           </div>
-        </nav>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
 
-        <div className="max-w-4xl mx-auto p-4">
-          <Card className="border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90">
-            <CardHeader>
-              <CardTitle className="font-pixel text-2xl text-amber-200 text-center">
-                <Trophy className="inline h-8 w-8 mr-2" />
-                Global Rankings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 text-center">
-              <div className="mb-4">
-                <MinecraftSteve scale={1.5} />
-              </div>
-              <p className="font-pixel text-amber-200 mb-2">
-                No rankings available yet
-              </p>
-              <p className="text-emerald-300 text-sm mb-4">
-                Play some games to see your ranking!
-              </p>
-              <Button
-                onClick={() => refetch()}
-                variant="outline"
-                className="font-pixel"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                REFRESH
-              </Button>
-            </CardContent>
-          </Card>
+  /* ── Empty ── */
+  if (!leaderboard.length) {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: '#060b14' }}>
+        <NavBar />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="p-8 text-center max-w-sm w-full" style={{ background: '#0d1117', border: '4px solid #b45309', boxShadow: '0 0 20px rgba(180,83,9,0.2)' }}>
+            <div className="text-4xl mb-3">🎮</div>
+            <p className="font-pixel text-amber-300 text-xs mb-1">NO RANKINGS YET</p>
+            <p className="font-pixel text-gray-600 text-[10px] mb-4">Play games to get on the leaderboard!</p>
+            <button onClick={() => refetch()}
+              className="font-pixel text-xs text-amber-200 px-5 py-2 transition-all duration-100 active:translate-y-0.5"
+              style={{ background: '#451a03', border: '3px solid #b45309', borderBottom: '5px solid #78350f' }}>
+              ↻ REFRESH
+            </button>
+          </div>
         </div>
         <BottomNav />
       </div>
@@ -268,358 +124,200 @@ export function RankTab() {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Navigation */}
-      <nav className="bg-card border-b border-card-border sticky top-0 z-50 shadow-md">
-        <div className="max-w-6xl mx-auto px-2 md:px-4 py-1 md:py-2">
-          {/* Mobile Layout */}
-          <div className="md:hidden">
-            <div className="flex items-center justify-between mb-1">
-              <h1 className="font-pixel text-xs text-foreground">⛏️ MINECRAFT MATH</h1>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="font-pixel text-xs px-2 py-1 h-6"
-              >
-                <LogOut className="h-3 w-3" />
-              </Button>
-            </div>
-            <div className="flex gap-1 w-full">
-              <Link href="/" className="flex-1">
-                <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
-                  <BarChart3 className="h-3 w-3" />
-                </Button>
-              </Link>
-              <Link href="/" className="flex-1">
-                <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
-                  <Gamepad2 className="h-3 w-3" />
-                </Button>
-              </Link>
-              <Link href="/english-dictation" className="flex-1">
-                <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
-                  <Volume2 className="h-3 w-3" />
-                </Button>
-              </Link>
-              <Button variant="default" size="sm" className="font-pixel text-xs flex-1 px-1 py-1 h-7">
-                <Trophy className="h-3 w-3" />
-              </Button>
-              <Link href="/" className="flex-1">
-                <Button variant="ghost" size="sm" className="font-pixel text-xs w-full px-1 py-1 h-7">
-                  <FileText className="h-3 w-3" />
-                </Button>
-              </Link>
-            </div>
-          </div>
+    <div className="min-h-screen flex flex-col" style={{ background: '#060b14', imageRendering: 'pixelated' }}>
+      <NavBar />
 
-          {/* Desktop Layout */}
-          <div className="hidden md:flex md:flex-row items-center justify-between">
-            <div className="flex flex-row items-center gap-4">
-              <h1 className="font-pixel text-xl text-foreground">MINECRAFT MATH</h1>
-              <div className="flex gap-2">
-                <Link href="/">
-                  <Button variant="ghost" size="sm" className="font-pixel text-xs">
-                    <BarChart3 className="h-4 w-4 mr-1" />
-                    DASHBOARD
-                  </Button>
-                </Link>
-                <Link href="/">
-                  <Button variant="ghost" size="sm" className="font-pixel text-xs">
-                    <Gamepad2 className="h-4 w-4 mr-1" />
-                    PLAY
-                  </Button>
-                </Link>
-                <Link href="/english-dictation">
-                  <Button variant="ghost" size="sm" className="font-pixel text-xs">
-                    <Volume2 className="h-4 w-4 mr-1" />
-                    ENGLISH
-                  </Button>
-                </Link>
-                <Button variant="default" size="sm" className="font-pixel text-xs">
-                  <Trophy className="h-4 w-4 mr-1" />
-                  LEADERBOARD
-                </Button>
-                <Link href="/">
-                  <Button variant="ghost" size="sm" className="font-pixel text-xs">
-                    <FileText className="h-4 w-4 mr-1" />
-                    REPORT
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                Welcome, {(user as any)?.firstName || (user as any)?.name || 'Player'}!
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="font-pixel text-xs"
-              >
-                <LogOut className="h-4 w-4 mr-1" />
-                LOGOUT
-              </Button>
-            </div>
+      <div className="flex-1 max-w-2xl mx-auto w-full px-4 pt-4 pb-24 md:pb-8 space-y-4">
+
+        {/* ── Title ── */}
+        <div className="text-center py-5 px-4 relative overflow-hidden"
+          style={{ background: '#0d1117', border: '4px solid #b45309', boxShadow: '0 0 28px rgba(245,158,11,0.2)' }}>
+          <div className="absolute left-3 top-3 flex gap-1 opacity-25">
+            {['#f59e0b','#22c55e','#3b82f6','#a855f7'].map((c, i) => (
+              <div key={i} className="w-3 h-3 animate-pulse" style={{ background: c, animationDelay: `${i * 0.2}s` }} />
+            ))}
+          </div>
+          <div className="absolute right-3 top-3 flex gap-1 opacity-25">
+            {['#ef4444','#f59e0b','#67e8f9'].map((c, i) => (
+              <div key={i} className="w-3 h-3 animate-pulse" style={{ background: c, animationDelay: `${i * 0.15}s` }} />
+            ))}
+          </div>
+          <div className="font-pixel text-2xl md:text-3xl text-amber-300 mb-1">
+            🏆 GLOBAL RANKINGS
+          </div>
+          <div className="font-pixel text-[9px] text-gray-600 tracking-widest">
+            ALL STUDENTS — ALL TIME
           </div>
         </div>
-      </nav>
 
-      <div className="max-w-4xl mx-auto space-y-3 md:space-y-6 p-2 md:p-4 pb-20 md:pb-4">
-        {/* Header */}
-        <Card className="border-2 md:border-4 border-amber-600 bg-gradient-to-r from-emerald-900/90 to-cyan-900/90 shadow-2xl backdrop-blur-sm relative overflow-hidden">
-          {/* Decorative blocks - hide on mobile */}
-          <div className="absolute top-2 left-2 opacity-30 animate-float hidden md:block">
-            <MinecraftBlock type="gold" size={8} />
-          </div>
-          <div className="absolute top-2 right-2 opacity-30 animate-float-delay hidden md:block">
-            <MinecraftBlock type="diamond" size={8} />
-          </div>
-          
-          <CardHeader className="relative z-10 p-3 md:p-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-0">
-              <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 text-center md:text-left">
-                <Trophy className="h-6 w-6 md:h-10 md:w-10 text-yellow-500" />
+        {/* ── My rank card ── */}
+        {myEntry && (
+          <div className="p-4 relative"
+            style={{ background: '#080e1f', border: '3px solid #1d4ed8', boxShadow: '0 0 20px rgba(29,78,216,0.3)' }}>
+            <div className="absolute -top-2 left-4 font-pixel text-[9px] text-blue-300 px-2 py-0.5"
+              style={{ background: '#080e1f', border: '1px solid #1d4ed8' }}>
+              YOUR RANK
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="font-pixel text-3xl text-blue-200 w-14 text-center"
+                  style={{ textShadow: '0 0 14px rgba(59,130,246,0.7)' }}>
+                  #{myEntry.rank}
+                </div>
                 <div>
-                  <CardTitle className="font-pixel text-lg md:text-3xl text-amber-200 animate-pulse">
-                    🏆 Global Rankings 🏆
-                  </CardTitle>
-                  <p className="text-emerald-300 font-pixel text-xs md:text-sm">
-                    All registered students ranked by total score
-                  </p>
+                  <div className="font-pixel text-sm text-blue-100 mb-1">{myEntry.userName}</div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="font-pixel text-[9px] text-emerald-400">⚔️ {myEntry.mathScore.toLocaleString()} math</span>
+                    <span className="font-pixel text-[9px] text-purple-400">📖 {myEntry.dictationScore.toLocaleString()} english</span>
+                  </div>
                 </div>
               </div>
-              <Button 
-                onClick={() => refetch()} 
-                variant="outline" 
-                size="sm"
-                className="font-pixel text-xs"
-              >
-                <RefreshCw className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                REFRESH
-              </Button>
+              <div className="text-right flex-shrink-0">
+                <div className="font-pixel text-xl text-yellow-300"
+                  style={{ textShadow: '0 0 10px rgba(253,224,71,0.5)' }}>
+                  {myEntry.totalScore.toLocaleString()}
+                </div>
+                <div className="font-pixel text-[8px] text-gray-600">TOTAL PTS</div>
+                {myEntry.rank === 1 && (
+                  <div className="font-pixel text-[9px] text-amber-400 animate-pulse">👑 CHAMPION</div>
+                )}
+                {myEntry.rank === 2 && <div className="font-pixel text-[9px] text-gray-400">🥈 2nd place</div>}
+                {myEntry.rank === 3 && <div className="font-pixel text-[9px] text-amber-600">🥉 3rd place</div>}
+                {myEntry.rank > 3 && (
+                  <div className="font-pixel text-[9px] text-blue-500">💪 keep going!</div>
+                )}
+              </div>
             </div>
-          </CardHeader>
-        </Card>
-
-        {/* User's Rank Summary */}
-        {currentUser && leaderboardData && (
-          <Card className="border-2 md:border-4 border-blue-600 bg-gradient-to-r from-blue-900/90 to-indigo-900/90 shadow-2xl">
-            <CardHeader className="p-3 md:p-6">
-              <CardTitle className="font-pixel text-lg md:text-xl text-blue-200 text-center">
-                🎯 Your Global Ranking
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center p-3 md:p-6">
-              {(() => {
-                const userEntry = leaderboardData.leaderboard.find(entry => entry.userId === currentUser.id);
-                if (userEntry) {
-                  return (
-                    <div className="space-y-3 md:space-y-2">
-                      <div className="grid grid-cols-2 md:flex md:items-center md:justify-center gap-3 md:gap-6">
-                        <div className="text-center">
-                          <p className="text-2xl md:text-4xl font-pixel text-blue-200">#{userEntry.rank}</p>
-                          <p className="text-xs md:text-sm text-blue-300">Your Rank</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-2xl md:text-4xl font-pixel text-yellow-200">{userEntry.totalScore.toLocaleString()}</p>
-                          <p className="text-xs md:text-sm text-yellow-300">Total Score</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xl md:text-2xl font-pixel text-green-200">{userEntry.mathScore.toLocaleString()}</p>
-                          <p className="text-xs md:text-sm text-green-300">Math Score</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xl md:text-2xl font-pixel text-purple-200">{userEntry.dictationScore.toLocaleString()}</p>
-                          <p className="text-xs md:text-sm text-purple-300">English Score</p>
-                        </div>
-                      </div>
-                      {userEntry.rank === 1 && (
-                        <p className="font-pixel text-yellow-400 animate-pulse">
-                          👑 YOU ARE THE CHAMPION! 👑
-                        </p>
-                      )}
-                      {userEntry.rank <= 3 && userEntry.rank > 1 && (
-                        <p className="font-pixel text-amber-400">
-                          🏆 You're on the podium! Amazing work!
-                        </p>
-                      )}
-                      {userEntry.rank > 3 && (
-                        <p className="font-pixel text-blue-300">
-                          💪 Keep playing to climb higher!
-                        </p>
-                      )}
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div className="space-y-2">
-                      <p className="font-pixel text-gray-400">🎮 Not ranked yet</p>
-                      <p className="text-sm text-gray-500">Play some games to get on the leaderboard!</p>
-                    </div>
-                  );
-                }
-              })()}
-            </CardContent>
-          </Card>
+          </div>
         )}
 
-        {/* Summary Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4">
-          <Card className="border border-blue-500 md:border-2 bg-gradient-to-br from-blue-900/50 to-indigo-900/50">
-            <CardContent className="p-3 md:p-4 text-center">
-              <User className="h-5 w-5 md:h-8 md:w-8 text-blue-400 mx-auto mb-1 md:mb-2" />
-              <p className="text-lg md:text-2xl font-pixel text-blue-200">{leaderboardData.total}</p>
-              <p className="text-xs md:text-sm text-blue-300 font-pixel">Total Students</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-green-500 md:border-2 bg-gradient-to-br from-green-900/50 to-emerald-900/50">
-            <CardContent className="p-3 md:p-4 text-center">
-              <TrendingUp className="h-5 w-5 md:h-8 md:w-8 text-green-400 mx-auto mb-1 md:mb-2" />
-              <p className="text-lg md:text-2xl font-pixel text-green-200">
-                {Math.round(leaderboardData.leaderboard.reduce((sum, s) => sum + s.totalScore, 0) / leaderboardData.leaderboard.length).toLocaleString()}
-              </p>
-              <p className="text-xs md:text-sm text-green-300 font-pixel">Average Score</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-yellow-500 md:border-2 bg-gradient-to-br from-yellow-900/50 to-amber-900/50">
-            <CardContent className="p-3 md:p-4 text-center">
-              <Trophy className="h-5 w-5 md:h-8 md:w-8 text-yellow-400 mx-auto mb-1 md:mb-2" />
-              <p className="text-lg md:text-2xl font-pixel text-yellow-200">
-                {Math.max(...leaderboardData.leaderboard.map(s => s.totalScore)).toLocaleString()}
-              </p>
-              <p className="text-xs md:text-sm text-yellow-300 font-pixel">Highest Score</p>
-            </CardContent>
-          </Card>
+        {/* ── Summary stats ── */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: 'STUDENTS', value: data?.total ?? 0, color: '#3b82f6', icon: '👥' },
+            { label: 'AVG SCORE', value: avgScore.toLocaleString(), color: '#22c55e', icon: '📊' },
+            { label: 'TOP SCORE', value: topScore.toLocaleString(), color: '#f59e0b', icon: '👑' },
+          ].map(s => (
+            <div key={s.label} className="text-center py-3"
+              style={{ background: '#0d1117', border: `2px solid ${s.color}33`, boxShadow: `0 0 8px ${s.color}22` }}>
+              <div className="h-0.5 w-full mb-2" style={{ background: s.color }} />
+              <div className="font-pixel text-sm mb-0.5" style={{ color: s.color }}>{s.value}</div>
+              <div className="font-pixel text-[7px] text-gray-600">{s.icon} {s.label}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Rankings List */}
-        <Card className="border-2 md:border-4 border-amber-600 bg-gradient-to-b from-stone-900/90 to-slate-900/90 shadow-2xl">
-          <CardHeader className="p-3 md:p-6">
-            <CardTitle className="font-pixel text-lg md:text-2xl text-amber-200 text-center">
-              🏆 All Students Rankings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="space-y-1 md:space-y-2 p-2 md:p-4">
-              {leaderboardData.leaderboard.map((entry, index) => {
-                const isCurrentUser = currentUser && entry.userId === currentUser.id;
+        {/* ── Top 3 podium ── */}
+        {leaderboard.slice(0, 3).length > 0 && (
+          <div>
+            <div className="font-pixel text-[9px] text-gray-700 mb-2 tracking-widest">◆ TOP PLAYERS ◆</div>
+            <div className="space-y-2">
+              {leaderboard.slice(0, 3).map(entry => {
+                const isMe = entry.userId === currentUser?.id;
+                const rs = RANK_STYLE[entry.rank] ?? DEFAULT_STYLE;
                 return (
-                <div
-                  key={`${entry.userId}-${entry.rank}`}
-                  className={`
-                    flex items-center justify-between p-2 md:p-4 rounded-lg border md:border-2 transition-all duration-200 relative
-                    ${isCurrentUser
-                      ? 'bg-gradient-to-r from-blue-900/70 to-cyan-900/70 border-blue-400 shadow-lg shadow-blue-400/30 ring-1 md:ring-2 ring-blue-300 animate-pulse-slow'
-                      : entry.rank === 1 
-                      ? 'bg-gradient-to-r from-yellow-900/50 to-amber-900/50 border-yellow-500 shadow-lg shadow-yellow-500/20' 
-                      : entry.rank === 2
-                      ? 'bg-gradient-to-r from-slate-800/50 to-gray-800/50 border-gray-400 shadow-md shadow-gray-400/20'
-                      : entry.rank === 3
-                      ? 'bg-gradient-to-r from-amber-900/30 to-orange-900/30 border-amber-600 shadow-md shadow-amber-600/20'
-                      : 'bg-gradient-to-r from-stone-800/30 to-slate-800/30 border-stone-600 hover:border-stone-500'
-                    }
-                  `}
-                >
-                  {isCurrentUser && (
-                    <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-blue-500 text-white px-1 md:px-2 py-0.5 md:py-1 rounded-full text-xs font-pixel animate-bounce">
-                      YOU
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
-                    <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-                      <div className="hidden md:block">
-                        {getRankIcon(entry.rank)}
+                  <div key={entry.userId}
+                    className="flex items-center justify-between p-3 md:p-4"
+                    style={{
+                      background: isMe ? '#080e1f' : rs.bg,
+                      border: `3px solid ${isMe ? '#1d4ed8' : rs.border}`,
+                      boxShadow: isMe ? '0 0 18px rgba(29,78,216,0.35)' : rs.glow,
+                    }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 text-center text-xl flex-shrink-0">
+                        {MEDAL[entry.rank]}
                       </div>
-                      <Badge 
-                        variant={getRankBadgeVariant(entry.rank)}
-                        className="font-pixel min-w-[2rem] md:min-w-[3rem] justify-center text-xs"
-                      >
-                        #{entry.rank}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                      <div className={`
-                        transform transition-transform flex-shrink-0
-                        ${entry.rank === 1 ? 'scale-110 animate-bounce-slow' : ''}
-                      `}>
-                        <MinecraftSteve scale={entry.rank === 1 ? (window.innerWidth < 768 ? 0.6 : 1.2) : (window.innerWidth < 768 ? 0.4 : 0.8)} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`
-                          font-pixel font-medium truncate
-                          ${isCurrentUser
-                            ? 'text-blue-200 text-sm md:text-lg'
-                            : entry.rank === 1 
-                            ? 'text-yellow-200 text-sm md:text-lg' 
-                            : entry.rank <= 3 
-                            ? 'text-amber-200 text-sm md:text-base' 
-                            : 'text-stone-200 text-sm'
-                          }
-                        `}>
-                          {isCurrentUser ? `${entry.userName} (You)` : entry.userName}
-                        </p>
-                        {entry.rank === 1 && (
-                          <p className="text-xs text-yellow-400 font-pixel animate-pulse hidden md:block">
-                            👑 CHAMPION 👑
-                          </p>
-                        )}
-                        <div className="flex flex-col md:flex-row gap-1 md:gap-3 text-xs mt-1">
-                          <span className="text-green-400 font-pixel">Math: {entry.mathScore.toLocaleString()}</span>
-                          <span className="text-purple-400 font-pixel">English: {entry.dictationScore.toLocaleString()}</span>
+                      <PixelBot color={isMe ? '#3b82f6' : rs.botColor} />
+                      <div>
+                        <div className="font-pixel text-xs" style={{ color: isMe ? '#93c5fd' : rs.textColor }}>
+                          {entry.userName}
+                          {isMe && <span className="text-blue-400 ml-1">(YOU)</span>}
+                        </div>
+                        <div className="flex gap-2 mt-0.5">
+                          <span className="font-pixel text-[8px] text-emerald-600">⚔️ {entry.mathScore.toLocaleString()}</span>
+                          <span className="font-pixel text-[8px] text-purple-600">📖 {entry.dictationScore.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-pixel text-base md:text-lg"
+                        style={{ color: isMe ? '#93c5fd' : rs.textColor, textShadow: entry.rank === 1 ? '0 0 10px rgba(253,224,71,0.5)' : 'none' }}>
+                        {entry.totalScore.toLocaleString()}
+                      </div>
+                      <div className="font-pixel text-[8px] text-gray-700">pts</div>
+                      {entry.rank > 1 && leaderboard[0] && (
+                        <div className="font-pixel text-[8px] text-red-700">
+                          -{(leaderboard[0].totalScore - entry.totalScore).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
                   </div>
-
-                  <div className="text-right flex-shrink-0">
-                    <p className={`
-                      font-pixel font-bold text-sm md:text-lg
-                      ${isCurrentUser
-                        ? 'text-blue-200'
-                        : entry.rank === 1 
-                        ? 'text-yellow-200' 
-                        : entry.rank <= 3 
-                        ? 'text-amber-200' 
-                        : 'text-stone-200'
-                      }
-                    `}>
-                      {entry.totalScore.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground hidden md:block">
-                      Total Score
-                    </p>
-                    {entry.rank > 1 && leaderboardData.leaderboard[0] && (
-                      <p className="text-xs text-red-400 font-pixel">
-                        -{(leaderboardData.leaderboard[0].totalScore - entry.totalScore).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
+                );
               })}
             </div>
+          </div>
+        )}
 
-            {/* Footer */}
-            <div className="border-t border-stone-600 p-2 md:p-4 bg-stone-900/50">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-2 md:gap-0 text-xs md:text-sm text-stone-400">
-                <div className="flex items-center gap-2">
-                  <Trophy className="h-3 w-3 md:h-4 md:w-4" />
-                  <span>
-                    Showing {leaderboardData.total} registered students
-                  </span>
-                </div>
-                <span className="font-pixel text-xs">
-                  Updated: {new Date(leaderboardData.timestamp).toLocaleTimeString()}
-                </span>
+        {/* ── Full rankings table ── */}
+        {leaderboard.length > 3 && (
+          <div>
+            <div className="font-pixel text-[9px] text-gray-700 mb-2 tracking-widest">◆ ALL RANKINGS ◆</div>
+            <div style={{ background: '#0d1117', border: '2px solid #1f2937' }}>
+              {/* Table header */}
+              <div className="grid px-3 py-2 bg-black/40"
+                style={{ gridTemplateColumns: '2rem 1fr 4rem 4rem 4rem' }}>
+                {['#', 'PLAYER', 'MATH', 'ENG', 'TOTAL'].map(h => (
+                  <span key={h} className="font-pixel text-[7px] text-gray-700">{h}</span>
+                ))}
               </div>
+
+              {leaderboard.map((entry, i) => {
+                const isMe = entry.userId === currentUser?.id;
+                return (
+                  <div key={entry.userId}
+                    className="grid items-center px-3 py-2"
+                    style={{
+                      gridTemplateColumns: '2rem 1fr 4rem 4rem 4rem',
+                      borderTop: '1px solid #1a1f2a',
+                      background: isMe ? 'rgba(29,78,216,0.08)' : 'transparent',
+                      borderLeft: isMe ? '3px solid #1d4ed8' : '3px solid transparent',
+                    }}>
+                    <span className="font-pixel text-[10px]"
+                      style={{ color: entry.rank <= 3 ? ['#f59e0b','#9ca3af','#d97706'][entry.rank-1] : '#374151' }}>
+                      {entry.rank <= 3 ? MEDAL[entry.rank] : entry.rank}
+                    </span>
+                    <span className="font-pixel text-[9px] truncate pr-1"
+                      style={{ color: isMe ? '#93c5fd' : '#9ca3af' }}>
+                      {entry.userName}
+                      {isMe && <span className="text-blue-500 ml-1">◀</span>}
+                    </span>
+                    <span className="font-pixel text-[8px] text-emerald-700">{entry.mathScore.toLocaleString()}</span>
+                    <span className="font-pixel text-[8px] text-purple-700">{entry.dictationScore.toLocaleString()}</span>
+                    <span className="font-pixel text-[8px]" style={{ color: isMe ? '#93c5fd' : '#6b7280' }}>
+                      {entry.totalScore.toLocaleString()}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
+
+        {/* ── Footer ── */}
+        <div className="flex items-center justify-between px-4 py-3"
+          style={{ background: '#0a0f14', border: '2px solid #1a1f2a' }}>
+          <div className="font-pixel text-[8px] text-gray-700">
+            🕐 {data?.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '—'}
+          </div>
+          <button onClick={() => refetch()}
+            className="font-pixel text-[9px] text-amber-400 px-3 py-1.5 transition-all duration-100 active:translate-y-0.5"
+            style={{ background: '#1c0e00', border: '2px solid #451a03', borderBottom: '3px solid #2d1200' }}>
+            ↻ REFRESH
+          </button>
+        </div>
+
       </div>
+
       <BottomNav />
     </div>
   );

@@ -1,4 +1,4 @@
-import { Trophy, Star, Target, TrendingUp, Home, RotateCcw } from "lucide-react";
+import { MinecraftSteve } from "@/components/MinecraftCharacters";
 import type { GameStats } from "@/types/dictation";
 
 interface DictationResultsProps {
@@ -7,114 +7,134 @@ interface DictationResultsProps {
   onBackToMenu: () => void;
 }
 
+function FloatingBlock({ emoji, className }: { emoji: string; className: string }) {
+  return (
+    <div className={`absolute select-none pointer-events-none text-2xl opacity-20 ${className}`}>
+      {emoji}
+    </div>
+  );
+}
+
 export function DictationResults({ stats, onPlayAgain, onBackToMenu }: DictationResultsProps) {
   const { score, accuracy, correctWords, totalWords, level, mode } = stats;
 
-  const getPerformanceMessage = () => {
-    if (accuracy >= 90) return "SPELLING MASTER!";
-    if (accuracy >= 75) return "GREAT JOB!";
-    if (accuracy >= 60) return "GOOD EFFORT!";
-    return "KEEP PRACTICING!";
-  };
-
-  const getStarCount = () => {
-    if (accuracy >= 90) return 3;
-    if (accuracy >= 75) return 2;
-    return 1;
-  };
-
-  const stars = getStarCount();
+  const perf = accuracy >= 90 ? "SPELLING MASTER!" : accuracy >= 75 ? "GREAT JOB!" : accuracy >= 60 ? "GOOD EFFORT!" : "KEEP PRACTICING!";
+  const stars = accuracy >= 90 ? 3 : accuracy >= 75 ? 2 : 1;
   const modeLabel = mode === "typing" ? "TYPING MODE" : mode === "multiple-choice" ? "MULTIPLE CHOICE" : "FILL THE BLANK";
+  const steveMsg = accuracy >= 90 ? "YOU CRUSHED IT!" : accuracy >= 75 ? "WELL DONE!" : accuracy >= 60 ? "NOT BAD!" : "TRY AGAIN!";
 
   return (
-    <div className="flex-1 bg-gradient-to-b from-blue-900 to-emerald-900 flex items-center justify-center p-4 pb-20 md:pb-4" style={{ imageRendering: 'pixelated' }}>
-      <div className="max-w-xl w-full border-4 border-amber-600 bg-gradient-to-b from-slate-900/95 to-emerald-950/95 rounded-lg shadow-2xl p-6">
+    <div className="relative flex-1 overflow-x-hidden pb-20 md:pb-6"
+      style={{ background: 'linear-gradient(180deg,#060b14 0%,#0a1a0f 60%,#060b14 100%)', imageRendering: 'pixelated' }}>
+
+      {/* Floating blocks */}
+      <FloatingBlock emoji="⭐" className="top-16 left-[5%] animate-float" />
+      <FloatingBlock emoji="🏆" className="top-12 right-[7%] animate-float-delay" />
+      <FloatingBlock emoji="💎" className="top-32 left-[12%] animate-float-slow" />
+      <FloatingBlock emoji="🟩" className="top-24 right-[15%] animate-float" />
+      <FloatingBlock emoji="📖" className="top-48 left-[4%] animate-float-delay hidden md:block" />
+      <FloatingBlock emoji="⭐" className="top-44 right-[5%] animate-float-slow hidden md:block" />
+
+      {/* Stars background */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden>
+        {[...Array(16)].map((_, i) => (
+          <div key={i} className="absolute rounded-full bg-white animate-pulse-slow"
+            style={{
+              width: i % 3 === 0 ? 2 : 1, height: i % 3 === 0 ? 2 : 1,
+              top: `${((i * 73) % 90) + 2}%`, left: `${((i * 61.8) % 98) + 1}%`,
+              animationDelay: `${(i * 0.4) % 3}s`, opacity: 0.15 + (i % 5) * 0.06,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="relative z-10 max-w-md mx-auto px-4 pt-6">
 
         {/* Title */}
-        <div className="text-center mb-6">
-          <Trophy className="w-14 h-14 mx-auto mb-3 text-yellow-400 drop-shadow-lg" />
-          <h1 className="font-pixel text-xl text-amber-200 animate-pulse mb-1" data-testid="text-results-title">
-            GAME COMPLETE!
+        <div className="text-center mb-5">
+          <h1
+            className="font-pixel text-xl md:text-2xl text-amber-400 mb-1 leading-tight"
+            style={{ textShadow: '0 0 20px rgba(251,191,36,0.4), 4px 4px 0 #78350f' }}
+            data-testid="text-results-title">
+            🏆 GAME COMPLETE!
           </h1>
-          <p className="font-pixel text-sm text-emerald-400" data-testid="text-performance-message">
-            {getPerformanceMessage()}
-          </p>
-          <div className="mt-2">
-            <span className="font-pixel text-[9px] text-cyan-400 bg-black/40 border border-cyan-800 px-3 py-1 rounded-md">
-              {modeLabel} · LEVEL {level}
-            </span>
+          <span className="font-pixel text-[8px] text-gray-600 bg-black/40 px-3 py-1"
+            style={{ border: '1px solid #374151' }}>
+            {modeLabel} · LEVEL {level}
+          </span>
+        </div>
+
+        {/* Steve + speech bubble */}
+        <div className="flex items-end gap-3 mb-5">
+          <div className="flex-none flex flex-col items-center">
+            <MinecraftSteve scale={1.3} />
+            <span className="font-pixel text-[6px] text-emerald-500 mt-0.5">STEVE</span>
+          </div>
+          <div className="flex-1 bg-[#0d1117] border-2 border-amber-600 p-3 relative animate-float"
+            style={{ boxShadow: '0 0 14px rgba(217,119,6,0.25)' }}>
+            {/* triangle pointer */}
+            <div className="absolute left-0 bottom-3 w-0 h-0"
+              style={{ borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderRight: '8px solid #b45309', transform: 'translateX(-8px)' }} />
+            <p className="font-pixel text-[11px] text-amber-300" data-testid="text-performance-message">
+              {steveMsg}
+            </p>
+            <p className="font-pixel text-[8px] text-amber-700 mt-1">{perf}</p>
           </div>
         </div>
 
         {/* Stars */}
-        <div className="flex justify-center gap-3 mb-6">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Star
-              key={i}
-              className={`w-10 h-10 ${
-                i < stars
-                  ? "fill-yellow-400 text-yellow-400 drop-shadow-lg"
-                  : "fill-gray-700 text-gray-700"
-              }`}
-              data-testid={`star-${i}`}
-            />
+        <div className="flex justify-center gap-4 mb-5">
+          {[0, 1, 2].map(i => (
+            <span key={i} className="text-3xl transition-all"
+              style={{ opacity: i < stars ? 1 : 0.12, filter: i < stars ? 'drop-shadow(0 0 6px rgba(251,191,36,0.6))' : 'grayscale(1)' }}
+              data-testid={`star-${i}`}>⭐</span>
           ))}
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="text-center p-4 bg-black/40 border-2 border-blue-800 rounded-lg">
-            <Target className="w-6 h-6 mx-auto mb-2 text-blue-400" />
-            <div className="font-pixel text-2xl text-blue-300" data-testid="text-score">
-              {score}
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 gap-2 mb-5">
+          {[
+            { label: 'SCORE',    value: score,                        color: '#3b82f6', glow: 'rgba(59,130,246,0.2)',   testid: 'text-score' },
+            { label: 'ACCURACY', value: `${accuracy}%`,               color: '#10b981', glow: 'rgba(16,185,129,0.2)',  testid: 'text-accuracy' },
+            { label: 'CORRECT',  value: `${correctWords}/${totalWords}`, color: '#a855f7', glow: 'rgba(168,85,247,0.2)', testid: 'text-correct-words' },
+            { label: 'STARS',    value: `${stars}/3`,                 color: '#f59e0b', glow: 'rgba(245,158,11,0.2)',  testid: 'text-level' },
+          ].map(s => (
+            <div key={s.label} className="text-center py-4 bg-[#0d1117]"
+              style={{ border: `2px solid ${s.color}`, boxShadow: `0 0 10px ${s.glow}` }}>
+              {/* top color bar */}
+              <div className="h-1 w-full mb-2" style={{ background: s.color }} />
+              <div className="font-pixel text-2xl mb-1" style={{ color: s.color, textShadow: `0 0 8px ${s.glow}` }}
+                data-testid={s.testid}>{s.value}</div>
+              <div className="font-pixel text-[8px] text-gray-600">{s.label}</div>
             </div>
-            <div className="font-pixel text-[9px] text-blue-500 mt-1">SCORE</div>
-          </div>
-
-          <div className="text-center p-4 bg-black/40 border-2 border-emerald-800 rounded-lg">
-            <TrendingUp className="w-6 h-6 mx-auto mb-2 text-emerald-400" />
-            <div className="font-pixel text-2xl text-emerald-300" data-testid="text-accuracy">
-              {accuracy}%
-            </div>
-            <div className="font-pixel text-[9px] text-emerald-500 mt-1">ACCURACY</div>
-          </div>
-
-          <div className="text-center p-4 bg-black/40 border-2 border-purple-800 rounded-lg">
-            <Trophy className="w-6 h-6 mx-auto mb-2 text-purple-400" />
-            <div className="font-pixel text-2xl text-purple-300" data-testid="text-correct-words">
-              {correctWords}/{totalWords}
-            </div>
-            <div className="font-pixel text-[9px] text-purple-500 mt-1">CORRECT</div>
-          </div>
-
-          <div className="text-center p-4 bg-black/40 border-2 border-amber-800 rounded-lg">
-            <Star className="w-6 h-6 mx-auto mb-2 text-amber-400" />
-            <div className="font-pixel text-2xl text-amber-300" data-testid="text-level">
-              {stars}/3
-            </div>
-            <div className="font-pixel text-[9px] text-amber-500 mt-1">STARS</div>
-          </div>
+          ))}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          <button
-            onClick={onBackToMenu}
-            data-testid="button-back-to-menu"
-            className="flex-1 py-4 font-pixel text-xs border-4 border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg hover:scale-105 transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
-          >
-            <Home className="w-4 h-4" />
-            MENU
+        {/* Action buttons */}
+        <div className="flex gap-3 mb-6">
+          <button onClick={onBackToMenu} data-testid="button-back-to-menu"
+            className="flex-1 py-3 font-pixel text-[10px] text-gray-300 tracking-wider
+              bg-gray-800 border-b-4 border-gray-900 hover:bg-gray-700
+              transition-all active:border-b-0 active:translate-y-1"
+            style={{ borderRadius: 0 }}>
+            ← MENU
           </button>
-          <button
-            onClick={onPlayAgain}
-            data-testid="button-play-again"
-            className="flex-1 py-4 font-pixel text-xs border-4 border-green-700 bg-green-800 hover:bg-green-700 text-white rounded-lg hover:scale-105 transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            PLAY AGAIN
+          <button onClick={onPlayAgain} data-testid="button-play-again"
+            className="flex-1 py-3 font-pixel text-[10px] text-white tracking-wider
+              bg-emerald-700 border-b-4 border-emerald-900 hover:bg-emerald-600
+              transition-all active:border-b-0 active:translate-y-1"
+            style={{ borderRadius: 0 }}>
+            ▶ PLAY AGAIN
           </button>
         </div>
+
+        {/* Bottom tagline */}
+        <div className="text-center">
+          <p className="font-pixel text-[7px] text-gray-700 tracking-widest">
+            📖 LISTEN · SPELL · LEVEL UP · REPEAT 📖
+          </p>
+        </div>
+
       </div>
     </div>
   );

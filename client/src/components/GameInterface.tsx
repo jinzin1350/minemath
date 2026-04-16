@@ -1,18 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card'; // Import CardContent
-import { MinecraftSteve, MinecraftZombie, MinecraftSkeleton, MinecraftCreeper, MinecraftWitch, MinecraftDragon, MinecraftBlock } from './MinecraftCharacters';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { MinecraftSteve, MinecraftZombie, MinecraftSkeleton, MinecraftCreeper, MinecraftWitch, MinecraftDragon } from './MinecraftCharacters';
 import { AchievementNotification } from './AchievementBadge';
 import { GameInventoryBoard } from './GameInventoryBoard';
-import { Heart, Diamond, Zap, Trophy } from 'lucide-react'; // Import Trophy
-import { apiRequest } from '@/lib/queryClient';
 
 interface GameStats {
   level: number;
   score: number;
   hearts: number;
   diamonds: number;
+  wrongAnswers: number;
   magicPower: number;
 }
 
@@ -34,8 +30,10 @@ interface Enemy {
 interface GameInterfaceProps {
   onGameComplete?: (stats: GameStats) => void;
   mockMode?: boolean;
-  onBackToDashboard?: () => void; // Added for navigation
-  startNewGame?: () => void; // Added for starting a new game
+  onBackToDashboard?: () => void;
+  startNewGame?: () => void;
+  onStatsUpdate?: (stats: GameStats) => void; // called on every stat change so parent can save mid-game
+  startLevel?: number; // resume from last saved level
 }
 
 interface Achievement {
@@ -46,40 +44,74 @@ interface Achievement {
   pointsRequired: number;
 }
 
-// Mock items for GameInventoryBoard - assuming this is where item.name, item.rarity, item.iconName, item.quantity are used
-// This is a placeholder and should be replaced with actual inventory data if available
 const mockInventoryItems = [
   { id: 'item1', name: 'Sword', rarity: 'Epic', iconName: 'sword', quantity: 1 },
   { id: 'item2', name: 'Shield', rarity: 'Rare', iconName: 'shield', quantity: 1 },
   { id: 'item3', name: 'Potion', rarity: 'Common', iconName: 'potion', quantity: 5 },
   { id: 'item4', name: 'Gold Coin', rarity: 'Common', iconName: 'coin', quantity: 10 },
-  { id: 'item5', name: 'Mystery Box', iconName: 'chest', quantity: 2 }, // Missing rarity
-  { id: 'item6', name: null, rarity: 'Legendary', iconName: 'gem', quantity: 1 }, // Missing name
-  { id: 'item7', iconName: 'arrow', rarity: 'Common', quantity: 20 }, // Missing name
-  { id: 'item8', name: 'Empty Slot' }, // Missing rarity and iconName
+  { id: 'item5', name: 'Mystery Box', iconName: 'chest', quantity: 2 },
+  { id: 'item6', name: null, rarity: 'Legendary', iconName: 'gem', quantity: 1 },
+  { id: 'item7', iconName: 'arrow', rarity: 'Common', quantity: 20 },
+  { id: 'item8', name: 'Empty Slot' },
 ];
 
-export function GameInterface({ onGameComplete, mockMode = false, onBackToDashboard = () => {}, startNewGame = () => {} }: GameInterfaceProps) {
-  const [gameStats, setGameStats] = useState<GameStats>({
-    level: 1,
-    score: 0,
-    hearts: 3,
-    diamonds: 0,
-    magicPower: 0
-  });
+// ── Audio helper ─────────────────────────────────────────────
+function playBeep(type: 'hit' | 'correct' | 'levelup' = 'hit') {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    if (type === 'hit') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(120, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(); osc.stop(ctx.currentTime + 0.4);
+    } else if (type === 'correct') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523, ctx.currentTime);
+      osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.start(); osc.stop(ctx.currentTime + 0.3);
+    } else {
+      // Level up: triumphant 5-note fanfare  C E G E C(high)
+      const notes = [523, 659, 784, 659, 1046];
+      notes.forEach((freq, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine';
+        const t = ctx.currentTime + i * 0.13;
+        o.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(0.18, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        o.start(t); o.stop(t + 0.18);
+      });
+      return; // early return — already handled above
+    }
+  } catch (_) {}
+}
 
-  // Keep latest gameStats in ref for cleanup
+export function GameInterface({ onGameComplete, mockMode = false, onBackToDashboard = () => {}, startNewGame = () => {}, onStatsUpdate, startLevel = 1 }: GameInterfaceProps) {
+  const [gameStats, setGameStats] = useState<GameStats>({
+    level: startLevel, score: 0, hearts: 3, diamonds: 0, wrongAnswers: 0, magicPower: 0
+  });
   const gameStatsRef = useRef(gameStats);
   useEffect(() => {
     gameStatsRef.current = gameStats;
+    onStatsUpdate?.(gameStats); // keep parent ref in sync for mid-game saves
   }, [gameStats]);
 
-  const [currentQuestion, setCurrentQuestion] = useState<Question>({ num1: 0, num2: 0 });
+  const [currentQuestion, setCurrentQuestion] = useState<Question>({ num1: 0, num2: 0 } as Question);
   const [userAnswer, setUserAnswer] = useState('');
   const [feedback, setFeedback] = useState('');
   const [showCelebration, setShowCelebration] = useState(false);
-  const [gameState, setGameState] = useState<'playing' | 'gameOver' | 'levelComplete' | 'menu'>('playing'); // Added 'menu' state
-  const [enemyPosition, setEnemyPosition] = useState(100);
+  const [gameState, setGameState] = useState<'playing' | 'gameOver' | 'levelComplete' | 'menu'>('playing');
+  const [enemyPosition, setEnemyPosition] = useState(0);
   const [enemyAttacking, setEnemyAttacking] = useState(false);
   const [playerDefending, setPlayerDefending] = useState(false);
   const [currentEnemy, setCurrentEnemy] = useState<Enemy | null>(null);
@@ -89,180 +121,109 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
   const [pointsEarned, setPointsEarned] = useState(0);
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
   const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(15); // 15 seconds timer
-  const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
-
-  // Mock data and states for the old `handleAnswerSubmit` function, which are not directly used in the new implementation but were part of the original structure that needed replacement.
-  // These are kept to ensure the context of the change is clear, but their values are not critical as the new `handleSubmit` logic supersedes them.
-  const [score, setScore] = useState(0);
-  const [playerHealth, setPlayerHealth] = useState(100);
-  const [enemyHealth, setEnemyHealth] = useState(100);
-  const [correctAnswers, setCorrectAnswers] = useState(0);
-  const [questionsAnswered, setQuestionsAnswered] = useState(0);
-  const [gameStartTime, setGameStartTime] = useState(Date.now());
-  const [currentProblem, setCurrentProblem] = useState({ answer: 0 }); // Placeholder for the old structure
-  const [answer, setAnswer] = useState(''); // Placeholder for the old structure
+  const [timeLeft, setTimeLeft] = useState(15);
+  // Fix 3: collision explosion
+  const [showExplosion, setShowExplosion] = useState(false);
+  // Level up celebration overlay
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [levelUpNumber, setLevelUpNumber] = useState(1);
+  const collisionInProgressRef = useRef(false);
 
   const enemies: Enemy[] = [
-    { name: 'Zombie', speed: 1.5, sound: '💀 GRRRR!', defeatSound: '💥 ARGHHHH!' },
+    { name: 'Zombie',   speed: 1.5, sound: '💀 GRRRR!',      defeatSound: '💥 ARGHHHH!' },
     { name: 'Skeleton', speed: 1.2, sound: '🏹 CLACK CLACK!', defeatSound: '💀 CRACK!' },
-    { name: 'Creeper', speed: 1.8, sound: '💣 SSSSSS!', defeatSound: '💥 BOOM!' },
-    { name: 'Witch', speed: 1.0, sound: '🧙‍♀️ CACKLE!', defeatSound: '⚡ NOOO!' },
-    { name: 'Dragon', speed: 2.0, sound: '🐲 ROAAAAR!', defeatSound: '🔥 DEFEATED!' }
+    { name: 'Creeper',  speed: 1.8, sound: '💣 SSSSSS!',      defeatSound: '💥 BOOM!' },
+    { name: 'Witch',    speed: 1.0, sound: '🧙‍♀️ CACKLE!',   defeatSound: '⚡ NOOO!' },
+    { name: 'Dragon',   speed: 2.0, sound: '🐲 ROAAAAR!',     defeatSound: '🔥 DEFEATED!' },
   ];
 
-  const generateQuestion = async () => {
-    // Get user age for difficulty adjustment
-    let userAge = 10; // Default age
+  const generateQuestion = useCallback(async () => {
+    collisionInProgressRef.current = false;
+    let userAge = 10;
     try {
       if (!mockMode) {
-        const response = await fetch('/api/auth/user');
-        if (response.ok) {
-          const userData = await response.json();
-          userAge = userData.age || 10;
-        }
+        const r = await fetch('/api/auth/user');
+        if (r.ok) { const d = await r.json(); userAge = d.age || 10; }
       }
-    } catch (error) {
-      console.log('Could not fetch user age, using default');
-    }
+    } catch (_) {}
 
-    // Canadian education system difficulty levels
-    const getDifficultySettings = (age: number, level: number) => {
-      const baseLevel = Math.min(level, 5); // Cap at level 5
-      
-      if (age >= 8 && age <= 9) {
-        // Grade 3: Basic addition and subtraction
-        return {
-          additionMax: Math.min(10 + baseLevel * 2, 20),
-          subtractionMax: Math.min(10 + baseLevel * 2, 20),
-          multiplicationMax: 3, // Very basic: 1x1 to 3x3
-          allowDivision: false,
-          operations: ['+', '-'] as const
-        };
-      } else if (age >= 10 && age <= 11) {
-        // Grade 4-5: Introduction to multiplication, larger addition/subtraction
-        return {
-          additionMax: Math.min(25 + baseLevel * 5, 50),
-          subtractionMax: Math.min(25 + baseLevel * 5, 50),
-          multiplicationMax: Math.min(5 + baseLevel, 10),
-          allowDivision: baseLevel >= 2,
-          operations: ['+', '-', '*'] as const
-        };
-      } else if (age >= 12 && age <= 13) {
-        // Grade 6-7: More complex operations
-        return {
-          additionMax: Math.min(50 + baseLevel * 10, 100),
-          subtractionMax: Math.min(50 + baseLevel * 10, 100),
-          multiplicationMax: Math.min(10 + baseLevel * 2, 15),
-          allowDivision: true,
-          operations: ['+', '-', '*', '/'] as const
-        };
-      } else if (age >= 14 && age <= 15) {
-        // Grade 8-9: Advanced operations
-        return {
-          additionMax: Math.min(75 + baseLevel * 15, 150),
-          subtractionMax: Math.min(75 + baseLevel * 15, 150),
-          multiplicationMax: Math.min(15 + baseLevel * 3, 25),
-          allowDivision: true,
-          operations: ['+', '-', '*', '/'] as const
-        };
-      } else {
-        // Grade 10+ or adults: Most challenging
-        return {
-          additionMax: Math.min(100 + baseLevel * 20, 200),
-          subtractionMax: Math.min(100 + baseLevel * 20, 200),
-          multiplicationMax: Math.min(20 + baseLevel * 5, 50),
-          allowDivision: true,
-          operations: ['+', '-', '*', '/'] as const
-        };
-      }
+    const getDiff = (age: number, level: number) => {
+      const bl = Math.min(level, 5);
+      if (age <= 9)  return { addMax: Math.min(10+bl*2,20),  subMax: Math.min(10+bl*2,20),  mulMax: 3,            ops: ['+','-'] as const };
+      if (age <= 11) return { addMax: Math.min(25+bl*5,50),  subMax: Math.min(25+bl*5,50),  mulMax: Math.min(5+bl,10),   ops: ['+','-','*'] as const };
+      if (age <= 13) return { addMax: Math.min(50+bl*10,100),subMax: Math.min(50+bl*10,100),mulMax: Math.min(10+bl*2,15),ops: ['+','-','*','/'] as const };
+      return            { addMax: Math.min(75+bl*15,150),subMax: Math.min(75+bl*15,150),mulMax: Math.min(15+bl*3,25),ops: ['+','-','*','/'] as const };
     };
 
-    const settings = getDifficultySettings(userAge, gameStats.level);
-    const availableOperations = settings.allowDivision && gameStats.level >= 2 
-      ? settings.operations 
-      : settings.operations.filter(op => op !== '/');
-    
-    const operation = availableOperations[Math.floor(Math.random() * availableOperations.length)];
-    
-    let num1: number, num2: number, answer: number, points: number;
-    
-    if (operation === '+') {
-      // Addition
-      num1 = Math.floor(Math.random() * settings.additionMax) + 1;
-      num2 = Math.floor(Math.random() * settings.additionMax) + 1;
-      answer = num1 + num2;
-      points = 10;
-    } else if (operation === '-') {
-      // Subtraction (ensure positive result)
-      num1 = Math.floor(Math.random() * settings.subtractionMax) + 10;
-      num2 = Math.floor(Math.random() * (num1 - 1)) + 1;
-      answer = num1 - num2;
-      points = 15;
-    } else if (operation === '*') {
-      // Multiplication
-      num1 = Math.floor(Math.random() * settings.multiplicationMax) + 1;
-      num2 = Math.floor(Math.random() * settings.multiplicationMax) + 1;
-      answer = num1 * num2;
-      points = 20;
-    } else {
-      // Division (ensure whole number result)
-      num2 = Math.floor(Math.random() * 9) + 2; // divisor 2-10
-      answer = Math.floor(Math.random() * 15) + 1; // quotient 1-15
-      num1 = num2 * answer; // dividend
-      points = 25;
-    }
-    
-    setCurrentQuestion({ num1, num2, operation: operation as '+' | '-' | '*', answer, points });
+    const s = getDiff(userAge, gameStats.level);
+    const ops = s.ops.filter(o => o !== '/' || gameStats.level >= 2);
+    const op = ops[Math.floor(Math.random() * ops.length)];
+    let n1: number, n2: number, ans: number, pts: number;
 
-    // Reset timer to 15 seconds
+    if (op === '+')      { n1 = Math.floor(Math.random()*s.addMax)+1; n2 = Math.floor(Math.random()*s.addMax)+1; ans = n1+n2; pts = 10; }
+    else if (op === '-') { n1 = Math.floor(Math.random()*s.subMax)+10; n2 = Math.floor(Math.random()*(n1-1))+1; ans = n1-n2; pts = 15; }
+    else if (op === '*') { n1 = Math.floor(Math.random()*s.mulMax)+1; n2 = Math.floor(Math.random()*s.mulMax)+1; ans = n1*n2; pts = 20; }
+    else                 { n2 = Math.floor(Math.random()*9)+2; ans = Math.floor(Math.random()*15)+1; n1 = n2*ans; pts = 25; }
+
+    setCurrentQuestion({ num1: n1, num2: n2, operation: op as '+' | '-' | '*', answer: ans, points: pts });
     setTimeLeft(15);
-    setQuestionStartTime(Date.now());
+    setEnemyPosition(0);
+    setEnemyAttacking(false);
+    setEnemyMoving(true);
+    setShowExplosion(false);
+    setCurrentEnemy(enemies[Math.floor(Math.random() * enemies.length)]);
+  }, [gameStats.level, mockMode]);
 
-    // Show different enemies on each question for variety!
-    const randomEnemyIndex = Math.floor(Math.random() * enemies.length);
-    setCurrentEnemy(enemies[randomEnemyIndex]);
-    setEnemyPosition(0); // Start from left side
-    setEnemyAttacking(false); // Reset attack state
-    setEnemyMoving(true); // Start moving
-  };
+  // Fix 3: collision handler
+  const handleCollision = useCallback(() => {
+    if (collisionInProgressRef.current) return;
+    collisionInProgressRef.current = true;
+    setEnemyMoving(false);
+    setShowExplosion(true);
+    playBeep('hit');
 
-  const handleSubmit = () => {
-    const userAnswerNumber = parseInt(userAnswer);
+    const currentStats = gameStatsRef.current;
+    const newHearts = Math.max(0, currentStats.hearts - 1);
+    // Build the final snapshot NOW (before setState async update)
+    const updatedStats = { ...currentStats, hearts: newHearts, wrongAnswers: currentStats.wrongAnswers + 1 };
+    setGameStats(updatedStats);
 
-    if (userAnswerNumber === currentQuestion.answer) {
-      const earnedPoints = currentQuestion.points;
-      setPointsEarned(earnedPoints);
+    setTimeout(() => {
+      setShowExplosion(false);
+      if (newHearts <= 0) {
+        setGameState('gameOver');
+        onGameComplete?.(updatedStats); // ✅ use snapshot, not stale ref
+      } else {
+        setFeedback('');
+        setUserAnswer('');
+        generateQuestion();
+      }
+    }, 1600);
+  }, [generateQuestion, onGameComplete]);
+
+  const handleSubmit = useCallback(() => {
+    if (collisionInProgressRef.current) return;
+    const num = parseInt(userAnswer);
+    if (num === currentQuestion.answer) {
+      const pts = currentQuestion.points;
+      setPointsEarned(pts);
       setShowPointsAnimation(true);
       setPlayerDefending(true);
       setShowMagicBlast(true);
       setEnemyMoving(false);
+      playBeep('correct');
 
       const newStats = {
-        ...gameStats,
-        score: gameStats.score + earnedPoints,
-        diamonds: gameStats.diamonds + 1,
-        magicPower: gameStats.magicPower + gameStats.level
+        ...gameStatsRef.current,
+        score: gameStatsRef.current.score + pts,
+        diamonds: gameStatsRef.current.diamonds + 1,
+        magicPower: gameStatsRef.current.magicPower + gameStatsRef.current.level,
       };
       setGameStats(newStats);
+      if (!mockMode) checkForAchievements(newStats.score);
 
-      // Check for new achievements every 500 points
-      if (!mockMode) {
-        checkForAchievements(newStats.score);
-      }
-
-      // Different celebration messages based on operation
-      let celebrationEmoji = '';
-      if (currentQuestion.operation === '+') celebrationEmoji = '➕';
-      else if (currentQuestion.operation === '-') celebrationEmoji = '➖';
-      else if (currentQuestion.operation === '*') celebrationEmoji = '✖️';
-
-      if (currentEnemy) {
-        setFeedback(`${currentEnemy.defeatSound} ${celebrationEmoji} +${earnedPoints} POINTS! 🌟`);
-      } else {
-        setFeedback(`✨ Perfect! ${celebrationEmoji} +${earnedPoints} POINTS! 🌟`);
-      }
-
+      const opEmoji = currentQuestion.operation === '+' ? '➕' : currentQuestion.operation === '-' ? '➖' : '✖️';
+      setFeedback(currentEnemy ? `${currentEnemy.defeatSound} ${opEmoji} +${pts} PTS!` : `✨ PERFECT! ${opEmoji} +${pts} PTS!`);
       setShowCelebration(true);
 
       setTimeout(() => {
@@ -273,483 +234,550 @@ export function GameInterface({ onGameComplete, mockMode = false, onBackToDashbo
         setFeedback('');
         setUserAnswer('');
 
-        if (newStats.score >= gameStats.level * 50) {
-          if (gameStats.level < 5) {
-            setGameStats(prev => ({ ...prev, level: prev.level + 1 }));
-            setFeedback(`🎊 LEVEL UP! Now Level ${gameStats.level + 1}! 🎊`);
-            setTimeout(() => {
-              setFeedback('');
-              generateQuestion();
-            }, 2000);
+        if (newStats.score >= gameStatsRef.current.level * 50) {
+          if (gameStatsRef.current.level < 5) {
+            // snapshot level-up immediately so ref stays in sync
+            const levelUpStats = { ...gameStatsRef.current, level: gameStatsRef.current.level + 1 };
+            setGameStats(levelUpStats);
+            gameStatsRef.current = levelUpStats;
+            playBeep('levelup');
+            // show level-up overlay
+            setLevelUpNumber(levelUpStats.level);
+            setShowLevelUp(true);
+            setTimeout(() => setShowLevelUp(false), 2500);
           } else {
             setGameState('levelComplete');
             onGameComplete?.(newStats);
+            return;
           }
-        } else {
-          generateQuestion();
         }
-      }, 2000);
+        generateQuestion();
+      }, 1800);
     } else {
-      // Deduct 2 points for wrong answer (minimum 0)
-      const newScore = Math.max(0, gameStats.score - 2);
-      setGameStats(prev => ({ ...prev, score: newScore }));
-
-      // Show feedback without revealing correct answer
-      setFeedback(`❌ Wrong! Try again!`);
-
-      // Enemy advances closer with each wrong answer (add 10% to position)
-      setEnemyPosition(prev => Math.min(100, prev + 10));
-
-      // Clear user input to allow retry
+      // Build snapshot immediately so ref stays in sync for next onGameComplete call
+      const wrongStats = {
+        ...gameStatsRef.current,
+        score: Math.max(0, gameStatsRef.current.score - 2),
+        wrongAnswers: gameStatsRef.current.wrongAnswers + 1,
+      };
+      setGameStats(wrongStats);
+      gameStatsRef.current = wrongStats; // ✅ keep ref in sync right away
+      setFeedback('❌ WRONG! TRY AGAIN!');
+      setEnemyPosition(prev => Math.min(85, prev + 12));
       setUserAnswer('');
-
-      // Clear feedback after 1 second but stay on same question
-      setTimeout(() => {
-        setFeedback('');
-      }, 1000);
+      setTimeout(() => setFeedback(''), 900);
     }
-  };
+  }, [userAnswer, currentQuestion, currentEnemy, generateQuestion, mockMode, onGameComplete]);
 
   const restartGame = () => {
-    setGameStats({ level: 1, score: 0, hearts: 3, diamonds: 0, magicPower: 0 });
+    collisionInProgressRef.current = false;
+    setGameStats({ level: 1, score: 0, hearts: 3, diamonds: 0, wrongAnswers: 0, magicPower: 0 });
     setEnemyPosition(0);
     setEnemyAttacking(false);
     setPlayerDefending(false);
     setEnemyMoving(false);
     setShowMagicBlast(false);
     setShowPointsAnimation(false);
+    setShowExplosion(false);
     setUserAnswer('');
     setFeedback('');
     setGameState('playing');
-    generateQuestion();
+  };
+
+  // Save progress then go home — called when user taps ← HOME mid-game
+  const handleGoHome = () => {
+    const s = gameStatsRef.current;
+    const totalAnswered = s.diamonds + s.wrongAnswers;
+    if (totalAnswered > 0) {
+      // always save if at least one question was answered
+      onGameComplete?.(s);
+    } else {
+      onBackToDashboard();
+    }
   };
 
   useEffect(() => {
-    // Start the game with a question when the component mounts or level changes
-    if (gameState === 'playing') {
-      generateQuestion();
-    }
-  }, [gameState, gameStats.level]); // Only depend on gameState and level changes
+    if (gameState === 'playing') generateQuestion();
+  }, [gameState]);
 
-  // Auto-save progress when component unmounts (user leaves game)
-  useEffect(() => {
-    console.log('GameInterface mounted, setting up auto-save cleanup');
-    return () => {
-      // Save progress when component unmounts only if there's meaningful progress
-      const currentStats = gameStatsRef.current;
-      console.log('GameInterface unmounting with stats:', currentStats);
-      if (currentStats.score > 0) {
-        console.log('Auto-saving progress on component unmount:', currentStats);
-        onGameComplete?.(currentStats);
-      } else {
-        console.log('No meaningful progress to save (score = 0)');
-      }
-    };
-  }, [onGameComplete]); // Only depend on onGameComplete, use ref for latest gameStats
+  // NOTE: intentionally no unmount cleanup calling onGameComplete —
+  // doing so would double-save progress and corrupt daily stats in the DB.
 
-  // Check for achievements
   const checkForAchievements = async (totalPoints: number) => {
     try {
-      const response = await fetch('/api/achievements/check', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const r = await fetch('/api/achievements/check', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ totalPoints }),
       });
-
-      if (response.ok) {
-        const achievements = await response.json();
-        if (achievements.length > 0) {
-          setNewAchievements(achievements);
-          setCurrentAchievementIndex(0);
-        }
+      if (r.ok) {
+        const a = await r.json();
+        if (a.length > 0) { setNewAchievements(a); setCurrentAchievementIndex(0); }
       }
-    } catch (error) {
-      console.error('Failed to check achievements:', error);
-    }
+    } catch (_) {}
   };
 
   const handleAchievementClose = () => {
-    if (currentAchievementIndex < newAchievements.length - 1) {
-      setCurrentAchievementIndex(prev => prev + 1);
+    if (currentAchievementIndex < newAchievements.length - 1) setCurrentAchievementIndex(p => p + 1);
+    else { setNewAchievements([]); setCurrentAchievementIndex(0); }
+  };
+
+  // Timer countdown
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+    if (timeLeft <= 0) return;
+    const t = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(t);
+          // Fix 3: time up = collision
+          handleCollision();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [gameState, handleCollision]);
+
+  // Enemy movement
+  useEffect(() => {
+    if (!enemyMoving || !currentEnemy) return;
+    const start = Date.now();
+    const duration = 15000;
+    const iv = setInterval(() => {
+      const p = Math.min((Date.now() - start) / duration, 1);
+      // Enemy moves from 5% to 80% (leaves room so char doesn't overlap player)
+      setEnemyPosition(5 + p * 75);
+      if (p >= 1) { setEnemyMoving(false); clearInterval(iv); }
+    }, 50);
+    return () => clearInterval(iv);
+  }, [enemyMoving, currentEnemy]);
+
+  // ── GAME OVER ──────────────────────────────────────────────
+  if (gameState === 'gameOver') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4"
+        style={{ background: 'linear-gradient(180deg,#1a0000 0%,#060b14 100%)' }}>
+        <div className="w-full max-w-xs text-center">
+          <div className="flex justify-center mb-4"><MinecraftZombie scale={1.8} /></div>
+          <div className="border-2 border-red-700 bg-[#0d1117] p-6"
+            style={{ boxShadow: '0 0 30px rgba(220,38,38,0.3)' }}>
+            <h2 className="font-pixel text-2xl text-red-400 mb-5" style={{ textShadow: '0 0 12px rgba(220,38,38,0.5)' }}>GAME OVER</h2>
+            <div className="space-y-1.5 mb-5 border border-gray-800 bg-black/40 p-4">
+              <p className="font-pixel text-[10px] text-amber-400">SCORE: {gameStats.score}</p>
+              <p className="font-pixel text-[10px] text-emerald-400">CORRECT: {gameStats.diamonds}</p>
+              <p className="font-pixel text-[10px] text-red-400">WRONG: {gameStats.wrongAnswers}</p>
+            </div>
+            <button onClick={restartGame} data-testid="button-respawn"
+              className="w-full font-pixel text-[11px] text-white py-3 tracking-widest
+                bg-red-700 border-b-4 border-red-900 hover:bg-red-600
+                transition-all active:border-b-0 active:translate-y-1" style={{ borderRadius: 0 }}>
+              ▶ RESPAWN
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── LEVEL COMPLETE ─────────────────────────────────────────
+  if (gameState === 'levelComplete') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4"
+        style={{ background: 'linear-gradient(180deg,#0a1a00 0%,#060b14 100%)' }}>
+        <div className="w-full max-w-xs text-center">
+          <div className="flex justify-center mb-4"><MinecraftSteve scale={1.8} /></div>
+          <div className="border-2 border-amber-500 bg-[#0d1117] p-6"
+            style={{ boxShadow: '0 0 30px rgba(251,191,36,0.25)' }}>
+            <h2 className="font-pixel text-2xl text-amber-400 mb-1" style={{ textShadow: '0 0 12px rgba(251,191,36,0.4)' }}>VICTORY!</h2>
+            <p className="font-pixel text-[9px] text-emerald-400 tracking-widest mb-5">YOU CONQUERED ALL LEVELS</p>
+            <div className="space-y-1.5 mb-5 border border-gray-800 bg-black/40 p-4">
+              <p className="font-pixel text-[10px] text-amber-400">SCORE: {gameStats.score}</p>
+              <p className="font-pixel text-[10px] text-emerald-400">CORRECT: {gameStats.diamonds}</p>
+              <p className="font-pixel text-[10px] text-red-400">WRONG: {gameStats.wrongAnswers}</p>
+            </div>
+            <button onClick={restartGame} data-testid="button-new-game"
+              className="w-full font-pixel text-[11px] text-white py-3 tracking-widest
+                bg-emerald-700 border-b-4 border-emerald-900 hover:bg-emerald-600
+                transition-all active:border-b-0 active:translate-y-1" style={{ borderRadius: 0 }}>
+              ▶ PLAY AGAIN
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PLAYING ────────────────────────────────────────────────
+  const { score: currentScore, hearts, diamonds, wrongAnswers, magicPower } = gameStats;
+
+  const opStyle = currentQuestion.operation === '+'
+    ? { border: '#22c55e', bg: 'rgba(34,197,94,0.08)', text: '#86efac', label: '➕ +10 PTS' }
+    : currentQuestion.operation === '-'
+    ? { border: '#3b82f6', bg: 'rgba(59,130,246,0.08)', text: '#93c5fd', label: '➖ +15 PTS' }
+    : { border: '#a855f7', bg: 'rgba(168,85,247,0.08)', text: '#d8b4fe', label: '✖️ +20 PTS' };
+
+  const timerStyle = timeLeft <= 5
+    ? { border: '#ef4444', bg: 'rgba(239,68,68,0.12)', text: '#fca5a5', pulse: true }
+    : timeLeft <= 10
+    ? { border: '#f59e0b', bg: 'rgba(245,158,11,0.12)', text: '#fcd34d', pulse: false }
+    : { border: '#22c55e', bg: 'rgba(34,197,94,0.1)',   text: '#86efac', pulse: false };
+
+  // ── Arena JSX (shared between mobile and desktop) ──────────
+  const ArenaContent = (
+    <div className="relative w-full h-full overflow-hidden">
+      {/* Sky stars */}
+      {[...Array(8)].map((_, i) => (
+        <div key={i} className="absolute rounded-full bg-white"
+          style={{ width: 1, height: 1, top: `${8+(i*11)%40}%`, left: `${(i*19)%88+5}%`, opacity: 0.3 }} />
+      ))}
+      {/* Ground */}
+      <div className="absolute bottom-0 left-0 right-0 h-7"
+        style={{ background: 'repeating-linear-gradient(90deg,#2d4a1a 0,#2d4a1a 16px,#3a5c22 16px,#3a5c22 32px)' }} />
+      <div className="absolute bottom-7 left-0 right-0 h-2" style={{ background: '#5c2d0a' }} />
+
+      {/* Enemy */}
+      {currentEnemy && !showExplosion && (
+        <div className="absolute" style={{ left: `${enemyPosition}%`, bottom: 36, transform: 'translateX(-50%)', transition: 'left 0.05s linear' }}>
+          {currentEnemy.name === 'Zombie'   && <MinecraftZombie   isAttacking={enemyAttacking} scale={1} />}
+          {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={1} />}
+          {currentEnemy.name === 'Creeper'  && <MinecraftCreeper  isAttacking={enemyAttacking} scale={1} />}
+          {currentEnemy.name === 'Witch'    && <MinecraftWitch    isAttacking={enemyAttacking} scale={1} />}
+          {currentEnemy.name === 'Dragon'   && <MinecraftDragon   isAttacking={enemyAttacking} scale={0.75} />}
+          <div className="font-pixel text-[6px] text-red-400 text-center bg-black/70 px-1 mt-0.5">
+            {currentEnemy.name === 'Zombie' && '🧟'}{currentEnemy.name === 'Skeleton' && '💀'}
+            {currentEnemy.name === 'Creeper' && '💣'}{currentEnemy.name === 'Witch' && '🧙'}{currentEnemy.name === 'Dragon' && '🐲'}
+          </div>
+        </div>
+      )}
+
+      {/* Explosion */}
+      {showExplosion && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-30 bg-black/60">
+          <div className="text-5xl animate-ping">💥</div>
+          <div className="font-pixel text-[10px] text-red-400 mt-2 animate-pulse">
+            {hearts > 1 ? '❤️ -1 LIFE!' : '💔 LAST LIFE!'}
+          </div>
+        </div>
+      )}
+
+      {/* Player */}
+      {!showExplosion && (
+        <div className="absolute" style={{ right: 24, bottom: 36 }}>
+          <MinecraftSteve isDefending={playerDefending} scale={1} />
+          <div className="font-pixel text-[6px] text-emerald-400 text-center bg-black/70 px-1 mt-0.5">🛡️</div>
+          {magicPower > 0 && (
+            <div className="absolute -top-3 -right-2 bg-purple-700 text-white font-pixel text-[7px]
+              w-5 h-5 flex items-center justify-center border border-purple-400 animate-pulse">
+              {magicPower}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Magic blast */}
+      {showMagicBlast && (
+        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+          <div className="flex gap-2 text-3xl animate-ping"><span>⚡</span><span>💫</span><span>✨</span></div>
+        </div>
+      )}
+      {/* Points */}
+      {showPointsAnimation && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20">
+          <span className="font-pixel text-sm text-amber-300 animate-bounce bg-black/80 px-3 py-1"
+            style={{ border: '2px solid #f59e0b' }}>+{pointsEarned} XP</span>
+        </div>
+      )}
+      {/* Danger */}
+      {currentEnemy && enemyPosition >= 65 && !playerDefending && !showExplosion && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 animate-pulse">
+          <span className="font-pixel text-[9px] text-red-300 bg-black/90 px-3 py-1"
+            style={{ border: '2px solid #ef4444' }}>⚠ DANGER!</span>
+        </div>
+      )}
+    </div>
+  );
+
+  // ── Question + Input panel JSX ──────────────────────────────
+  const QuestionPanel = (
+    <div className="bg-[#0d1117] p-3 md:p-4" style={{ border: '2px solid #1a3a1a', borderTop: 'none' }}>
+      {/* Question */}
+      <div className="text-center py-2.5 px-4 mb-2"
+        style={{ border: `2px solid ${opStyle.border}`, background: opStyle.bg }}>
+        <p className="font-pixel text-xl md:text-2xl text-white tracking-widest">
+          {currentQuestion.num1} {currentQuestion.operation} {currentQuestion.num2} = ?
+        </p>
+      </div>
+      {/* Points + Timer */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="text-center py-1.5" style={{ border: `1px solid ${opStyle.border}`, background: opStyle.bg }}>
+          <span className="font-pixel text-[8px]" style={{ color: opStyle.text }}>{opStyle.label}</span>
+        </div>
+        <div className="text-center py-1.5" style={{ border: `1px solid ${timerStyle.border}`, background: timerStyle.bg }}>
+          <span className={`font-pixel text-[8px] ${timerStyle.pulse ? 'animate-pulse' : ''}`}
+            style={{ color: timerStyle.text }}>⏰ {timeLeft}s</span>
+        </div>
+      </div>
+      {/* Input + Attack */}
+      <div className="flex gap-2 mb-2">
+        <input
+          type="number"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={userAnswer}
+          onChange={e => setUserAnswer(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); } }}
+          placeholder="Answer..."
+          data-testid="input-answer"
+          className="flex-1 bg-black/70 border border-gray-600 text-white text-center font-pixel text-xl px-3 py-3
+            focus:outline-none focus:border-emerald-500 placeholder:text-gray-700 transition-colors"
+          style={{ borderRadius: 0, fontSize: '1.25rem' }}
+          autoComplete="off"
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={!userAnswer}
+          data-testid="button-submit"
+          className="font-pixel text-[10px] text-white px-4 py-3 tracking-wider
+            bg-red-700 border-b-4 border-red-900 hover:bg-red-600
+            transition-all active:border-b-0 active:translate-y-1
+            disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          style={{ borderRadius: 0 }}>
+          ⚔️ ATTACK
+        </button>
+      </div>
+      {/* Feedback */}
+      {feedback && (
+        <div className="text-center py-1.5 px-3" style={{ border: '1px solid #f59e0b', background: 'rgba(245,158,11,0.1)' }}>
+          <p className="font-pixel text-[9px] text-amber-300">{feedback}</p>
+        </div>
+      )}
+      {showCelebration && (
+        <div className="flex justify-center gap-2 text-xl animate-bounce py-1">🎉 🏆 🎉</div>
+      )}
+    </div>
+  );
+
+  // ── Custom on-screen keypad (mobile only) ──────────────────
+  const keypadPress = (val: string) => {
+    if (val === '⌫') {
+      setUserAnswer(prev => prev.slice(0, -1));
     } else {
-      setNewAchievements([]);
-      setCurrentAchievementIndex(0);
+      setUserAnswer(prev => (prev + val).slice(0, 4)); // max 4 digits
     }
   };
 
-  // Timer countdown effect
-  useEffect(() => {
-    if (gameState === 'playing' && timeLeft > 0) {
-      const timer = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            // Time's up! Timer stays at 0, enemy stops moving
-            setEnemyMoving(false);
-            // Don't show any feedback, just let timer stay at 0
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    }
-  }, [gameState]); // Only depend on gameState
-
-  // Enemy movement effect - consistent movement over 15 seconds
-  useEffect(() => {
-    if (enemyMoving && currentEnemy && enemyPosition < 100) {
-      const startTime = Date.now();
-      const duration = 15000; // 15 seconds in milliseconds
-      
-      const interval = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1); // 0 to 1
-        const newPosition = progress * 100; // 0 to 100%
-        
-        setEnemyPosition(newPosition);
-        
-        // Stop when enemy reaches player or time is up
-        if (progress >= 1) {
-          setEnemyMoving(false);
-          clearInterval(interval);
-        }
-      }, 50); // Update every 50ms for smooth animation
-      
-      return () => clearInterval(interval);
-    }
-  }, [enemyMoving, currentEnemy]);
-
-  // Game menu state handling
-  if (gameState === 'menu') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-purple-900 via-blue-900 to-green-900 flex items-center justify-center p-4">
-        <Card className="p-6 text-center border-4 border-yellow-500 w-full max-w-sm bg-card">
-          <div className="mb-4">
-            <MinecraftSteve scale={1.5} />
-          </div>
-          <h2 className="text-2xl font-pixel text-yellow-600 mb-4">MATH ADVENTURE</h2>
-          <p className="text-foreground mb-4">Press "NEW GAME" to begin your quest!</p>
-          <Button
-            onClick={() => {
-              setGameState('playing');
-              startNewGame();
-            }}
-            className="w-full font-pixel bg-purple-600 hover:bg-purple-700"
-            data-testid="button-start-game"
-          >
-            START ADVENTURE
-          </Button>
-          <Button
-            onClick={onBackToDashboard}
-            variant="outline"
-            className="w-full mt-4 font-pixel border-2 hover:scale-105 transition-all duration-200"
-          >
-            ← BACK TO DASHBOARD
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
-  if (gameState === 'gameOver') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-red-800 to-black flex items-center justify-center p-4">
-        <Card className="p-6 text-center border-4 border-destructive w-full max-w-sm bg-card">
-          <div className="mb-4">
-            <MinecraftZombie scale={1.2} />
-          </div>
-          <h2 className="text-2xl font-pixel text-destructive mb-4">GAME OVER</h2>
-          <div className="bg-muted p-3 rounded mb-4 text-sm space-y-1">
-            <p className="text-foreground">Score: {gameStats.score}</p>
-            <p className="text-cyan-400">Diamonds: {gameStats.diamonds}</p>
-            <p className="text-green-400">Level: {gameStats.level}</p>
-          </div>
-          <Button
-            onClick={restartGame}
-            className="w-full font-pixel"
-            data-testid="button-respawn"
-          >
-            RESPAWN
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
-  if (gameState === 'levelComplete') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-yellow-400 to-orange-500 flex items-center justify-center p-4">
-        <Card className="p-6 text-center border-4 border-yellow-500 w-full max-w-sm bg-card">
-          <div className="mb-4">
-            <MinecraftSteve scale={1.5} />
-          </div>
-          <h2 className="text-2xl font-pixel text-yellow-600 mb-4">VICTORY!</h2>
-          <div className="bg-muted p-3 rounded mb-4 text-sm space-y-1">
-            <p className="text-foreground">Score: {gameStats.score}</p>
-            <p className="text-cyan-400">Diamonds: {gameStats.diamonds}</p>
-          </div>
-          <Button
-            onClick={restartGame}
-            className="w-full font-pixel bg-purple-600 hover:bg-purple-700"
-            data-testid="button-new-game"
-          >
-            NEW GAME
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
-  // Destructure gameStats for easier access in JSX
-  const { score: currentScore, hearts, diamonds, magicPower } = gameStats;
-
   return (
-    // Removed redundant outer div and applied main styles directly
-    <div className="min-h-screen bg-gradient-to-b from-blue-800 to-green-800 p-4" style={{ imageRendering: 'pixelated' }}>
-      {/* Game Header */}
-      <div className="relative z-10 p-3 md:p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between mb-3 md:mb-6 gap-2 md:gap-0">
-            <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 w-full md:w-auto">
-              <Button
-                onClick={onBackToDashboard}
-                variant="outline"
-                size="sm"
-                className="font-pixel border-2 hover:scale-105 transition-all duration-200 text-xs md:text-sm w-full md:w-auto"
-              >
-                ← DASHBOARD
-              </Button>
-              <h1 className="font-pixel text-sm md:text-2xl text-white animate-pulse text-center">
-                🏹 MINECRAFT MATH ⚔️
-              </h1>
+    <>
+      {/* ══ LEVEL UP OVERLAY (mobile + desktop) ══ */}
+      {showLevelUp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+          style={{ background: 'rgba(0,0,0,0.65)' }}>
+          <style>{`
+            @keyframes lvlPop {
+              0%   { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+              60%  { transform: scale(1.15) rotate(2deg); opacity: 1; }
+              80%  { transform: scale(0.95) rotate(0deg); }
+              100% { transform: scale(1) rotate(0deg); opacity: 1; }
+            }
+            @keyframes lvlGlow {
+              0%, 100% { text-shadow: 0 0 20px rgba(251,191,36,0.8); }
+              50%       { text-shadow: 0 0 40px rgba(251,191,36,1), 0 0 80px rgba(251,191,36,0.5); }
+            }
+          `}</style>
+          <div className="text-center"
+            style={{ animation: 'lvlPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards' }}>
+            <div className="text-7xl mb-2">⚡</div>
+            <div className="font-pixel text-amber-400 text-3xl mb-2 tracking-widest"
+              style={{ animation: 'lvlGlow 1s ease-in-out infinite' }}>
+              LEVEL UP!
             </div>
-            <div className="flex gap-2 md:gap-3 w-full md:w-auto justify-center">
-              <Button
-                onClick={startNewGame}
-                variant="outline"
-                size="sm"
-                className="font-pixel border-2 hover:scale-105 transition-all duration-200 text-xs md:text-sm flex-1 md:flex-none"
-                disabled={gameState !== 'playing'} // Only disable if not playing
-              >
-                🔄 NEW GAME
-              </Button>
+            <div className="font-pixel text-white mb-3"
+              style={{ fontSize: '5rem', lineHeight: 1, textShadow: '0 0 30px rgba(168,85,247,0.9), 4px 4px 0 #4c1d95' }}>
+              {levelUpNumber}
+            </div>
+            <div className="font-pixel text-emerald-400 text-[11px] tracking-[0.3em]">
+              ★ NEW LEVEL UNLOCKED ★
             </div>
           </div>
-          {/* Game Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-3 md:mb-6">
-            <Card className="border-2 border-red-600 bg-gradient-to-br from-red-900/80 to-red-800/60">
-              <CardContent className="p-2 md:p-4 text-center">
-                <div className="flex items-center justify-center gap-1 md:gap-2 mb-1 md:mb-2">
-                  <Heart className="h-4 w-4 md:h-6 md:w-6 text-red-400 animate-pulse" />
-                  <span className="font-pixel text-white text-sm md:text-lg">{hearts}</span>
-                </div>
-                <p className="text-red-300 text-xs md:text-sm font-pixel">❤️ Lives</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-blue-600 bg-gradient-to-br from-blue-900/80 to-blue-800/60">
-              <CardContent className="p-2 md:p-4 text-center">
-                <div className="flex items-center justify-center gap-1 md:gap-2 mb-1 md:mb-2">
-                  <Trophy className="h-4 w-4 md:h-6 md:w-6 text-yellow-400 animate-bounce" />
-                  <span className="font-pixel text-white text-sm md:text-lg">{currentScore}</span>
-                </div>
-                <p className="text-blue-300 text-xs md:text-sm font-pixel">🏆 Score</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-green-600 bg-gradient-to-br from-green-900/80 to-green-800/60">
-              <CardContent className="p-2 md:p-4 text-center">
-                <div className="flex items-center justify-center gap-1 md:gap-2 mb-1 md:mb-2">
-                  <Zap className="h-4 w-4 md:h-6 md:w-6 text-yellow-400 animate-pulse" />
-                  <span className="font-pixel text-white text-sm md:text-lg">{gameStats.level}</span>
-                </div>
-                <p className="text-green-300 text-xs md:text-sm font-pixel">⚡ Level</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-purple-600 bg-gradient-to-br from-purple-900/80 to-purple-800/60">
-              <CardContent className="p-2 md:p-4 text-center">
-                <div className="flex items-center justify-center gap-1 md:gap-2 mb-1 md:mb-2">
-                  <Diamond className="h-4 w-4 md:h-6 md:w-6 text-cyan-400 animate-spin" />
-                  <span className="font-pixel text-white text-sm md:text-lg">{diamonds}</span>
-                </div>
-                <p className="text-purple-300 text-xs md:text-sm font-pixel">💎 Gems</p>
-              </CardContent>
-            </Card>
-          </div>
         </div>
-      </div>
-
-      {/* Game Arena - Enhanced mobile layout */}
-      <Card className="p-3 md:p-4 mb-3 md:mb-4 border-2 border-card-border relative min-h-[140px] md:min-h-[300px] bg-gradient-to-b from-sky-300 to-green-400 overflow-hidden">
-        {/* Minecraft-style background blocks */}
-        <div className="absolute top-0 left-0 right-0 h-3 md:h-8 bg-gradient-to-r from-green-600 via-green-700 to-green-600 opacity-40"></div>
-        <div className="absolute bottom-0 left-0 right-0 h-3 md:h-8 bg-gradient-to-r from-amber-800 via-amber-900 to-amber-800"></div>
-
-        {/* Floating blocks decoration - minimal on mobile */}
-        <div className="hidden md:block absolute top-4 left-4">
-          <MinecraftBlock type="grass" size={12} />
-        </div>
-        <div className="hidden md:block absolute top-4 right-4">
-          <MinecraftBlock type="stone" size={12} />
-        </div>
-
-        <div className="relative z-10 flex justify-between items-center h-full px-1 md:px-0">
-          {/* Enemy - Enhanced mobile positioning */}
-          {currentEnemy && (
-            <div className="flex flex-col items-center absolute bottom-4 scale-90 md:scale-100 transition-all duration-200"
-                 style={{ 
-                   left: `${enemyPosition}%`,
-                   transform: `translateX(-50%)` // Center the enemy on its position
-                 }}>
-              {currentEnemy.name === 'Zombie' && <MinecraftZombie isAttacking={enemyAttacking} scale={0.7} />}
-              {currentEnemy.name === 'Skeleton' && <MinecraftSkeleton isAttacking={enemyAttacking} scale={0.7} />}
-              {currentEnemy.name === 'Creeper' && <MinecraftCreeper isAttacking={enemyAttacking} scale={0.7} />}
-              {currentEnemy.name === 'Witch' && <MinecraftWitch isAttacking={enemyAttacking} scale={0.7} />}
-              {currentEnemy.name === 'Dragon' && <MinecraftDragon isAttacking={enemyAttacking} scale={0.5} />}
-              <div className="text-xs text-center font-pixel text-red-400 mt-1 bg-black bg-opacity-60 px-1 py-0.5 rounded">
-                {currentEnemy.name === 'Zombie' && '🧟'}
-                {currentEnemy.name === 'Skeleton' && '💀'}
-                {currentEnemy.name === 'Creeper' && '💣'}
-                {currentEnemy.name === 'Witch' && '🧙‍♀️'}
-                {currentEnemy.name === 'Dragon' && '🐲'}
-                <span className="hidden sm:inline ml-1">{currentEnemy.name}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Player - Enhanced positioning */}
-          <div className="flex flex-col items-center relative scale-90 md:scale-100">
-            <MinecraftSteve isDefending={playerDefending} />
-            <span className="font-pixel text-xs text-green-400 mt-1 md:mt-2 bg-black bg-opacity-60 px-2 py-0.5 rounded">
-              🛡️ <span className="hidden sm:inline ml-1">STEVE</span>
-            </span>
-            {/* Magic power indicator */}
-            {magicPower > 0 && (
-              <div className="absolute -top-1 md:-top-4 -right-1 md:-right-4 bg-purple-600 text-white rounded-full w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-xs font-pixel animate-pulse border border-purple-400">
-                {magicPower}
-              </div>
-            )}
-          </div>
-
-          {/* Battle Effects - Enhanced mobile visibility */}
-          {showMagicBlast && (
-            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-              <div className="flex gap-1 text-xl md:text-4xl animate-ping">
-                <div className="text-yellow-400 animate-spin">⚡</div>
-                <div className="text-blue-400 animate-pulse">💫</div>
-                <div className="text-purple-400 animate-bounce">✨</div>
-              </div>
-            </div>
-          )}
-
-          {showPointsAnimation && (
-            <div className="absolute top-2 md:top-4 left-1/2 transform -translate-x-1/2 font-pixel text-yellow-400 animate-bounce text-sm md:text-lg z-20 bg-black bg-opacity-70 px-3 py-1 rounded-lg border-2 border-yellow-400 shadow-lg">
-              +{pointsEarned} XP
-            </div>
-          )}
-
-          {/* Enemy approaching warning - Better mobile visibility */}
-          {currentEnemy && enemyPosition >= 70 && !playerDefending && (
-            <div className="absolute top-3 md:top-1/4 left-1/2 transform -translate-x-1/2 text-red-400 font-pixel text-xs md:text-sm animate-pulse bg-black bg-opacity-80 px-2 md:px-4 py-1 md:py-2 rounded-lg border-2 border-red-500 shadow-lg">
-              ⚠️ DANGER! ⚠️
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Main Game Content - Side by side layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Question and Answer - Enhanced mobile layout */}
-        <Card className="lg:col-span-2 p-3 md:p-4 border-2 border-card-border bg-gradient-to-b from-card/95 to-card/90 backdrop-blur-sm">
-          <div className="text-center space-y-3 md:space-y-4">
-            <div className="space-y-3 md:space-y-3">
-              <h2 className="text-xl md:text-2xl font-pixel text-foreground bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent border-2 border-blue-400 bg-black bg-opacity-40 px-3 md:px-4 py-2 md:py-3 rounded-lg shadow-lg">
-                ⚡ {currentQuestion.num1} {currentQuestion.operation} {currentQuestion.num2} = ? ⚡
-              </h2>
-              
-              {/* Show point value for current question */}
-              <div className={`text-center font-pixel text-sm px-3 py-1 rounded-lg border-2 inline-block ${
-                currentQuestion.operation === '+' ? 'bg-green-900/70 border-green-400 text-green-100' :
-                currentQuestion.operation === '-' ? 'bg-blue-900/70 border-blue-400 text-blue-100' :
-                'bg-purple-900/70 border-purple-400 text-purple-100'
-              }`}>
-                {currentQuestion.operation === '+' && '➕ Addition: 10 points'}
-                {currentQuestion.operation === '-' && '➖ Subtraction: 15 points'}
-                {currentQuestion.operation === '*' && '✖️ Multiplication: 20 points'}
-              </div>
-              
-              {/* Timer Display - Better mobile visibility */}
-              <div className={`text-center font-pixel text-base md:text-lg px-3 md:px-4 py-2 md:py-2 rounded-lg border-2 shadow-md transition-all duration-300 ${
-                timeLeft <= 5 
-                  ? 'bg-red-900/70 border-red-400 text-red-100 animate-pulse scale-105' 
-                  : timeLeft <= 10 
-                  ? 'bg-yellow-900/70 border-yellow-400 text-yellow-100 animate-pulse' 
-                  : 'bg-green-900/70 border-green-400 text-green-100'
-              }`}>
-                ⏰ <span className="hidden sm:inline">Time: </span>{timeLeft}s
-              </div>
-            </div>
-
-            <div className="flex gap-2 md:gap-3 max-w-sm mx-auto">
-              <Input
-                type="number"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                placeholder="Answer"
-                className="text-center font-pixel text-base md:text-base h-10 md:h-11 bg-background/90 border-2 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
-                data-testid="input-answer"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSubmit();
-                  }
-                }}
-              />
-              <Button
-                onClick={handleSubmit}
-                disabled={!userAnswer}
-                className="font-pixel px-4 md:px-6 text-sm md:text-sm bg-red-600 hover:bg-red-700 border-2 border-red-800 text-white shadow-lg hover:scale-105 transition-all duration-200 h-10 md:h-11 min-w-[80px] md:min-w-[100px]"
-                data-testid="button-submit"
-              >
-                ⚔️ <span className="hidden sm:inline ml-1">ATTACK</span>
-              </Button>
-            </div>
-
-            {feedback && (
-              <div className="font-pixel text-sm md:text-sm text-yellow-200 animate-pulse bg-black bg-opacity-70 px-3 md:px-4 py-2 md:py-2 rounded-lg border-2 border-yellow-400 shadow-md max-w-md mx-auto">
-                {feedback}
-              </div>
-            )}
-
-            {showCelebration && (
-              <div className="text-2xl md:text-3xl animate-bounce flex gap-2 justify-center py-2">
-                🎉 🏆 🎉
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Game Inventory Board - Hidden on mobile to save space */}
-        <div className="lg:col-span-1 hidden md:block">
-          <GameInventoryBoard
-            // Pass mock items or actual inventory data here
-            items={mockInventoryItems}
-            onItemClick={(item) => console.log('Clicked on item:', item)} // Placeholder for item click handler
-          />
-        </div>
-      </div>
-
-      {/* Achievement Notifications */}
-      {newAchievements.length > 0 && currentAchievementIndex < newAchievements.length && (
-        <AchievementNotification
-          achievement={newAchievements[currentAchievementIndex]}
-          onClose={handleAchievementClose}
-        />
       )}
-    </div>
+
+      {/* ═══════════════════════════════════════
+          MOBILE layout — fixed keypad, no system keyboard
+      ═══════════════════════════════════════ */}
+      <div className="md:hidden flex flex-col"
+        style={{ height: 'calc(100dvh - 60px)', background: '#060b14', imageRendering: 'pixelated', overflow: 'hidden' }}>
+
+        {/* Top bar */}
+        <div className="flex-none" style={{ background: '#0d1117', borderBottom: '2px solid #1a2a1a' }}>
+          <div className="px-3 py-2 flex items-center justify-between">
+            <button onClick={handleGoHome}
+              className="font-pixel text-[8px] text-gray-400 border border-gray-700 px-3 py-1.5"
+              style={{ borderRadius: 0 }}>← HOME</button>
+            <h1 className="font-pixel text-[10px] text-amber-400"
+              style={{ textShadow: '0 0 10px rgba(251,191,36,0.3)' }}>⛏️ MATH BATTLE</h1>
+            <button onClick={restartGame}
+              className="font-pixel text-[8px] text-gray-400 border border-gray-700 px-3 py-1.5"
+              style={{ borderRadius: 0 }}>🔄 NEW</button>
+          </div>
+        </div>
+
+        {/* Stats row */}
+        <div className="flex-none grid grid-cols-4 gap-1.5 px-2 py-1.5" style={{ background: '#08100c' }}>
+          {[
+            { icon: '❤️', value: hearts,          label: 'LIVES',  border: '#dc2626' },
+            { icon: '🏆', value: currentScore,    label: 'SCORE',  border: '#f59e0b' },
+            { icon: '⚡', value: gameStats.level,  label: 'LEVEL',  border: '#22c55e' },
+            { icon: '❌', value: wrongAnswers,     label: 'WRONG',  border: '#ef4444' },
+          ].map(s => (
+            <div key={s.label} className="bg-[#0d1117] text-center py-1.5" style={{ border: `2px solid ${s.border}` }}>
+              <div className="text-sm leading-none">{s.icon}</div>
+              <div className="font-pixel text-white text-xs leading-none mt-0.5">{s.value}</div>
+              <div className="font-pixel text-[6px] text-gray-600">{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Arena — fixed small height so keypad always fits */}
+        <div className="flex-none mx-2 mt-1.5 relative overflow-hidden"
+          style={{ height: '160px', background: 'linear-gradient(180deg,#071220 0%,#0d2010 65%,#1a0d00 100%)', border: '2px solid #1a3a1a' }}>
+          {ArenaContent}
+        </div>
+
+        {/* ── Bottom panel: question + keypad ── */}
+        <div className="flex-none mx-2 mb-2 mt-1.5 bg-[#0d1117]"
+          style={{ border: '2px solid #1a3a1a' }}>
+
+          {/* Question + timer row */}
+          <div className="flex items-center gap-1.5 p-1.5">
+            <div className="flex-1 text-center py-1.5"
+              style={{ border: `2px solid ${opStyle.border}`, background: opStyle.bg }}>
+              <p className="font-pixel text-base text-white">
+                {currentQuestion.num1} {currentQuestion.operation} {currentQuestion.num2} = ?
+              </p>
+            </div>
+            <div className="text-center py-1 px-2.5"
+              style={{ border: `2px solid ${timerStyle.border}`, background: timerStyle.bg, minWidth: 46 }}>
+              <p className={`font-pixel text-[10px] ${timerStyle.pulse ? 'animate-pulse' : ''}`}
+                style={{ color: timerStyle.text }}>⏰</p>
+              <p className={`font-pixel text-sm leading-none ${timerStyle.pulse ? 'animate-pulse' : ''}`}
+                style={{ color: timerStyle.text }}>{timeLeft}</p>
+            </div>
+          </div>
+
+          {/* Answer display */}
+          <div className="mx-1.5 mb-1.5 text-center py-2"
+            style={{ border: '2px solid #374151', background: '#111827' }}
+            data-testid="input-answer">
+            <span className="font-pixel text-xl text-white tracking-widest">
+              {userAnswer || <span className="text-gray-600 text-base">_ _ _ _</span>}
+            </span>
+          </div>
+
+          {/* Feedback / celebration inside panel */}
+          {feedback && (
+            <div className="mx-2 mb-2 text-center py-1.5" style={{ border: '1px solid #f59e0b', background: 'rgba(245,158,11,0.1)' }}>
+              <p className="font-pixel text-[9px] text-amber-300">{feedback}</p>
+            </div>
+          )}
+          {showCelebration && (
+            <div className="flex justify-center gap-2 text-lg animate-bounce pb-1">🎉 🏆 🎉</div>
+          )}
+
+          {/* ── Number Pad ── */}
+          <div className="grid grid-cols-3 gap-1 p-1.5">
+            {['7','8','9','4','5','6','1','2','3','⌫','0','⚔️'].map((key) => {
+              const isAttack = key === '⚔️';
+              const isBack   = key === '⌫';
+              return (
+                <button
+                  key={key}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    if (isAttack) handleSubmit();
+                    else keypadPress(key);
+                  }}
+                  disabled={isAttack && !userAnswer}
+                  data-testid={isAttack ? 'button-submit' : undefined}
+                  className="py-2 font-pixel text-sm select-none
+                    transition-all active:translate-y-0.5"
+                  style={{
+                    borderRadius: 0,
+                    background: isAttack ? '#b91c1c' : isBack ? '#1f2937' : '#1a2a1a',
+                    border: `2px solid ${isAttack ? '#7f1d1d' : isBack ? '#374151' : '#2d4a1a'}`,
+                    borderBottom: `3px solid ${isAttack ? '#7f1d1d' : isBack ? '#111827' : '#1a3010'}`,
+                    color: isAttack ? '#fff' : isBack ? '#9ca3af' : '#d1fae5',
+                    opacity: isAttack && !userAnswer ? 0.4 : 1,
+                  }}
+                >
+                  {key}
+                </button>
+              );
+            })}
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ═══════════════════════════════════════
+          DESKTOP layout — scrollable
+      ═══════════════════════════════════════ */}
+      <div className="hidden md:block min-h-screen pb-8"
+        style={{ background: 'linear-gradient(180deg,#060b14 0%,#0a1a0f 60%,#060b14 100%)', imageRendering: 'pixelated' }}>
+
+        {/* Top bar */}
+        <div className="sticky top-0 z-30" style={{ background: '#0d1117', borderBottom: '2px solid #1a2a1a' }}>
+          <div className="max-w-4xl mx-auto px-4 py-2.5 flex items-center justify-between">
+            <button onClick={handleGoHome}
+              className="font-pixel text-[8px] text-gray-400 hover:text-amber-300 border border-gray-700 px-3 py-1.5 transition-colors"
+              style={{ borderRadius: 0 }}>← HOME</button>
+            <h1 className="font-pixel text-sm text-amber-400"
+              style={{ textShadow: '0 0 10px rgba(251,191,36,0.3)' }}>⛏️ MATH BATTLE</h1>
+            <button onClick={restartGame}
+              className="font-pixel text-[8px] text-gray-400 hover:text-emerald-300 border border-gray-700 px-3 py-1.5 transition-colors"
+              style={{ borderRadius: 0 }}>🔄 NEW</button>
+          </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto px-4 pt-4 space-y-3">
+          {/* Stats */}
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { icon: '❤️', value: hearts,          label: 'LIVES',  border: '#dc2626', glow: 'rgba(220,38,38,0.2)' },
+              { icon: '🏆', value: currentScore,    label: 'SCORE',  border: '#f59e0b', glow: 'rgba(245,158,11,0.2)' },
+              { icon: '⚡', value: gameStats.level,  label: 'LEVEL',  border: '#22c55e', glow: 'rgba(34,197,94,0.2)' },
+              { icon: '❌', value: wrongAnswers,     label: 'WRONG',  border: '#ef4444', glow: 'rgba(239,68,68,0.2)' },
+            ].map(s => (
+              <div key={s.label} className="bg-[#0d1117] text-center py-3"
+                style={{ border: `2px solid ${s.border}`, boxShadow: `0 0 8px ${s.glow}` }}>
+                <div className="text-xl leading-none mb-1">{s.icon}</div>
+                <div className="font-pixel text-white text-lg leading-none mb-1">{s.value}</div>
+                <div className="font-pixel text-[7px] text-gray-500 tracking-wider">{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Arena */}
+          <div className="relative overflow-hidden"
+            style={{ background: 'linear-gradient(180deg,#071220 0%,#0d2010 65%,#1a0d00 100%)', border: '2px solid #1a3a1a', height: '240px' }}>
+            {ArenaContent}
+          </div>
+
+          {/* Question panel */}
+          {QuestionPanel}
+
+          {/* Inventory */}
+          <div className="hidden lg:block">
+            <GameInventoryBoard items={mockInventoryItems} onItemClick={() => {}} />
+          </div>
+        </div>
+      </div>
+
+      {newAchievements.length > 0 && currentAchievementIndex < newAchievements.length && (
+        <AchievementNotification achievement={newAchievements[currentAchievementIndex]} onClose={handleAchievementClose} />
+      )}
+    </>
   );
 }

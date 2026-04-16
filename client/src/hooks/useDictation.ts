@@ -89,6 +89,7 @@ export function useDictation() {
       queryClient.invalidateQueries({ queryKey: ["/api/dictation/progress"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dictation/progress-report"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dictation/weekly-report"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leaderboard/global"] });
     },
     onError: (error) => {
       console.error(`❌ Failed to save dictation game history:`, error);
