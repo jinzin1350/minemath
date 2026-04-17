@@ -15,6 +15,10 @@ provider:
     PGPORT: ${env:PGPORT}
     PGUSER: ${env:PGUSER}
     PGPASSWORD: ${env:PGPASSWORD}
+    PUSHER_APP_ID: ${env:PUSHER_APP_ID}
+    PUSHER_KEY: ${env:PUSHER_KEY}
+    PUSHER_SECRET: ${env:PUSHER_SECRET}
+    PUSHER_CLUSTER: ${env:PUSHER_CLUSTER}
 
 functions:
   api:

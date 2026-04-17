@@ -1,9 +1,40 @@
-import { WebSocketServer, WebSocket } from "ws";
-import type { Server } from "http";
+/**
+ * Multiplayer module — Pusher-based (works on AWS Lambda / serverless)
+ *
+ * Architecture:
+ *  - Game state lives in-memory (fine for single Lambda instance; for multi-instance use Redis/DynamoDB)
+ *  - Each HTTP endpoint is called by the client and broadcasts via Pusher
+ *  - Channels:  presence-room-{roomId}   (lobby + game events)
+ *  - Pusher auth endpoint:  POST /api/multiplayer/auth
+ */
+
+import Pusher from "pusher";
+import type { Express, Request, Response } from "express";
+
+// ─────────────────────────────────────────────
+// Pusher server instance (lazy-init)
+// ─────────────────────────────────────────────
+
+let _pusher: Pusher | null = null;
+
+function getPusher(): Pusher {
+  if (_pusher) return _pusher;
+  const appId = process.env.PUSHER_APP_ID!;
+  const key = process.env.PUSHER_KEY!;
+  const secret = process.env.PUSHER_SECRET!;
+  const cluster = process.env.PUSHER_CLUSTER || "us3";
+  if (!appId || !key || !secret) {
+    throw new Error("Pusher env vars not set (PUSHER_APP_ID, PUSHER_KEY, PUSHER_SECRET)");
+  }
+  _pusher = new Pusher({ appId, key, secret, cluster, useTLS: true });
+  return _pusher;
+}
 
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
+
+export type GameMode = "battle" | "coop";
 
 interface Question {
   id: number;
@@ -12,10 +43,9 @@ interface Question {
   choices: number[];
 }
 
-interface Player {
+interface PlayerState {
   userId: string;
   username: string;
-  ws: WebSocket;
   score: number;
   ready: boolean;
   answeredCurrent: boolean;
@@ -24,92 +54,65 @@ interface Player {
 interface Room {
   id: string;
   hostUserId: string;
-  gameMode: "battle" | "coop";
+  gameMode: GameMode;
   grade: number;
-  players: Map<string, Player>;
+  maxPlayers: number;
   status: "waiting" | "active" | "finished";
+  players: Record<string, PlayerState>;
   questions: Question[];
   currentQuestionIndex: number;
-  questionTimer: ReturnType<typeof setTimeout> | null;
-  coopHp: number; // for coop mode
-  coopTurn: string | null; // userId whose turn it is
+  questionStartedAt: number; // epoch ms
+  coopHp: number;
+  coopTurn: string | null; // userId
+  questionTimerHandle: ReturnType<typeof setTimeout> | null;
 }
 
-// Client → Server messages
-type ClientMsg =
-  | { type: "CREATE_ROOM"; gameMode: "battle" | "coop"; grade: number; username: string }
-  | { type: "JOIN_ROOM"; roomId: string; username: string }
-  | { type: "PLAYER_READY" }
-  | { type: "SUBMIT_ANSWER"; questionId: number; answer: number; timeMs: number };
-
-// Server → Client messages
-type ServerMsg =
-  | { type: "ROOM_CREATED"; roomId: string; gameMode: string; grade: number }
-  | { type: "PLAYER_JOINED"; userId: string; username: string; playerCount: number }
-  | { type: "PLAYER_LEFT"; userId: string; username: string }
-  | { type: "PLAYER_READY_UPDATE"; userId: string; allReady: boolean }
-  | { type: "GAME_START"; questions: Omit<Question, "answer">[] }
-  | { type: "QUESTION"; question: Omit<Question, "answer">; index: number; total: number; timeLimit: number }
-  | { type: "ANSWER_RESULT"; userId: string; correct: boolean; points: number; scores: Record<string, number> }
-  | { type: "COOP_DAMAGE"; damage: number; hp: number; maxHp: number }
-  | { type: "COOP_TURN"; userId: string }
-  | { type: "QUESTION_TIMEOUT"; correctAnswer: number }
-  | { type: "GAME_OVER"; winner?: string; scores: Record<string, { score: number; username: string }> }
-  | { type: "ERROR"; message: string }
-  | { type: "PING" };
-
 // ─────────────────────────────────────────────
-// In-memory room store
+// In-memory store
 // ─────────────────────────────────────────────
 
 const rooms = new Map<string, Room>();
-// Map WebSocket → userId + roomId
-const wsMap = new Map<WebSocket, { userId: string; roomId: string }>();
 
 // ─────────────────────────────────────────────
 // Question generator
 // ─────────────────────────────────────────────
 
 function generateQuestion(grade: number, id: number): Question {
-  let a: number, b: number, op: string, answer: number, text: string;
+  let a: number, b: number, answer: number, text: string;
 
   if (grade <= 3) {
-    // Grade 2-3: addition / subtraction
     const useAdd = Math.random() > 0.4;
     if (useAdd) {
       a = Math.floor(Math.random() * 50) + 1;
       b = Math.floor(Math.random() * 50) + 1;
       answer = a + b;
-      text = `${a} + ${b} = ?`;
+      text = `${a} + ${b}`;
     } else {
       a = Math.floor(Math.random() * 50) + 10;
       b = Math.floor(Math.random() * (a - 1)) + 1;
       answer = a - b;
-      text = `${a} − ${b} = ?`;
+      text = `${a} − ${b}`;
     }
   } else if (grade <= 5) {
-    // Grade 4-5: multiplication
     a = Math.floor(Math.random() * 10) + 2;
     b = Math.floor(Math.random() * 10) + 2;
     answer = a * b;
-    text = `${a} × ${b} = ?`;
+    text = `${a} × ${b}`;
   } else {
-    // Grade 6-8: multiplication / division
     const useMult = Math.random() > 0.4;
     if (useMult) {
       a = Math.floor(Math.random() * 12) + 3;
       b = Math.floor(Math.random() * 12) + 3;
       answer = a * b;
-      text = `${a} × ${b} = ?`;
+      text = `${a} × ${b}`;
     } else {
       b = Math.floor(Math.random() * 11) + 2;
       answer = Math.floor(Math.random() * 11) + 2;
       a = b * answer;
-      text = `${a} ÷ ${b} = ?`;
+      text = `${a} ÷ ${b}`;
     }
   }
 
-  // Generate 3 wrong choices close to correct answer
   const wrongSet = new Set<number>();
   while (wrongSet.size < 3) {
     const delta = Math.floor(Math.random() * 10) - 5;
@@ -118,8 +121,7 @@ function generateQuestion(grade: number, id: number): Question {
   }
 
   const choices = [...wrongSet, answer].sort(() => Math.random() - 0.5);
-
-  return { id, text, answer, choices };
+  return { id, text: `${text} = ?`, answer, choices };
 }
 
 function generateQuestions(grade: number, count = 10): Question[] {
@@ -127,7 +129,7 @@ function generateQuestions(grade: number, count = 10): Question[] {
 }
 
 // ─────────────────────────────────────────────
-// Room code generator
+// Room code
 // ─────────────────────────────────────────────
 
 function generateRoomCode(): string {
@@ -139,25 +141,23 @@ function generateRoomCode(): string {
 }
 
 // ─────────────────────────────────────────────
-// Send helper
+// Channel name helper
 // ─────────────────────────────────────────────
 
-function send(ws: WebSocket, msg: ServerMsg) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(msg));
+function roomChannel(roomId: string) {
+  return `presence-room-${roomId}`;
+}
+
+// ─────────────────────────────────────────────
+// Broadcast helpers
+// ─────────────────────────────────────────────
+
+async function broadcast(roomId: string, event: string, data: unknown) {
+  try {
+    await getPusher().trigger(roomChannel(roomId), event, data);
+  } catch (err) {
+    console.error("[Pusher] broadcast error:", err);
   }
-}
-
-function broadcast(room: Room, msg: ServerMsg, excludeUserId?: string) {
-  room.players.forEach((player) => {
-    if (player.userId !== excludeUserId) {
-      send(player.ws, msg);
-    }
-  });
-}
-
-function broadcastAll(room: Room, msg: ServerMsg) {
-  broadcast(room, msg);
 }
 
 // ─────────────────────────────────────────────
@@ -165,47 +165,42 @@ function broadcastAll(room: Room, msg: ServerMsg) {
 // ─────────────────────────────────────────────
 
 function getScores(room: Room): Record<string, { score: number; username: string }> {
-  const scores: Record<string, { score: number; username: string }> = {};
-  room.players.forEach((p) => {
-    scores[p.userId] = { score: p.score, username: p.username };
-  });
-  return scores;
+  const out: Record<string, { score: number; username: string }> = {};
+  for (const [uid, p] of Object.entries(room.players)) {
+    out[uid] = { score: p.score, username: p.username };
+  }
+  return out;
 }
 
 function getScoreMap(room: Room): Record<string, number> {
-  const scores: Record<string, number> = {};
-  room.players.forEach((p) => {
-    scores[p.userId] = p.score;
-  });
-  return scores;
+  const out: Record<string, number> = {};
+  for (const [uid, p] of Object.entries(room.players)) {
+    out[uid] = p.score;
+  }
+  return out;
 }
 
 // ─────────────────────────────────────────────
 // Game loop
 // ─────────────────────────────────────────────
 
-const QUESTION_TIME_MS = 15000; // 15 seconds per question
+const QUESTION_TIME_MS = 15000;
 const COOP_MAX_HP = 100;
 
-function startGame(room: Room) {
+async function startGame(room: Room) {
   room.status = "active";
   room.questions = generateQuestions(room.grade, 10);
   room.currentQuestionIndex = 0;
-
   if (room.gameMode === "coop") {
     room.coopHp = COOP_MAX_HP;
-    const firstPlayer = Array.from(room.players.keys())[0];
-    room.coopTurn = firstPlayer;
+    room.coopTurn = Object.keys(room.players)[0];
   }
-
-  // Reset scores
-  room.players.forEach((p) => {
+  for (const p of Object.values(room.players)) {
     p.score = 0;
     p.answeredCurrent = false;
-  });
+  }
 
-  broadcastAll(room, {
-    type: "GAME_START",
+  await broadcast(room.id, "game-start", {
     questions: room.questions.map(({ answer: _a, ...q }) => q),
   });
 
@@ -218,43 +213,33 @@ function sendNextQuestion(room: Room) {
     return;
   }
 
-  // Reset answered flags
-  room.players.forEach((p) => (p.answeredCurrent = false));
+  for (const p of Object.values(room.players)) p.answeredCurrent = false;
 
   const q = room.questions[room.currentQuestionIndex];
+  room.questionStartedAt = Date.now();
 
-  broadcastAll(room, {
-    type: "QUESTION",
+  broadcast(room.id, "question", {
     question: { id: q.id, text: q.text, choices: q.choices },
     index: room.currentQuestionIndex,
     total: room.questions.length,
     timeLimit: QUESTION_TIME_MS,
   });
 
-  // For coop, broadcast whose turn it is
   if (room.gameMode === "coop" && room.coopTurn) {
-    broadcastAll(room, { type: "COOP_TURN", userId: room.coopTurn });
+    broadcast(room.id, "coop-turn", { userId: room.coopTurn });
   }
 
-  // Auto-advance after timeout
-  if (room.questionTimer) clearTimeout(room.questionTimer);
-  room.questionTimer = setTimeout(() => {
+  if (room.questionTimerHandle) clearTimeout(room.questionTimerHandle);
+  room.questionTimerHandle = setTimeout(async () => {
     const correct = room.questions[room.currentQuestionIndex].answer;
-    broadcastAll(room, { type: "QUESTION_TIMEOUT", correctAnswer: correct });
+    await broadcast(room.id, "question-timeout", { correctAnswer: correct });
 
-    // Coop: missed = damage
     if (room.gameMode === "coop") {
       room.coopHp = Math.max(0, room.coopHp - 20);
-      broadcastAll(room, {
-        type: "COOP_DAMAGE",
-        damage: 20,
-        hp: room.coopHp,
-        maxHp: COOP_MAX_HP,
+      await broadcast(room.id, "coop-damage", {
+        damage: 20, hp: room.coopHp, maxHp: COOP_MAX_HP,
       });
-      if (room.coopHp <= 0) {
-        endGame(room);
-        return;
-      }
+      if (room.coopHp <= 0) { endGame(room); return; }
       advanceCoopTurn(room);
     }
 
@@ -264,28 +249,29 @@ function sendNextQuestion(room: Room) {
 }
 
 function advanceCoopTurn(room: Room) {
-  const playerIds = Array.from(room.players.keys());
-  const currentIdx = playerIds.indexOf(room.coopTurn!);
-  room.coopTurn = playerIds[(currentIdx + 1) % playerIds.length];
+  const ids = Object.keys(room.players);
+  const cur = ids.indexOf(room.coopTurn!);
+  room.coopTurn = ids[(cur + 1) % ids.length];
 }
 
-function handleAnswer(room: Room, player: Player, questionId: number, answer: number, timeMs: number) {
+async function handleAnswer(
+  room: Room,
+  player: PlayerState,
+  questionId: number,
+  answer: number,
+  timeMs: number
+) {
   if (room.status !== "active") return;
   if (player.answeredCurrent) return;
 
   const q = room.questions[room.currentQuestionIndex];
   if (!q || q.id !== questionId) return;
 
-  // Coop mode: only the current turn player can answer
-  if (room.gameMode === "coop" && room.coopTurn !== player.userId) {
-    send(player.ws, { type: "ERROR", message: "Not your turn!" });
-    return;
-  }
+  if (room.gameMode === "coop" && room.coopTurn !== player.userId) return;
 
   player.answeredCurrent = true;
   const correct = answer === q.answer;
 
-  // Calculate points: faster = more points (max 100, min 10)
   let points = 0;
   if (correct) {
     const timeFraction = Math.max(0, 1 - timeMs / QUESTION_TIME_MS);
@@ -293,8 +279,7 @@ function handleAnswer(room: Room, player: Player, questionId: number, answer: nu
     player.score += points;
   }
 
-  broadcastAll(room, {
-    type: "ANSWER_RESULT",
+  await broadcast(room.id, "answer-result", {
     userId: player.userId,
     correct,
     points,
@@ -303,279 +288,203 @@ function handleAnswer(room: Room, player: Player, questionId: number, answer: nu
 
   if (room.gameMode === "coop") {
     if (!correct) {
-      // Damage on wrong answer
       const damage = 15;
       room.coopHp = Math.max(0, room.coopHp - damage);
-      broadcastAll(room, {
-        type: "COOP_DAMAGE",
-        damage,
-        hp: room.coopHp,
-        maxHp: COOP_MAX_HP,
+      await broadcast(room.id, "coop-damage", {
+        damage, hp: room.coopHp, maxHp: COOP_MAX_HP,
       });
       if (room.coopHp <= 0) {
-        if (room.questionTimer) clearTimeout(room.questionTimer);
+        if (room.questionTimerHandle) clearTimeout(room.questionTimerHandle);
         endGame(room);
         return;
       }
     }
-    // Coop: advance immediately after answer
-    if (room.questionTimer) clearTimeout(room.questionTimer);
+    if (room.questionTimerHandle) clearTimeout(room.questionTimerHandle);
     advanceCoopTurn(room);
     room.currentQuestionIndex++;
-    setTimeout(() => sendNextQuestion(room), 1500); // 1.5s delay to show result
+    setTimeout(() => sendNextQuestion(room), 1500);
   } else {
-    // Battle: check if all players answered
-    const allAnswered = Array.from(room.players.values()).every((p) => p.answeredCurrent);
+    const allAnswered = Object.values(room.players).every((p) => p.answeredCurrent);
     if (allAnswered) {
-      if (room.questionTimer) clearTimeout(room.questionTimer);
+      if (room.questionTimerHandle) clearTimeout(room.questionTimerHandle);
       room.currentQuestionIndex++;
       setTimeout(() => sendNextQuestion(room), 1500);
     }
   }
 }
 
-function endGame(room: Room) {
-  if (room.questionTimer) clearTimeout(room.questionTimer);
+async function endGame(room: Room) {
+  if (room.questionTimerHandle) clearTimeout(room.questionTimerHandle);
   room.status = "finished";
 
-  // Find winner (battle mode)
   let winner: string | undefined;
   if (room.gameMode === "battle") {
     let maxScore = -1;
-    room.players.forEach((p) => {
-      if (p.score > maxScore) {
-        maxScore = p.score;
-        winner = p.userId;
-      }
-    });
+    for (const [uid, p] of Object.entries(room.players)) {
+      if (p.score > maxScore) { maxScore = p.score; winner = uid; }
+    }
   }
 
-  broadcastAll(room, {
-    type: "GAME_OVER",
-    winner,
-    scores: getScores(room),
-  });
+  await broadcast(room.id, "game-over", { winner, scores: getScores(room) });
 
-  // Clean up room after 30 seconds
-  setTimeout(() => {
-    rooms.delete(room.id);
-    room.players.forEach((p) => wsMap.delete(p.ws));
-  }, 30000);
+  setTimeout(() => rooms.delete(room.id), 30000);
 }
 
 // ─────────────────────────────────────────────
-// WebSocket message handler
+// Register Express routes
 // ─────────────────────────────────────────────
 
-function handleMessage(ws: WebSocket, userId: string, raw: string) {
-  let msg: ClientMsg;
-  try {
-    msg = JSON.parse(raw);
-  } catch {
-    send(ws, { type: "ERROR", message: "Invalid JSON" });
-    return;
-  }
+export function setupMultiplayer(app: Express) {
+  // Pusher channel auth (required for presence channels)
+  app.post("/api/multiplayer/auth", (req: Request, res: Response) => {
+    const socketId: string = req.body.socket_id;
+    const channel: string = req.body.channel_name;
+    const userId: string = (req.body.userId as string) || (req.session as any)?.userId || "anon";
+    const username: string = (req.body.username as string) || "Player";
 
-  switch (msg.type) {
-    case "CREATE_ROOM": {
-      const roomId = generateRoomCode();
-      const room: Room = {
-        id: roomId,
-        hostUserId: userId,
-        gameMode: msg.gameMode,
-        grade: msg.grade,
-        players: new Map(),
-        status: "waiting",
-        questions: [],
-        currentQuestionIndex: 0,
-        questionTimer: null,
-        coopHp: 0,
-        coopTurn: null,
-      };
-
-      const player: Player = {
-        userId,
-        username: msg.username || "Player 1",
-        ws,
-        score: 0,
-        ready: false,
-        answeredCurrent: false,
-      };
-
-      room.players.set(userId, player);
-      rooms.set(roomId, room);
-      wsMap.set(ws, { userId, roomId });
-
-      send(ws, { type: "ROOM_CREATED", roomId, gameMode: msg.gameMode, grade: msg.grade });
-      break;
-    }
-
-    case "JOIN_ROOM": {
-      const room = rooms.get(msg.roomId);
-      if (!room) {
-        send(ws, { type: "ERROR", message: "Room not found" });
-        return;
-      }
-      if (room.status !== "waiting") {
-        send(ws, { type: "ERROR", message: "Game already started" });
-        return;
-      }
-      if (room.players.size >= room.maxPlayers) {
-        send(ws, { type: "ERROR", message: "Room is full" });
-        return;
-      }
-
-      // Remove player from any previous room
-      const prev = wsMap.get(ws);
-      if (prev) {
-        const prevRoom = rooms.get(prev.roomId);
-        if (prevRoom) prevRoom.players.delete(prev.userId);
-      }
-
-      const player: Player = {
-        userId,
-        username: msg.username || `Player ${room.players.size + 1}`,
-        ws,
-        score: 0,
-        ready: false,
-        answeredCurrent: false,
-      };
-
-      room.players.set(userId, player);
-      wsMap.set(ws, { userId, roomId: room.id });
-
-      // Tell the newcomer about existing players
-      room.players.forEach((p) => {
-        if (p.userId !== userId) {
-          send(ws, {
-            type: "PLAYER_JOINED",
-            userId: p.userId,
-            username: p.username,
-            playerCount: room.players.size,
-          });
-        }
+    try {
+      const authResponse = getPusher().authorizeChannel(socketId, channel, {
+        user_id: userId,
+        user_info: { username },
       });
+      res.json(authResponse);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
-      // Tell everyone else about the newcomer
-      broadcast(room, {
-        type: "PLAYER_JOINED",
-        userId,
-        username: player.username,
-        playerCount: room.players.size,
-      }, userId);
+  // ── CREATE ROOM ──────────────────────────────
+  app.post("/api/multiplayer/rooms", async (req: Request, res: Response) => {
+    const { userId, username, gameMode, grade } = req.body as {
+      userId: string; username: string; gameMode: GameMode; grade: number;
+    };
 
-      // Also send ROOM_CREATED info back to joiner (so they know mode/grade)
-      send(ws, { type: "ROOM_CREATED", roomId: room.id, gameMode: room.gameMode, grade: room.grade });
-      break;
+    const roomId = generateRoomCode();
+    const room: Room = {
+      id: roomId,
+      hostUserId: userId,
+      gameMode: gameMode || "battle",
+      grade: grade || 3,
+      maxPlayers: 2,
+      status: "waiting",
+      players: {
+        [userId]: { userId, username, score: 0, ready: false, answeredCurrent: false },
+      },
+      questions: [],
+      currentQuestionIndex: 0,
+      questionStartedAt: 0,
+      coopHp: 0,
+      coopTurn: null,
+      questionTimerHandle: null,
+    };
+
+    rooms.set(roomId, room);
+    res.json({ roomId, gameMode: room.gameMode, grade: room.grade });
+  });
+
+  // ── JOIN ROOM ────────────────────────────────
+  app.post("/api/multiplayer/rooms/:roomId/join", async (req: Request, res: Response) => {
+    const { roomId } = req.params;
+    const { userId, username } = req.body as { userId: string; username: string };
+
+    const room = rooms.get(roomId);
+    if (!room) return res.status(404).json({ error: "Room not found" });
+    if (room.status !== "waiting") return res.status(400).json({ error: "Game already started" });
+    if (Object.keys(room.players).length >= room.maxPlayers) {
+      return res.status(400).json({ error: "Room is full" });
     }
 
-    case "PLAYER_READY": {
-      const info = wsMap.get(ws);
-      if (!info) return;
-      const room = rooms.get(info.roomId);
-      if (!room) return;
-      const player = room.players.get(userId);
-      if (!player) return;
+    room.players[userId] = { userId, username, score: 0, ready: false, answeredCurrent: false };
 
-      player.ready = true;
-      const allReady = Array.from(room.players.values()).every((p) => p.ready);
-
-      broadcastAll(room, { type: "PLAYER_READY_UPDATE", userId, allReady });
-
-      // Start game when all players are ready (min 2 players)
-      if (allReady && room.players.size >= 2) {
-        setTimeout(() => startGame(room), 1000);
-      }
-      break;
-    }
-
-    case "SUBMIT_ANSWER": {
-      const info = wsMap.get(ws);
-      if (!info) return;
-      const room = rooms.get(info.roomId);
-      if (!room) return;
-      const player = room.players.get(userId);
-      if (!player) return;
-
-      handleAnswer(room, player, msg.questionId, msg.answer, msg.timeMs);
-      break;
-    }
-  }
-}
-
-// ─────────────────────────────────────────────
-// Disconnect handler
-// ─────────────────────────────────────────────
-
-function handleDisconnect(ws: WebSocket) {
-  const info = wsMap.get(ws);
-  if (!info) return;
-
-  wsMap.delete(ws);
-
-  const room = rooms.get(info.roomId);
-  if (!room) return;
-
-  const player = room.players.get(info.userId);
-  const username = player?.username || "Player";
-
-  room.players.delete(info.userId);
-
-  if (room.players.size === 0) {
-    // Last player left — delete room
-    if (room.questionTimer) clearTimeout(room.questionTimer);
-    rooms.delete(room.id);
-    return;
-  }
-
-  broadcast(room, { type: "PLAYER_LEFT", userId: info.userId, username });
-
-  // If game was active and only 1 player remains → end game
-  if (room.status === "active" && room.players.size < 2 && room.gameMode === "battle") {
-    if (room.questionTimer) clearTimeout(room.questionTimer);
-    endGame(room);
-  }
-}
-
-// ─────────────────────────────────────────────
-// Main setup export
-// ─────────────────────────────────────────────
-
-export function setupMultiplayer(httpServer: Server) {
-  const wss = new WebSocketServer({ server: httpServer, path: "/ws/multiplayer" });
-
-  wss.on("connection", (ws, req) => {
-    // Extract userId from query string: /ws/multiplayer?userId=xxx
-    const url = new URL(req.url || "", `http://localhost`);
-    const userId = url.searchParams.get("userId");
-
-    if (!userId) {
-      ws.close(1008, "Missing userId");
-      return;
-    }
-
-    // Keep-alive ping
-    const pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        send(ws, { type: "PING" });
-      }
-    }, 25000);
-
-    ws.on("message", (data) => {
-      handleMessage(ws, userId, data.toString());
+    await broadcast(roomId, "player-joined", {
+      userId,
+      username,
+      playerCount: Object.keys(room.players).length,
+      gameMode: room.gameMode,
+      grade: room.grade,
     });
 
-    ws.on("close", () => {
-      clearInterval(pingInterval);
-      handleDisconnect(ws);
-    });
+    res.json({ ok: true, gameMode: room.gameMode, grade: room.grade, roomId });
+  });
 
-    ws.on("error", (err) => {
-      console.error("[Multiplayer WS] error:", err.message);
-      clearInterval(pingInterval);
-      handleDisconnect(ws);
+  // ── GET ROOM INFO ────────────────────────────
+  app.get("/api/multiplayer/rooms/:roomId", (req: Request, res: Response) => {
+    const room = rooms.get(req.params.roomId);
+    if (!room) return res.status(404).json({ error: "Room not found" });
+    res.json({
+      roomId: room.id,
+      gameMode: room.gameMode,
+      grade: room.grade,
+      status: room.status,
+      players: Object.values(room.players).map((p) => ({
+        userId: p.userId,
+        username: p.username,
+        score: p.score,
+        ready: p.ready,
+      })),
     });
   });
 
-  console.log("[Multiplayer] WebSocket server ready at /ws/multiplayer");
+  // ── PLAYER READY ─────────────────────────────
+  app.post("/api/multiplayer/rooms/:roomId/ready", async (req: Request, res: Response) => {
+    const room = rooms.get(req.params.roomId);
+    if (!room) return res.status(404).json({ error: "Room not found" });
+
+    const { userId } = req.body as { userId: string };
+    const player = room.players[userId];
+    if (!player) return res.status(404).json({ error: "Player not in room" });
+
+    player.ready = true;
+    const allReady = Object.values(room.players).every((p) => p.ready);
+
+    await broadcast(room.id, "player-ready", { userId, allReady });
+
+    if (allReady && Object.keys(room.players).length >= 2) {
+      setTimeout(() => startGame(room), 1000);
+    }
+
+    res.json({ ok: true, allReady });
+  });
+
+  // ── SUBMIT ANSWER ────────────────────────────
+  app.post("/api/multiplayer/rooms/:roomId/answer", async (req: Request, res: Response) => {
+    const room = rooms.get(req.params.roomId);
+    if (!room) return res.status(404).json({ error: "Room not found" });
+
+    const { userId, questionId, answer } = req.body as {
+      userId: string; questionId: number; answer: number;
+    };
+
+    const player = room.players[userId];
+    if (!player) return res.status(404).json({ error: "Player not in room" });
+
+    const timeMs = Date.now() - room.questionStartedAt;
+    await handleAnswer(room, player, questionId, answer, timeMs);
+
+    res.json({ ok: true });
+  });
+
+  // ── LEAVE ROOM ───────────────────────────────
+  app.post("/api/multiplayer/rooms/:roomId/leave", async (req: Request, res: Response) => {
+    const room = rooms.get(req.params.roomId);
+    if (!room) return res.json({ ok: true });
+
+    const { userId } = req.body as { userId: string };
+    const player = room.players[userId];
+    const username = player?.username || "Player";
+
+    delete room.players[userId];
+
+    await broadcast(room.id, "player-left", { userId, username });
+
+    if (Object.keys(room.players).length === 0) {
+      if (room.questionTimerHandle) clearTimeout(room.questionTimerHandle);
+      rooms.delete(room.id);
+    } else if (room.status === "active" && room.gameMode === "battle") {
+      if (room.questionTimerHandle) clearTimeout(room.questionTimerHandle);
+      endGame(room);
+    }
+
+    res.json({ ok: true });
+  });
 }

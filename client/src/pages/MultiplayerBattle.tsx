@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useMultiplayer } from "@/hooks/useMultiplayer";
@@ -8,17 +8,15 @@ import { Button } from "@/components/ui/button";
 // Timer bar component
 // ─────────────────────────────────────────────
 
-function TimerBar({ timeLimit, onTick }: { timeLimit: number; onTick?: (ms: number) => void }) {
+function TimerBar({ timeLimit }: { timeLimit: number }) {
   const [elapsed, setElapsed] = useState(0);
-  const startRef = useRef(Date.now());
 
   useEffect(() => {
-    startRef.current = Date.now();
+    const start = Date.now();
     setElapsed(0);
     const interval = setInterval(() => {
-      const ms = Date.now() - startRef.current;
+      const ms = Date.now() - start;
       setElapsed(ms);
-      onTick?.(ms);
       if (ms >= timeLimit) clearInterval(interval);
     }, 50);
     return () => clearInterval(interval);
@@ -53,7 +51,6 @@ export default function MultiplayerBattle() {
 
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answered, setAnswered] = useState(false);
-  const elapsedMsRef = useRef(0);
   const [showResult, setShowResult] = useState<"correct" | "wrong" | null>(null);
 
   // Reset UI when a new question arrives
@@ -61,7 +58,6 @@ export default function MultiplayerBattle() {
     setSelectedAnswer(null);
     setAnswered(false);
     setShowResult(null);
-    elapsedMsRef.current = 0;
   }, [state.currentQuestion?.id]);
 
   // Show result flash
@@ -166,7 +162,7 @@ export default function MultiplayerBattle() {
     if (state.gameMode === "coop" && !isMyCoopTurn) return;
     setSelectedAnswer(choice);
     setAnswered(true);
-    submitAnswer(currentQuestion.id, choice, elapsedMsRef.current);
+    submitAnswer(currentQuestion.id, choice);
   };
 
   return (
@@ -235,10 +231,7 @@ export default function MultiplayerBattle() {
               <span>Question {questionIndex + 1} / {totalQuestions}</span>
               <span>⏱</span>
             </div>
-            <TimerBar
-              timeLimit={timeLimit}
-              onTick={(ms) => { elapsedMsRef.current = ms; }}
-            />
+            <TimerBar timeLimit={timeLimit} />
           </div>
 
           {/* Question text */}

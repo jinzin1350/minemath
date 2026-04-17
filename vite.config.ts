@@ -2,8 +2,16 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { config } from "dotenv";
+
+config(); // load .env so we can bake Pusher public keys into the frontend build
 
 export default defineConfig({
+  define: {
+    // Bake public Pusher keys into the frontend bundle at build time
+    "import.meta.env.VITE_PUSHER_KEY": JSON.stringify(process.env.PUSHER_KEY || ""),
+    "import.meta.env.VITE_PUSHER_CLUSTER": JSON.stringify(process.env.PUSHER_CLUSTER || "us3"),
+  },
   plugins: [
     react(),
     runtimeErrorOverlay(),

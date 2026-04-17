@@ -1,8 +1,18 @@
+/**
+ * useMultiplayer — Pusher-based real-time multiplayer hook
+ *
+ * - Communicates with server via REST API calls (/api/multiplayer/*)
+ * - Receives real-time events via Pusher presence channel (presence-room-{roomId})
+ */
+
 import { useEffect, useRef, useState, useCallback } from "react";
+import Pusher, { type Channel } from "pusher-js";
 
 // ─────────────────────────────────────────────
-// Types (mirrored from server/multiplayer.ts)
+// Types
 // ─────────────────────────────────────────────
+
+export type GameMode = "battle" | "coop";
 
 export interface MPQuestion {
   id: number;
@@ -10,46 +20,23 @@ export interface MPQuestion {
   choices: number[];
 }
 
-export type GameMode = "battle" | "coop";
+export interface PlayerInfo {
+  username: string;
+  score: number;
+  ready: boolean;
+}
 
 export interface PlayerScore {
   score: number;
   username: string;
 }
 
-export type ServerMsg =
-  | { type: "ROOM_CREATED"; roomId: string; gameMode: string; grade: number }
-  | { type: "PLAYER_JOINED"; userId: string; username: string; playerCount: number }
-  | { type: "PLAYER_LEFT"; userId: string; username: string }
-  | { type: "PLAYER_READY_UPDATE"; userId: string; allReady: boolean }
-  | { type: "GAME_START"; questions: MPQuestion[] }
-  | { type: "QUESTION"; question: MPQuestion; index: number; total: number; timeLimit: number }
-  | { type: "ANSWER_RESULT"; userId: string; correct: boolean; points: number; scores: Record<string, number> }
-  | { type: "COOP_DAMAGE"; damage: number; hp: number; maxHp: number }
-  | { type: "COOP_TURN"; userId: string }
-  | { type: "QUESTION_TIMEOUT"; correctAnswer: number }
-  | { type: "GAME_OVER"; winner?: string; scores: Record<string, PlayerScore> }
-  | { type: "ERROR"; message: string }
-  | { type: "PING" };
-
-export type ClientMsg =
-  | { type: "CREATE_ROOM"; gameMode: GameMode; grade: number; username: string }
-  | { type: "JOIN_ROOM"; roomId: string; username: string }
-  | { type: "PLAYER_READY" }
-  | { type: "SUBMIT_ANSWER"; questionId: number; answer: number; timeMs: number };
-
-// ─────────────────────────────────────────────
-// Game state
-// ─────────────────────────────────────────────
-
 export interface MultiplayerState {
-  connected: boolean;
   roomId: string | null;
   gameMode: GameMode | null;
   grade: number | null;
-  players: Record<string, { username: string; score: number; ready: boolean }>;
-  myUserId: string | null;
   status: "idle" | "lobby" | "active" | "finished";
+  players: Record<string, PlayerInfo>;
   currentQuestion: MPQuestion | null;
   questionIndex: number;
   totalQuestions: number;
@@ -60,16 +47,15 @@ export interface MultiplayerState {
   coopTurnUserId: string | null;
   gameOver: { winner?: string; scores: Record<string, PlayerScore> } | null;
   error: string | null;
+  loading: boolean;
 }
 
-const initialState: MultiplayerState = {
-  connected: false,
+const INITIAL: MultiplayerState = {
   roomId: null,
   gameMode: null,
   grade: null,
-  players: {},
-  myUserId: null,
   status: "idle",
+  players: {},
   currentQuestion: null,
   questionIndex: 0,
   totalQuestions: 10,
@@ -80,216 +66,291 @@ const initialState: MultiplayerState = {
   coopTurnUserId: null,
   gameOver: null,
   error: null,
+  loading: false,
 };
+
+// ─────────────────────────────────────────────
+// Pusher client (singleton)
+// ─────────────────────────────────────────────
+
+let pusherInstance: Pusher | null = null;
+
+function getPusherClient(): Pusher {
+  if (pusherInstance) return pusherInstance;
+
+  const key = import.meta.env.VITE_PUSHER_KEY as string;
+  const cluster = (import.meta.env.VITE_PUSHER_CLUSTER as string) || "us3";
+
+  if (!key) {
+    throw new Error("VITE_PUSHER_KEY env var not set");
+  }
+
+  pusherInstance = new Pusher(key, {
+    cluster,
+    authEndpoint: "/api/multiplayer/auth",
+    auth: { params: {} },
+  });
+
+  return pusherInstance;
+}
+
+// ─────────────────────────────────────────────
+// API helpers
+// ─────────────────────────────────────────────
+
+async function apiCall(path: string, method: string, body?: unknown) {
+  const res = await fetch(path, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Network error" }));
+    throw new Error(err.error || "Request failed");
+  }
+  return res.json();
+}
 
 // ─────────────────────────────────────────────
 // Hook
 // ─────────────────────────────────────────────
 
 export function useMultiplayer(userId: string | null, username: string) {
-  const wsRef = useRef<WebSocket | null>(null);
-  const [state, setState] = useState<MultiplayerState>({ ...initialState, myUserId: userId });
+  const [state, setState] = useState<MultiplayerState>({ ...INITIAL });
+  const channelRef = useRef<Channel | null>(null);
+  const roomIdRef = useRef<string | null>(null);
 
-  // Update myUserId when userId changes
+  // ── Subscribe to Pusher room channel ──────────
+  const subscribeToRoom = useCallback(
+    (roomId: string) => {
+      const pusher = getPusherClient();
+
+      // update auth params to include userId + username
+      (pusher.config as any).auth = {
+        params: { userId, username },
+      };
+
+      const channel = pusher.subscribe(`presence-room-${roomId}`);
+      channelRef.current = channel;
+
+      channel.bind("player-joined", (data: any) => {
+        setState((s) => ({
+          ...s,
+          status: "lobby",
+          gameMode: data.gameMode ?? s.gameMode,
+          grade: data.grade ?? s.grade,
+          players: {
+            ...s.players,
+            [data.userId]: { username: data.username, score: 0, ready: false },
+          },
+        }));
+      });
+
+      channel.bind("player-left", (data: { userId: string }) => {
+        setState((s) => {
+          const p = { ...s.players };
+          delete p[data.userId];
+          return { ...s, players: p };
+        });
+      });
+
+      channel.bind("player-ready", (data: { userId: string; allReady: boolean }) => {
+        setState((s) => ({
+          ...s,
+          players: {
+            ...s.players,
+            [data.userId]: { ...(s.players[data.userId] || { username: "", score: 0 }), ready: true },
+          },
+        }));
+      });
+
+      channel.bind("game-start", (data: { questions: MPQuestion[] }) => {
+        setState((s) => ({
+          ...s,
+          status: "active",
+          totalQuestions: data.questions.length,
+          gameOver: null,
+          lastResult: null,
+          coopHp: s.coopMaxHp,
+        }));
+      });
+
+      channel.bind("question", (data: { question: MPQuestion; index: number; total: number; timeLimit: number }) => {
+        setState((s) => ({
+          ...s,
+          currentQuestion: data.question,
+          questionIndex: data.index,
+          totalQuestions: data.total,
+          timeLimit: data.timeLimit,
+          lastResult: null,
+        }));
+      });
+
+      channel.bind("answer-result", (data: { userId: string; correct: boolean; points: number; scores: Record<string, number> }) => {
+        setState((s) => {
+          const updatedPlayers = { ...s.players };
+          for (const [uid, score] of Object.entries(data.scores)) {
+            if (updatedPlayers[uid]) {
+              updatedPlayers[uid] = { ...updatedPlayers[uid], score };
+            }
+          }
+          return {
+            ...s,
+            players: updatedPlayers,
+            lastResult: { userId: data.userId, correct: data.correct, points: data.points },
+          };
+        });
+      });
+
+      channel.bind("coop-damage", (data: { damage: number; hp: number; maxHp: number }) => {
+        setState((s) => ({ ...s, coopHp: data.hp, coopMaxHp: data.maxHp }));
+      });
+
+      channel.bind("coop-turn", (data: { userId: string }) => {
+        setState((s) => ({ ...s, coopTurnUserId: data.userId }));
+      });
+
+      channel.bind("question-timeout", () => {
+        setState((s) => ({ ...s, lastResult: null }));
+      });
+
+      channel.bind("game-over", (data: { winner?: string; scores: Record<string, PlayerScore> }) => {
+        setState((s) => ({
+          ...s,
+          status: "finished",
+          gameOver: data,
+          currentQuestion: null,
+        }));
+      });
+    },
+    [userId, username]
+  );
+
+  // ── Cleanup on unmount ────────────────────────
   useEffect(() => {
-    setState((s) => ({ ...s, myUserId: userId }));
-  }, [userId]);
-
-  const connect = useCallback(() => {
-    if (!userId) return;
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
-
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const host = window.location.host;
-    const url = `${protocol}://${host}/ws/multiplayer?userId=${encodeURIComponent(userId)}`;
-
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      setState((s) => ({ ...s, connected: true, error: null }));
-    };
-
-    ws.onclose = () => {
-      setState((s) => ({ ...s, connected: false }));
-    };
-
-    ws.onerror = () => {
-      setState((s) => ({ ...s, error: "Connection error" }));
-    };
-
-    ws.onmessage = (event) => {
-      let msg: ServerMsg;
-      try {
-        msg = JSON.parse(event.data);
-      } catch {
-        return;
+    return () => {
+      if (channelRef.current && roomIdRef.current) {
+        channelRef.current.unbind_all();
+        getPusherClient().unsubscribe(`presence-room-${roomIdRef.current}`);
       }
-
-      if (msg.type === "PING") return; // ignore pings
-
-      setState((s) => handleServerMsg(s, msg, userId));
     };
-  }, [userId]);
-
-  const disconnect = useCallback(() => {
-    wsRef.current?.close();
-    wsRef.current = null;
-    setState({ ...initialState, myUserId: userId });
-  }, [userId]);
-
-  const send = useCallback((msg: ClientMsg) => {
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(msg));
-    }
   }, []);
 
+  // ── Actions ───────────────────────────────────
+
   const createRoom = useCallback(
-    (gameMode: GameMode, grade: number) => {
-      connect();
-      // Small delay to let connection open
-      setTimeout(() => {
-        send({ type: "CREATE_ROOM", gameMode, grade, username });
-      }, 300);
+    async (gameMode: GameMode, grade: number) => {
+      if (!userId) return;
+      setState((s) => ({ ...s, loading: true, error: null }));
+      try {
+        const data = await apiCall("/api/multiplayer/rooms", "POST", {
+          userId, username, gameMode, grade,
+        });
+        const roomId: string = data.roomId;
+        roomIdRef.current = roomId;
+
+        setState((s) => ({
+          ...s,
+          roomId,
+          gameMode: data.gameMode,
+          grade: data.grade,
+          status: "lobby",
+          loading: false,
+          players: {
+            [userId]: { username, score: 0, ready: false },
+          },
+        }));
+
+        subscribeToRoom(roomId);
+      } catch (err: any) {
+        setState((s) => ({ ...s, loading: false, error: err.message }));
+      }
     },
-    [connect, send, username]
+    [userId, username, subscribeToRoom]
   );
 
   const joinRoom = useCallback(
-    (roomId: string) => {
-      connect();
-      setTimeout(() => {
-        send({ type: "JOIN_ROOM", roomId: roomId.trim(), username });
-      }, 300);
+    async (roomId: string) => {
+      if (!userId) return;
+      setState((s) => ({ ...s, loading: true, error: null }));
+      try {
+        const data = await apiCall(`/api/multiplayer/rooms/${roomId}/join`, "POST", {
+          userId, username,
+        });
+        roomIdRef.current = roomId;
+
+        // Fetch current room state
+        const roomData = await apiCall(`/api/multiplayer/rooms/${roomId}`, "GET");
+
+        const players: Record<string, PlayerInfo> = {};
+        for (const p of roomData.players as any[]) {
+          players[p.userId] = { username: p.username, score: p.score, ready: p.ready };
+        }
+
+        setState((s) => ({
+          ...s,
+          roomId,
+          gameMode: data.gameMode,
+          grade: data.grade,
+          status: "lobby",
+          loading: false,
+          players,
+        }));
+
+        subscribeToRoom(roomId);
+      } catch (err: any) {
+        setState((s) => ({ ...s, loading: false, error: err.message }));
+      }
     },
-    [connect, send, username]
+    [userId, username, subscribeToRoom]
   );
 
-  const setReady = useCallback(() => {
-    send({ type: "PLAYER_READY" });
-  }, [send]);
+  const setReady = useCallback(async () => {
+    const roomId = roomIdRef.current;
+    if (!roomId || !userId) return;
+    try {
+      await apiCall(`/api/multiplayer/rooms/${roomId}/ready`, "POST", { userId });
+      setState((s) => ({
+        ...s,
+        players: {
+          ...s.players,
+          [userId]: { ...(s.players[userId] || { username, score: 0 }), ready: true },
+        },
+      }));
+    } catch (err: any) {
+      setState((s) => ({ ...s, error: err.message }));
+    }
+  }, [userId, username]);
 
   const submitAnswer = useCallback(
-    (questionId: number, answer: number, timeMs: number) => {
-      send({ type: "SUBMIT_ANSWER", questionId, answer, timeMs });
+    async (questionId: number, answer: number) => {
+      const roomId = roomIdRef.current;
+      if (!roomId || !userId) return;
+      try {
+        await apiCall(`/api/multiplayer/rooms/${roomId}/answer`, "POST", {
+          userId, questionId, answer,
+        });
+      } catch (err: any) {
+        setState((s) => ({ ...s, error: err.message }));
+      }
     },
-    [send]
+    [userId]
   );
 
-  // Auto-disconnect on unmount
-  useEffect(() => {
-    return () => {
-      wsRef.current?.close();
-    };
-  }, []);
+  const disconnect = useCallback(async () => {
+    const roomId = roomIdRef.current;
+    if (roomId && userId) {
+      await apiCall(`/api/multiplayer/rooms/${roomId}/leave`, "POST", { userId }).catch(() => {});
+      if (channelRef.current) {
+        channelRef.current.unbind_all();
+        getPusherClient().unsubscribe(`presence-room-${roomId}`);
+        channelRef.current = null;
+      }
+      roomIdRef.current = null;
+    }
+    setState({ ...INITIAL });
+  }, [userId]);
 
   return { state, createRoom, joinRoom, setReady, submitAnswer, disconnect };
-}
-
-// ─────────────────────────────────────────────
-// State reducer (pure)
-// ─────────────────────────────────────────────
-
-function handleServerMsg(
-  s: MultiplayerState,
-  msg: ServerMsg,
-  myUserId: string
-): MultiplayerState {
-  switch (msg.type) {
-    case "ROOM_CREATED":
-      return {
-        ...s,
-        roomId: msg.roomId,
-        gameMode: msg.gameMode as GameMode,
-        grade: msg.grade,
-        status: "lobby",
-        players: {
-          ...s.players,
-          [myUserId]: { username: s.players[myUserId]?.username || "You", score: 0, ready: false },
-        },
-      };
-
-    case "PLAYER_JOINED":
-      return {
-        ...s,
-        status: s.status === "idle" ? "lobby" : s.status,
-        players: {
-          ...s.players,
-          [msg.userId]: { username: msg.username, score: 0, ready: false },
-        },
-      };
-
-    case "PLAYER_LEFT": {
-      const newPlayers = { ...s.players };
-      delete newPlayers[msg.userId];
-      return { ...s, players: newPlayers };
-    }
-
-    case "PLAYER_READY_UPDATE":
-      return {
-        ...s,
-        players: {
-          ...s.players,
-          [msg.userId]: { ...(s.players[msg.userId] || { username: "", score: 0 }), ready: true },
-        },
-      };
-
-    case "GAME_START":
-      return {
-        ...s,
-        status: "active",
-        totalQuestions: msg.questions.length,
-        gameOver: null,
-        lastResult: null,
-        coopHp: s.coopMaxHp,
-      };
-
-    case "QUESTION":
-      return {
-        ...s,
-        currentQuestion: msg.question,
-        questionIndex: msg.index,
-        totalQuestions: msg.total,
-        timeLimit: msg.timeLimit,
-        lastResult: null,
-      };
-
-    case "ANSWER_RESULT": {
-      const updatedPlayers = { ...s.players };
-      Object.entries(msg.scores).forEach(([uid, score]) => {
-        if (updatedPlayers[uid]) {
-          updatedPlayers[uid] = { ...updatedPlayers[uid], score };
-        }
-      });
-      return {
-        ...s,
-        players: updatedPlayers,
-        lastResult: { userId: msg.userId, correct: msg.correct, points: msg.points },
-      };
-    }
-
-    case "COOP_DAMAGE":
-      return { ...s, coopHp: msg.hp, coopMaxHp: msg.maxHp };
-
-    case "COOP_TURN":
-      return { ...s, coopTurnUserId: msg.userId };
-
-    case "QUESTION_TIMEOUT":
-      return { ...s, lastResult: null };
-
-    case "GAME_OVER":
-      return {
-        ...s,
-        status: "finished",
-        gameOver: { winner: msg.winner, scores: msg.scores },
-        currentQuestion: null,
-      };
-
-    case "ERROR":
-      return { ...s, error: msg.message };
-
-    default:
-      return s;
-  }
 }
