@@ -12,6 +12,8 @@ import Home from "@/pages/Home";
 import Auth from "@/pages/Auth";
 import EnglishDictation from "@/pages/EnglishDictation";
 import RoboTrainer from "@/pages/RoboTrainer";
+import MultiplayerLobby from "@/pages/MultiplayerLobby";
+import MultiplayerBattle from "@/pages/MultiplayerBattle";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -63,6 +65,8 @@ function Router() {
           <Route path="/robo-trainer" component={RoboTrainer} />
           <Route path="/parents-report" component={ParentsReport} />
           <Route path="/rank" component={RankTab} />
+          <Route path="/multiplayer" component={MultiplayerLobby} />
+          <Route path="/multiplayer/battle" component={MultiplayerBattle} />
         </>
       )}
       <Route component={NotFound} />

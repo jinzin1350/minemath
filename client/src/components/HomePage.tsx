@@ -167,6 +167,19 @@ export function HomePage({ onStartGame, savedLevel }: HomePageProps) {
       delay: '240ms',
       href: '/rank',
     },
+    {
+      icon: '🎮',
+      title: 'MULTIPLAYER',
+      description: 'Challenge a friend in real-time Math Battle or Co-op!',
+      tag: '🔴 LIVE',
+      tagBg: 'bg-pink-600',
+      borderColor: 'border-pink-500',
+      topBarColor: 'bg-pink-500',
+      btnColor: 'bg-pink-700 border-pink-900 hover:bg-pink-600',
+      glowColor: 'hover:shadow-pink-500/50',
+      delay: '320ms',
+      href: '/multiplayer',
+    },
   ];
 
   return (
