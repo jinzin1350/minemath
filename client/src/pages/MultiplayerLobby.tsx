@@ -237,9 +237,9 @@ export default function MultiplayerLobby() {
                 <Button
                   className="w-full bg-green-500 hover:bg-green-400 text-white font-pixel text-lg py-6 rounded-xl"
                   onClick={handleCreate}
-                  disabled={!state.connected && state.status === "idle"}
+                  disabled={state.loading}
                 >
-                  🎮 CREATE ROOM
+                  {state.loading ? "⏳ Creating..." : "🎮 CREATE ROOM"}
                 </Button>
               </>
             ) : (
