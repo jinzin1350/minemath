@@ -22,7 +22,7 @@ provider:
 
 functions:
   api:
-    handler: dist/lambda.handler
+    handler: dist/handler.handler
     events:
       - httpApi:
           path: /api/{proxy+}
