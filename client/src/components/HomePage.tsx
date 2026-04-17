@@ -283,7 +283,7 @@ export function HomePage({ onStartGame, savedLevel }: HomePageProps) {
           GAME CARDS GRID
       ══════════════════════════════════════ */}
       <section className="relative z-10 max-w-5xl mx-auto px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
           {cards.map((card) => (
             <GameCard key={card.title} {...card} />
           ))}
